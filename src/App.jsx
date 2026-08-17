@@ -23,7 +23,6 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/debts" element={<Debts />} />
           
           {/* Protected Routes (Zinahitaji Login + Layout) */}
           <Route
@@ -54,6 +53,17 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <Inventory />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/debts"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Debts />
                 </Layout>
               </ProtectedRoute>
             }
