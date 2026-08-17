@@ -12,7 +12,6 @@ import {
   Loader2, 
   X, 
   Check, 
-  History,
   Phone,
   UserPlus
 } from 'lucide-react';
@@ -22,7 +21,7 @@ export default function Debts() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('debts'); // 'debts' au 'customers'
+  const [activeTab, setActiveTab] = useState('debts');
 
   // Modals States
   const [showPayModal, setShowPayModal] = useState(false);
@@ -58,7 +57,6 @@ export default function Debts() {
     }
   };
 
-  // Logic ya kusajili Mteja Mpya
   const handleAddCustomer = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -74,7 +72,6 @@ export default function Debts() {
     }
   };
 
-  // Logic ya kurekodi Deni Jipya
   const handleAddDebt = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -90,7 +87,6 @@ export default function Debts() {
     }
   };
 
-  // Logic ya kulipia Deni (Pay)
   const handlePayDebt = async (e) => {
     e.preventDefault();
     if (!payAmount || Number(payAmount) <= 0) {
@@ -115,7 +111,6 @@ export default function Debts() {
     }
   };
 
-  // Calculations kwa ajili ya Takwimu
   const totalDebtAmount = debts
     .filter(d => d.status !== 'PAID')
     .reduce((acc, curr) => acc + Number(curr.remaining_amount || 0), 0);
@@ -128,10 +123,10 @@ export default function Debts() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-slate-100">
       
       {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <CreditCard className="w-7 h-7 text-emerald-400" />
@@ -140,10 +135,10 @@ export default function Debts() {
           <p className="text-slate-400 text-sm mt-1">Simamia madeni ya wateja, fanya ufuatiliaji, na rekodi malipo.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setShowAddCustomerModal(true)}
-            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl border border-slate-700 flex items-center gap-2 transition"
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl border border-slate-700 flex items-center gap-2 transition shadow-md"
           >
             <UserPlus className="w-4 h-4 text-emerald-400" />
             <span>Mteja Mpya</span>
@@ -161,7 +156,7 @@ export default function Debts() {
 
       {/* STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Jumla ya Madeni Nje</p>
             <p className="text-2xl font-extrabold text-amber-400 mt-1">
@@ -173,7 +168,7 @@ export default function Debts() {
           </div>
         </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Wateja Wanaodaiwa</p>
             <p className="text-2xl font-extrabold text-white mt-1">{activeDebtorsCount} <span className="text-xs text-slate-400">Wateja</span></p>
@@ -183,7 +178,7 @@ export default function Debts() {
           </div>
         </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Madeni Yaliyokamilika</p>
             <p className="text-2xl font-extrabold text-emerald-400 mt-1">
@@ -205,11 +200,11 @@ export default function Debts() {
             placeholder="Tafuta mteja au namba ya simu..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 shadow-md"
           />
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 border border-slate-800 rounded-2xl w-full sm:w-auto">
+        <div className="flex items-center gap-2 bg-slate-900 p-1.5 border border-slate-800 rounded-2xl w-full sm:w-auto shadow-md">
           <button
             onClick={() => setActiveTab('debts')}
             className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-bold text-sm transition ${
@@ -231,21 +226,21 @@ export default function Debts() {
 
       {/* DEBTS TABLE */}
       {activeTab === 'debts' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
               <span>Inapakia madeni...</span>
             </div>
           ) : filteredDebts.length === 0 ? (
-            <div className="text-center py-16 text-slate-500">
+            <div className="text-center py-16 text-slate-400 font-medium">
               Hakuna kumbukumbu za madeni zilizopatikana.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                  <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 text-xs uppercase tracking-wider font-semibold">
                     <th className="py-4 px-6">Mteja</th>
                     <th className="py-4 px-6">Deni Lote</th>
                     <th className="py-4 px-6">Kilicholipwa</th>
@@ -254,9 +249,9 @@ export default function Debts() {
                     <th className="py-4 px-6 text-right">Vitendo</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-sm">
+                <tbody className="divide-y divide-slate-800 text-sm">
                   {filteredDebts.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-800/30 transition">
+                    <tr key={d.id} className="hover:bg-slate-800/40 transition">
                       <td className="py-4 px-6 font-semibold text-white">
                         <div>{d.customer_name}</div>
                         {d.customer_phone && (
@@ -303,24 +298,24 @@ export default function Debts() {
 
       {/* CUSTOMERS TABLE */}
       {activeTab === 'customers' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 text-xs uppercase tracking-wider font-semibold">
                   <th className="py-4 px-6">Jina la Mteja</th>
                   <th className="py-4 px-6">Namba ya Simu</th>
                   <th className="py-4 px-6">Jumla Anayodaiwa</th>
                   <th className="py-4 px-6">Tarehe ya Kusajiliwa</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-sm">
+              <tbody className="divide-y divide-slate-800 text-sm">
                 {customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/30 transition">
+                  <tr key={c.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-4 px-6 font-semibold text-white">{c.name}</td>
                     <td className="py-4 px-6 text-slate-400 font-mono">{c.phone || 'N/A'}</td>
                     <td className="py-4 px-6 text-amber-400 font-bold font-mono">{Number(c.total_debt || 0).toLocaleString()} TZS</td>
-                    <td className="py-4 px-6 text-slate-500 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
+                    <td className="py-4 px-6 text-slate-400 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -340,7 +335,7 @@ export default function Debts() {
               </button>
             </div>
 
-            <div className="bg-slate-950 border border-slate-800/80 p-4 rounded-2xl space-y-2">
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Mteja:</span>
                 <span className="text-white font-semibold">{selectedDebt.customer_name}</span>
@@ -366,7 +361,7 @@ export default function Debts() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Maelezo (Aina ya Malipo/Notes)</label>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Maelezo (Notes)</label>
                 <input
                   type="text"
                   placeholder="Mfano: Kalipa kwa M-Pesa"
