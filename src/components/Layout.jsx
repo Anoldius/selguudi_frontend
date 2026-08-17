@@ -1,10 +1,11 @@
 import React, { useContext, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
   Package, 
+  CreditCard,
   BarChart3, 
   LogOut, 
   Store, 
@@ -31,6 +32,7 @@ export default function Layout({ children }) {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart },
     { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package },
+    { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard },
     { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3 },
   ];
 
@@ -176,7 +178,7 @@ export default function Layout({ children }) {
 
         {/* Dynamic Page Content */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {children}
+          {children || <Outlet />}
         </main>
 
         {/* FOOTER SECTION */}
