@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../api/axios';
 import { 
   Plus, 
@@ -9,7 +9,8 @@ import {
   Trash2, 
   X, 
   Loader2, 
-  Check 
+  Check,
+  Scan
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -19,7 +20,11 @@ export default function Inventory() {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State - Zilinganishwe na Django Model Sahihi
+  // References kwa ajili ya ku-control cursor focus (Barcode Hardware Scanner)
+  const barcodeInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+
+  // Form State
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
@@ -36,6 +41,15 @@ export default function Inventory() {
     fetchProducts();
   }, []);
 
+  // Weka cursor kwenye Barcode Input kiotomatiki mara tu Modal inapofunguka
+  useEffect(() => {
+    if (showModal) {
+      setTimeout(() => {
+        barcodeInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showModal]);
+
   const fetchProducts = async () => {
     try {
       const res = await apiClient.get('inventory/products/');
@@ -49,6 +63,14 @@ export default function Inventory() {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Logic ya kukamata 'Enter' kutoka kwa Barcode Scanner
+  const handleBarcodeKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Zuia form kuji-submit kabla ya wakati
+      nameInputRef.current?.focus(); // Hamisha cursor kwenye Jina la Bidhaa
+    }
   };
 
   const openAddModal = () => {
@@ -234,27 +256,38 @@ export default function Inventory() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* BARCODE INPUT (With Hardware Scanner Auto-Focus) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <Scan className="w-4 h-4 text-emerald-400" />
+                  <span>Barcode (Scan au Andika)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    ref={barcodeInputRef}
+                    type="text"
+                    name="barcode"
+                    value={formData.barcode}
+                    onChange={handleInputChange}
+                    onKeyDown={handleBarcodeKeyDown}
+                    placeholder="Elekeza Scanner au andika kodi..."
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* PRODUCT NAME INPUT */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Bidhaa</label>
                 <input
+                  ref={nameInputRef}
                   type="text"
                   name="name"
                   required
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Mfano: Azam Juice 1L"
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Barcode (Kama Ipo)</label>
-                <input
-                  type="text"
-                  name="barcode"
-                  value={formData.barcode}
-                  onChange={handleInputChange}
-                  placeholder="Scann au andika kodi"
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
