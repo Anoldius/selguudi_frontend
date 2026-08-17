@@ -72,16 +72,36 @@ export default function Debts() {
     }
   };
 
+  // Logic ya kurekodi Deni Jipya iliyoboreshwa
   const handleAddDebt = async (e) => {
     e.preventDefault();
+    if (!debtData.customer || !debtData.total_amount) {
+      alert("Tafadhali chagua mteja na uweke kiasi cha deni!");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await apiClient.post('sales/debts/', debtData);
+      const payload = {
+        customer: parseInt(debtData.customer, 10),
+        total_amount: parseFloat(debtData.total_amount),
+        due_date: debtData.due_date || null
+      };
+
+      await apiClient.post('sales/debts/', payload);
       setShowAddDebtModal(false);
       setDebtData({ customer: '', total_amount: '', due_date: '' });
       fetchData();
     } catch (err) {
-      alert("Imeshindikana kurekodi deni!");
+      console.error("Error creating debt:", err.response?.data);
+      if (err.response?.data) {
+        const errors = Object.entries(err.response.data)
+          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+          .join('\n');
+        alert(`Imeshindikana kurekodi deni:\n${errors}`);
+      } else {
+        alert("Imeshindikana kurekodi deni!");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -97,7 +117,7 @@ export default function Debts() {
     setIsSubmitting(true);
     try {
       await apiClient.post(`sales/debts/${selectedDebt.id}/pay/`, {
-        amount_paid: payAmount,
+        amount_paid: parseFloat(payAmount),
         notes: payNotes
       });
       setShowPayModal(false);
@@ -123,10 +143,10 @@ export default function Debts() {
   );
 
   return (
-    <div className="space-y-6 text-slate-100">
+    <div className="w-full min-h-screen bg-slate-950 text-slate-100 space-y-6">
       
       {/* HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <CreditCard className="w-7 h-7 text-emerald-400" />
@@ -138,7 +158,7 @@ export default function Debts() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowAddCustomerModal(true)}
-            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl border border-slate-700 flex items-center gap-2 transition shadow-md"
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl border border-slate-700 flex items-center gap-2 transition"
           >
             <UserPlus className="w-4 h-4 text-emerald-400" />
             <span>Mteja Mpya</span>
@@ -156,36 +176,36 @@ export default function Debts() {
 
       {/* STATS CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-lg">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Jumla ya Madeni Nje</p>
             <p className="text-2xl font-extrabold text-amber-400 mt-1">
               {totalDebtAmount.toLocaleString()} <span className="text-xs text-slate-400">TZS</span>
             </p>
           </div>
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400">
+          <div className="p-3 bg-slate-800 border border-slate-700 rounded-2xl text-amber-400">
             <DollarSign className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-lg">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Wateja Wanaodaiwa</p>
             <p className="text-2xl font-extrabold text-white mt-1">{activeDebtorsCount} <span className="text-xs text-slate-400">Wateja</span></p>
           </div>
-          <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400">
+          <div className="p-3 bg-slate-800 border border-slate-700 rounded-2xl text-blue-400">
             <Users className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between shadow-lg">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex items-center justify-between">
           <div>
             <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Madeni Yaliyokamilika</p>
             <p className="text-2xl font-extrabold text-emerald-400 mt-1">
               {debts.filter(d => d.status === 'PAID').length} <span className="text-xs text-slate-400">Yalolipwa</span>
             </p>
           </div>
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
+          <div className="p-3 bg-slate-800 border border-slate-700 rounded-2xl text-emerald-400">
             <CheckCircle className="w-6 h-6" />
           </div>
         </div>
@@ -200,15 +220,15 @@ export default function Debts() {
             placeholder="Tafuta mteja au namba ya simu..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 shadow-md"
+            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-900 p-1.5 border border-slate-800 rounded-2xl w-full sm:w-auto shadow-md">
+        <div className="flex items-center gap-2 bg-slate-900 p-1.5 border border-slate-800 rounded-2xl w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('debts')}
             className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-bold text-sm transition ${
-              activeTab === 'debts' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+              activeTab === 'debts' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
           >
             Orodha ya Madeni
@@ -216,7 +236,7 @@ export default function Debts() {
           <button
             onClick={() => setActiveTab('customers')}
             className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-bold text-sm transition ${
-              activeTab === 'customers' ? 'bg-emerald-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+              activeTab === 'customers' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
           >
             Orodha ya Wateja
@@ -226,7 +246,7 @@ export default function Debts() {
 
       {/* DEBTS TABLE */}
       {activeTab === 'debts' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
@@ -251,7 +271,7 @@ export default function Debts() {
                 </thead>
                 <tbody className="divide-y divide-slate-800 text-sm">
                   {filteredDebts.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-800/40 transition">
+                    <tr key={d.id} className="hover:bg-slate-800 transition">
                       <td className="py-4 px-6 font-semibold text-white">
                         <div>{d.customer_name}</div>
                         {d.customer_phone && (
@@ -266,10 +286,10 @@ export default function Debts() {
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
                           d.status === 'PAID' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                             : d.status === 'PARTIAL'
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            ? 'bg-amber-950 text-amber-400 border border-amber-800'
+                            : 'bg-red-950 text-red-400 border border-red-800'
                         }`}>
                           {d.status === 'PAID' && <CheckCircle className="w-3.5 h-3.5" />}
                           {d.status === 'PARTIAL' && <Clock className="w-3.5 h-3.5" />}
@@ -281,7 +301,7 @@ export default function Debts() {
                         {d.status !== 'PAID' && (
                           <button
                             onClick={() => { setSelectedDebt(d); setShowPayModal(true); }}
-                            className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-semibold text-xs transition"
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl font-semibold text-xs transition"
                           >
                             Sajili Malipo
                           </button>
@@ -298,7 +318,7 @@ export default function Debts() {
 
       {/* CUSTOMERS TABLE */}
       {activeTab === 'customers' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -311,7 +331,7 @@ export default function Debts() {
               </thead>
               <tbody className="divide-y divide-slate-800 text-sm">
                 {customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/40 transition">
+                  <tr key={c.id} className="hover:bg-slate-800 transition">
                     <td className="py-4 px-6 font-semibold text-white">{c.name}</td>
                     <td className="py-4 px-6 text-slate-400 font-mono">{c.phone || 'N/A'}</td>
                     <td className="py-4 px-6 text-amber-400 font-bold font-mono">{Number(c.total_debt || 0).toLocaleString()} TZS</td>
@@ -324,17 +344,16 @@ export default function Debts() {
         </div>
       )}
 
-      {/* MODAL 1: PAY DEBT MODAL */}
+      {/* MODALS */}
       {showPayModal && selectedDebt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold text-white">Sajili Malipo ya Deni</h3>
-              <button onClick={() => setShowPayModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-white">
+              <button onClick={() => setShowPayModal(false)} className="p-1 text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Mteja:</span>
@@ -345,7 +364,6 @@ export default function Debts() {
                 <span className="text-amber-400 font-bold font-mono">{Number(selectedDebt.remaining_amount).toLocaleString()} TZS</span>
               </div>
             </div>
-
             <form onSubmit={handlePayDebt} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kiasi Anacholipa Sasa (TZS)</label>
@@ -353,15 +371,14 @@ export default function Debts() {
                   type="number"
                   step="0.01"
                   required
-                  placeholder="Mfano: 10000"
+                  placeholder="10000"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Maelezo (Notes)</label>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Maelezo</label>
                 <input
                   type="text"
                   placeholder="Mfano: Kalipa kwa M-Pesa"
@@ -370,11 +387,10 @@ export default function Debts() {
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                 <span>Hifadhi Malipo</span>
@@ -384,30 +400,27 @@ export default function Debts() {
         </div>
       )}
 
-      {/* MODAL 2: ADD CUSTOMER */}
       {showAddCustomerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold text-white">Sajili Mteja Mpya</h3>
-              <button onClick={() => setShowAddCustomerModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-white">
+              <button onClick={() => setShowAddCustomerModal(false)} className="p-1 text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <form onSubmit={handleAddCustomer} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Mteja</label>
                 <input
                   type="text"
                   required
-                  placeholder="Mfano: Mama Maria"
+                  placeholder="Mama Maria"
                   value={customerData.name}
                   onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Namba ya Simu</label>
                 <input
@@ -418,11 +431,10 @@ export default function Debts() {
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                 <span>Hifadhi Mteja</span>
@@ -432,17 +444,15 @@ export default function Debts() {
         </div>
       )}
 
-      {/* MODAL 3: RECORD DEBT */}
       {showAddDebtModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold text-white">Rekodi Deni Jipya</h3>
-              <button onClick={() => setShowAddDebtModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-white">
+              <button onClick={() => setShowAddDebtModal(false)} className="p-1 text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             <form onSubmit={handleAddDebt} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Chagua Mteja</label>
@@ -458,7 +468,6 @@ export default function Debts() {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jumla ya Deni (TZS)</label>
                 <input
@@ -471,11 +480,10 @@ export default function Debts() {
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl flex items-center justify-center gap-2 transition"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                 <span>Rekodi Deni</span>
