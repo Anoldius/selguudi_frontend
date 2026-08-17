@@ -72,7 +72,7 @@ export default function Debts() {
     }
   };
 
-  // Logic ya kurekodi Deni Jipya iliyoboreshwa
+  // Logic ya kurekodi Deni Jipya iliyolingana na DebtSerializer
   const handleAddDebt = async (e) => {
     e.preventDefault();
     if (!debtData.customer || !debtData.total_amount) {
@@ -82,11 +82,16 @@ export default function Debts() {
 
     setIsSubmitting(true);
     try {
+      // Tengeneza payload sahihi inayokubaliwa na DebtSerializer
       const payload = {
-        customer: parseInt(debtData.customer, 10),
+        customer: debtData.customer, // Primary Key/UUID ya mteja
         total_amount: parseFloat(debtData.total_amount),
-        due_date: debtData.due_date || null
       };
+
+      // Tuma due_date pekee pale mtumiaji alipojaza tarehe halisi
+      if (debtData.due_date && debtData.due_date.trim() !== '') {
+        payload.due_date = debtData.due_date;
+      }
 
       await apiClient.post('sales/debts/', payload);
       setShowAddDebtModal(false);
@@ -94,13 +99,18 @@ export default function Debts() {
       fetchData();
     } catch (err) {
       console.error("Error creating debt:", err.response?.data);
-      if (err.response?.data) {
-        const errors = Object.entries(err.response.data)
+      const resData = err.response?.data;
+
+      // Handle custom exception response structure ({ success: false, errors: {...} })
+      const errorSource = resData?.errors || resData;
+
+      if (errorSource && typeof errorSource === 'object') {
+        const errorDetails = Object.entries(errorSource)
           .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
           .join('\n');
-        alert(`Imeshindikana kurekodi deni:\n${errors}`);
+        alert(`Imeshindikana kurekodi deni:\n${errorDetails}`);
       } else {
-        alert("Imeshindikana kurekodi deni!");
+        alert(resData?.message || "Imeshindikana kurekodi deni!");
       }
     } finally {
       setIsSubmitting(false);
@@ -125,7 +135,7 @@ export default function Debts() {
       setPayNotes('');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || "Imeshindikana kurekodi malipo!");
+      alert(err.response?.data?.error || err.response?.data?.message || "Imeshindikana kurekodi malipo!");
     } finally {
       setIsSubmitting(false);
     }
@@ -344,7 +354,7 @@ export default function Debts() {
         </div>
       )}
 
-      {/* MODALS */}
+      {/* MODAL 1: PAY DEBT MODAL */}
       {showPayModal && selectedDebt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5">
@@ -400,6 +410,7 @@ export default function Debts() {
         </div>
       )}
 
+      {/* MODAL 2: ADD CUSTOMER */}
       {showAddCustomerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5">
@@ -444,6 +455,7 @@ export default function Debts() {
         </div>
       )}
 
+      {/* MODAL 3: RECORD DEBT */}
       {showAddDebtModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-5">
@@ -468,6 +480,7 @@ export default function Debts() {
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jumla ya Deni (TZS)</label>
                 <input
@@ -480,6 +493,17 @@ export default function Debts() {
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Tarehe ya Kurudisha (Hiyari)</label>
+                <input
+                  type="date"
+                  value={debtData.due_date}
+                  onChange={(e) => setDebtData({ ...debtData, due_date: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
