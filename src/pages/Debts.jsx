@@ -73,7 +73,7 @@ export default function Debts() {
   };
 
   // Logic ya kurekodi Deni Jipya iliyolingana na DebtSerializer
-  const handleAddDebt = async (e) => {
+ const handleAddDebt = async (e) => {
     e.preventDefault();
     if (!debtData.customer || !debtData.total_amount) {
       alert("Tafadhali chagua mteja na uweke kiasi cha deni!");
@@ -82,13 +82,15 @@ export default function Debts() {
 
     setIsSubmitting(true);
     try {
-      // Tengeneza payload sahihi inayokubaliwa na DebtSerializer
+      const amount = parseFloat(debtData.total_amount);
+
+      // Tuma remaining_amount ikiwa sawa na total_amount kwa ajili ya validation ya backend
       const payload = {
-        customer: debtData.customer, // Primary Key/UUID ya mteja
-        total_amount: parseFloat(debtData.total_amount),
+        customer: debtData.customer,
+        total_amount: amount,
+        remaining_amount: amount,
       };
 
-      // Tuma due_date pekee pale mtumiaji alipojaza tarehe halisi
       if (debtData.due_date && debtData.due_date.trim() !== '') {
         payload.due_date = debtData.due_date;
       }
@@ -100,8 +102,6 @@ export default function Debts() {
     } catch (err) {
       console.error("Error creating debt:", err.response?.data);
       const resData = err.response?.data;
-
-      // Handle custom exception response structure ({ success: false, errors: {...} })
       const errorSource = resData?.errors || resData;
 
       if (errorSource && typeof errorSource === 'object') {
