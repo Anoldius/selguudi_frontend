@@ -2,9 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    @apply bg-slate-950 text-slate-100 antialiased;
-  }
+/* Font ya Mfumo Mzima na Tarakimu za TZS */
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  background-color: #020617;
+  color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Class Maalum ya Namba za Fedha, Risiti na Takwimu za TZS */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
 }
