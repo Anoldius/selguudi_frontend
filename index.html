@@ -6,39 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Selguudi POS - Mfumo wa Mauzo na Stoko</title>
 
-    <!-- Tailwind CSS CDN (Inatibu tatizo la CSS kuvunjika moja kwa moja) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Configuration ya Custom Colors na Fonts kwa ajili ya CDN -->
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-              mono: ['"JetBrains Mono"', 'monospace'],
-            },
-            colors: {
-              brand: {
-                50: '#f0fdf4',
-                100: '#dcfce7',
-                500: '#22c55e',
-                600: '#16a34a',
-                700: '#15803d',
-                dark: '#0f172a',
-              }
-            }
-          }
-        }
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
       }
-    </script>
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace !important;
+      }
+    </style>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased font-sans">
+  <body class="bg-slate-950 text-slate-100 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
