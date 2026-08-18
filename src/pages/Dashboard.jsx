@@ -61,7 +61,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Top Welcome Banner with Dynamic Business Name */}
-      <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-linear-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <span>Karibu Kwenye Selguudi Dashboard</span>
