@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/axios';
+import { useAuth } from '../context/AuthContext'; // <--- Vuta Auth Context
 import { DollarSign, Receipt, TrendingUp, AlertTriangle, Store } from 'lucide-react';
 
 export default function Dashboard() {
+  const { user } = useAuth(); // <--- Pata taarifa za user aliyelogin
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +19,9 @@ export default function Dashboard() {
         setLoading(false);
       });
   }, []);
+
+  // Pata jina la duka kwa mpangilio sahihi wa vyanzo vya data
+  const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
   if (loading) {
     return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari wa leo...</div>;
@@ -55,7 +60,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top Welcome Banner with Business Name on the Right */}
+      {/* Top Welcome Banner with Dynamic Business Name */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -65,7 +70,7 @@ export default function Dashboard() {
           <p className="text-slate-400 text-sm mt-1">Hapa ndipo muhtasari halisi wa biashara yako kwa siku ya leo.</p>
         </div>
 
-        {/* Business Name Badge */}
+        {/* Dynamic Business Name Badge */}
         <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
           <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
             <Store className="w-5 h-5" />
@@ -73,7 +78,7 @@ export default function Dashboard() {
           <div>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Biashara / Duka</p>
             <p className="text-lg font-extrabold text-emerald-400 font-mono tracking-wide uppercase">
-              {data?.business_name || "ILAZO PUB"}
+              {businessName}
             </p>
           </div>
         </div>
@@ -91,7 +96,7 @@ export default function Dashboard() {
                   <Icon className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-extrabold text-white">{card.value}</h3>
+              <h3 className="text-2xl font-extrabold text-white font-mono">{card.value}</h3>
             </div>
           );
         })}
