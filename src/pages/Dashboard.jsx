@@ -96,7 +96,7 @@ export default function Dashboard() {
                   <Icon className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-extrabold text-white font-mono">{card.value}</h3>
+              <h3 className="texat-2xl font-extrabold text-white font-mono">{card.value}</h3>
             </div>
           );
         })}
