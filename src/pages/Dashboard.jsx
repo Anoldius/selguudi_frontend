@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/axios';
-import { DollarSign, Receipt, TrendingUp, AlertTriangle } from 'lucide-react';
+import { DollarSign, Receipt, TrendingUp, AlertTriangle, Store } from 'lucide-react';
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -19,7 +19,7 @@ export default function Dashboard() {
   }, []);
 
   if (loading) {
-    return <div className="text-slate-400 font-medium">Inapakia muhtasari wa leo...</div>;
+    return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari wa leo...</div>;
   }
 
   const statCards = [
@@ -55,10 +55,28 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top Welcome Banner */}
-      <div className="bg-gradient-to-r from-emerald-900/40 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl">
-        <h1 className="text-2xl font-bold text-white">Karibu Kwenye Selguudi Dashboard 👋</h1>
-        <p className="text-slate-400 text-sm mt-1">Hapa ndipo muhtasari halisi wa biashara yako kwa siku ya leo.</p>
+      {/* Top Welcome Banner with Business Name on the Right */}
+      <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <span>Karibu Kwenye Selguudi Dashboard</span>
+            <span className="text-xl">👋</span>
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">Hapa ndipo muhtasari halisi wa biashara yako kwa siku ya leo.</p>
+        </div>
+
+        {/* Business Name Badge */}
+        <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
+          <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+            <Store className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Biashara / Duka</p>
+            <p className="text-lg font-extrabold text-emerald-400 font-mono tracking-wide uppercase">
+              {data?.business_name || "ILAZO PUB"}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Analytics Cards Grid */}
