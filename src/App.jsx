@@ -13,11 +13,20 @@ import Debts from './pages/Debts';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Component ya kudhibiti Root Route (/) na Fallback (*)
+const RootRedirect = () => {
+  const token = localStorage.getItem('token');
+  return token ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+};
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Root Route (Mtu akiingia selguudi-frontend.vercel.app/) */}
+          <Route path="/" element={<RootRedirect />} />
+
           {/* Public Routes (Hazihitaji Login) */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -80,8 +89,8 @@ export default function App() {
             }
           />
 
-          {/* Fallback Route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Catch-all Fallback Route */}
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
