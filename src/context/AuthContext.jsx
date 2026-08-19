@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 
 export const AuthContext = createContext();
@@ -50,4 +50,13 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+// HII NDIYO EXPORT ILIYOKUWA INAKOSEKANA NA KUFANYA VERCEL I-FAIL BUILD:
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth lazima itumiwe ndani ya AuthProvider');
+  }
+  return context;
 };
