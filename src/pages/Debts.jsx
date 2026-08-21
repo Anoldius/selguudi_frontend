@@ -13,7 +13,8 @@ import {
   X, 
   Check, 
   Phone,
-  UserPlus
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 
 export default function Debts() {
@@ -27,15 +28,29 @@ export default function Debts() {
   const [showPayModal, setShowPayModal] = useState(false);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [showAddDebtModal, setShowAddDebtModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const [selectedDebt, setSelectedDebt] = useState(null);
+  const [debtToDelete, setDebtToDelete] = useState(null);
 
   // Form States
   const [payAmount, setPayAmount] = useState('');
   const [payNotes, setPayNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [customerData, setCustomerData] = useState({ name: '', phone: '' });
   const [debtData, setDebtData] = useState({ customer: '', total_amount: '', due_date: '' });
+
+  // Floating Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
 
   useEffect(() => {
     fetchData();
@@ -52,6 +67,7 @@ export default function Debts() {
       setCustomers(custRes.data.results || custRes.data);
     } catch (err) {
       console.error("Error fetching debt data:", err);
+      triggerToast("Imeshindikana kuvuta taarifa za madeni!", "error");
     } finally {
       setLoading(false);
     }
@@ -62,21 +78,21 @@ export default function Debts() {
     setIsSubmitting(true);
     try {
       await apiClient.post('sales/customers/', customerData);
+      triggerToast("Mteja amesajiliwa vizuri! 🎉", "success");
       setShowAddCustomerModal(false);
       setCustomerData({ name: '', phone: '' });
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.message || "Imeshindikana kusajili mteja!");
+      triggerToast(err.response?.data?.message || "Imeshindikana kusajili mteja!", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Logic ya kurekodi Deni Jipya iliyolingana na DebtSerializer
- const handleAddDebt = async (e) => {
+  const handleAddDebt = async (e) => {
     e.preventDefault();
     if (!debtData.customer || !debtData.total_amount) {
-      alert("Tafadhali chagua mteja na uweke kiasi cha deni!");
+      triggerToast("Tafadhali chagua mteja na uweke kiasi cha deni!", "error");
       return;
     }
 
@@ -84,7 +100,6 @@ export default function Debts() {
     try {
       const amount = parseFloat(debtData.total_amount);
 
-      // Tuma remaining_amount ikiwa sawa na total_amount kwa ajili ya validation ya backend
       const payload = {
         customer: debtData.customer,
         total_amount: amount,
@@ -96,22 +111,13 @@ export default function Debts() {
       }
 
       await apiClient.post('sales/debts/', payload);
+      triggerToast("Deni jipya limesajiliwa vizuri! 📝", "success");
       setShowAddDebtModal(false);
       setDebtData({ customer: '', total_amount: '', due_date: '' });
       fetchData();
     } catch (err) {
       console.error("Error creating debt:", err.response?.data);
-      const resData = err.response?.data;
-      const errorSource = resData?.errors || resData;
-
-      if (errorSource && typeof errorSource === 'object') {
-        const errorDetails = Object.entries(errorSource)
-          .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
-          .join('\n');
-        alert(`Imeshindikana kurekodi deni:\n${errorDetails}`);
-      } else {
-        alert(resData?.message || "Imeshindikana kurekodi deni!");
-      }
+      triggerToast(err.response?.data?.message || "Imeshindikana kurekodi deni!", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -120,7 +126,7 @@ export default function Debts() {
   const handlePayDebt = async (e) => {
     e.preventDefault();
     if (!payAmount || Number(payAmount) <= 0) {
-      alert("Ingiza kiasi sahihi cha malipo!");
+      triggerToast("Ingiza kiasi sahihi cha malipo!", "error");
       return;
     }
 
@@ -130,14 +136,34 @@ export default function Debts() {
         amount_paid: parseFloat(payAmount),
         notes: payNotes
       });
+      triggerToast("Malipo yamesajiliwa vizuri! 🎉", "success");
       setShowPayModal(false);
       setPayAmount('');
       setPayNotes('');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || err.response?.data?.message || "Imeshindikana kurekodi malipo!");
+      triggerToast(err.response?.data?.error || err.response?.data?.message || "Imeshindikana kurekodi malipo!", "error");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // LOGIC YA KUFUTA DENI
+  const handleDeleteDebt = async () => {
+    if (!debtToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await apiClient.delete(`sales/debts/${debtToDelete.id}/`);
+      triggerToast("Deni limefutwa kabisa kwenye mfumo! 🗑️", "success");
+      setShowDeleteModal(false);
+      setDebtToDelete(null);
+      fetchData();
+    } catch (err) {
+      console.error("Delete Debt Error:", err.response);
+      triggerToast(err.response?.data?.message || "Imeshindikana kufuta deni hili!", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -153,8 +179,20 @@ export default function Debts() {
   );
 
   return (
-    <div className="w-full min-h-screen bg-slate-950 text-slate-100 space-y-6">
+    <div className="w-full min-h-screen bg-slate-950 text-slate-100 space-y-6 relative">
       
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toast.show && (
+        <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+          toast.type === 'success' 
+            ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50' 
+            : 'bg-red-950/95 border-red-500/50 text-red-300 shadow-red-950/50'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
+          <span className="text-xs font-bold tracking-wide">{toast.message}</span>
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
         <div>
@@ -162,7 +200,7 @@ export default function Debts() {
             <CreditCard className="w-7 h-7 text-emerald-400" />
             <span>Daftari la Madeni & Wateja</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Simamia madeni ya wateja, fanya ufuatiliaji, na rekodi malipo.</p>
+          <p className="text-slate-400 text-sm mt-1">Simamia madeni ya wateja, fanya ufuatiliaji, na rekodi au futa madeni.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -291,7 +329,7 @@ export default function Debts() {
                         )}
                       </td>
                       <td className="py-4 px-6 text-slate-300 font-mono">{Number(d.total_amount).toLocaleString()} TZS</td>
-                      <td className="py-4 px-6 text-emerald-400 font-mono">{Number(d.paid_amount).toLocaleString()} TZS</td>
+                      <td className="py-4 px-6 text-emerald-400 font-mono">{Number(d.paid_amount || d.amount_paid || 0).toLocaleString()} TZS</td>
                       <td className="py-4 px-6 text-amber-400 font-bold font-mono">{Number(d.remaining_amount).toLocaleString()} TZS</td>
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
@@ -307,15 +345,26 @@ export default function Debts() {
                           {d.status === 'PAID' ? 'Imelipwa Yote' : d.status === 'PARTIAL' ? 'Imelipwa Nusu' : 'Haijalipwa'}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right space-x-2">
-                        {d.status !== 'PAID' && (
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {d.status !== 'PAID' && (
+                            <button
+                              onClick={() => { setSelectedDebt(d); setShowPayModal(true); }}
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl font-semibold text-xs transition"
+                            >
+                              Sajili Malipo
+                            </button>
+                          )}
+
+                          {/* KITUFE CHA KUFUTA DENI */}
                           <button
-                            onClick={() => { setSelectedDebt(d); setShowPayModal(true); }}
-                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl font-semibold text-xs transition"
+                            onClick={() => { setDebtToDelete(d); setShowDeleteModal(true); }}
+                            className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition"
+                            title="Futa Deni"
                           >
-                            Sajili Malipo
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -513,6 +562,46 @@ export default function Debts() {
                 <span>Rekodi Deni</span>
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: DELETE DEBT CONFIRMATION */}
+      {showDeleteModal && debtToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-base">
+                <Trash2 className="w-5 h-5" />
+                <span>Thibitisha Kufuta Deni</span>
+              </div>
+              <button onClick={() => setShowDeleteModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-slate-300 text-xs leading-relaxed">
+              Je, una uhakika unataka kufuta kabisa kumbukumbu ya deni la <strong className="text-white">{debtToDelete.customer_name}</strong> lenye thamani ya <strong className="text-amber-400">{Number(debtToDelete.total_amount).toLocaleString()} TZS</strong>?
+            </p>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition text-xs"
+              >
+                Ghairi
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteDebt}
+                disabled={isDeleting}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-slate-950 font-extrabold rounded-xl transition text-xs flex items-center justify-center gap-2"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span>Ndio, Futa Deni</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
