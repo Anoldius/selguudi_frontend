@@ -118,13 +118,14 @@ export default function Dashboard() {
     }
   };
 
-  // LOGIC YA MCHAKATO WA REFUND
+ // LOGIC YA MCHAKATO WA REFUND
   const handleExecuteRefund = async (e) => {
     e.preventDefault();
     if (!selectedTx) return;
 
     setIsRefunding(true);
     try {
+      // 1. Jaribio la kwanza: POST sales/transactions/{id}/refund/
       await apiClient.post(`sales/transactions/${selectedTx.id}/refund/`, {
         reason: refundReason
       });
@@ -135,8 +136,26 @@ export default function Dashboard() {
       setRefundReason('');
       fetchDashboardData();
     } catch (err) {
-      console.error("Refund Error:", err.response);
-      alert(err.response?.data?.message || err.response?.data?.error || "Imeshindikana kurejesha muamala huu!");
+      console.error("Refund Error Response:", err.response);
+
+      // Kama endpoint ya /refund/ haipo (404), jaribu kufuta muamala moja kwa moja (DELETE)
+      if (err.response?.status === 404) {
+        try {
+          await apiClient.delete(`sales/transactions/${selectedTx.id}/`);
+          alert("Muamala umefutwa na stoko imerejeshwa vizuri! 🔄");
+          setShowRefundModal(false);
+          setSelectedTx(null);
+          setRefundReason('');
+          fetchDashboardData();
+          return;
+        } catch (deleteErr) {
+          console.error("Delete Error Response:", deleteErr.response);
+          alert(`Error 404 & Delete Failed: ${JSON.stringify(deleteErr.response?.data || deleteErr.message)}`);
+        }
+      } else {
+        const errorData = err.response?.data;
+        alert(`Imeshindikana! Server Response:\n${JSON.stringify(errorData || err.message)}`);
+      }
     } finally {
       setIsRefunding(false);
     }
