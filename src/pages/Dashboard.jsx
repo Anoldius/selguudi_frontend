@@ -6,7 +6,6 @@ import {
   Receipt, 
   TrendingUp, 
   AlertTriangle, 
-  Store,
   Banknote,
   Smartphone,
   CreditCard,
@@ -130,14 +129,13 @@ export default function Dashboard() {
     }
   };
 
-// LOGIC YA MCHAKATO WA REFUND NA KUREJESHA STOKO
+  // LOGIC YA MCHAKATO WA REFUND NA KUREJESHA STOKO
   const handleExecuteRefund = async (e) => {
     e.preventDefault();
     if (!selectedTx) return;
 
     setIsRefunding(true);
     try {
-      // 1. REJESHA STOKO YA KILA BIDHAA ILIYOMO KWENYE MUAMALA
       if (selectedTx.items && Array.isArray(selectedTx.items) && selectedTx.items.length > 0) {
         for (const item of selectedTx.items) {
           const productId = item.product_id || item.product?.id || item.product;
@@ -145,12 +143,10 @@ export default function Dashboard() {
 
           if (productId && returnQty > 0) {
             try {
-              // Vuta stoko ya sasa ya bidhaa
               const prodRes = await apiClient.get(`inventory/products/${productId}/`);
               const currentStock = Number(prodRes.data.quantity ?? prodRes.data.stock_quantity ?? 0);
               const updatedStock = currentStock + returnQty;
 
-              // Ongeza stoko kwenye inventory
               await apiClient.patch(`inventory/products/${productId}/`, {
                 quantity: updatedStock,
                 stock_quantity: updatedStock
@@ -162,7 +158,6 @@ export default function Dashboard() {
         }
       }
 
-      // 2. JARIBU POST /refund/ AU DELETE TRANSACTION
       try {
         await apiClient.post(`sales/transactions/${selectedTx.id}/refund/`, {
           reason: refundReason
@@ -296,7 +291,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Top Welcome Banner with Date */}
+      {/* Top Welcome Banner with Date & Logo */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -311,8 +306,12 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
-          <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-            <Store className="w-5 h-5" />
+          <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-900 border border-emerald-500/20 p-1">
+            <img 
+              src="/selguudiLogo.png" 
+              alt="Selguudi Logo" 
+              className="w-full h-full object-contain rounded-lg"
+            />
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Biashara / Duka</p>
