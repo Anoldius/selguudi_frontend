@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/axios';
-import { User, Lock, Phone, Mail, Building2, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
-import appLogo from '../assets/adaptive_icon.png';
+import { Store, User, Lock, Phone, Mail, Building2, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -73,17 +72,13 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4 my-8">
       <div className="w-full max-w-lg">
-        
-        {/* Brand Header na Adaptive Icon */}
-        <div className="text-center mb-6 flex flex-col items-center">
-          <div className="w-24 h-24 mb-3 flex items-center justify-center rounded-2xl bg-slate-950/40 p-2 border border-slate-800/80 shadow-2xl">
-            <img 
-              src={appLogo} 
-              alt="Selguudi POS Logo" 
-              className="w-full h-full object-contain rounded-xl"
-            />
+        {/* Brand Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-3 shadow-lg shadow-emerald-500/10">
+            <Store className="w-7 h-7" />
           </div>
-          <p className="text-slate-400 text-sm font-medium">Sajili Duka Lako Jipya na Anza Mauzo</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Selguudi <span className="text-emerald-400">POS</span></h1>
+          <p className="text-slate-400 mt-1 text-sm">Sajili Duka Lako Jipya na Anza Mauzo</p>
         </div>
 
         {/* Card Form */}
