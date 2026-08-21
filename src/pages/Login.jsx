@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
-import appLogo from '../assets/adaptive-icon.png';
+import appLogo from '../assets/adaptive_icon.png';
 
 export default function Login() {
   const [username, setUsername] = useState('');

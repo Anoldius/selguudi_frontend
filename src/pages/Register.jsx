@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/axios';
 import { User, Lock, Phone, Mail, Building2, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
-import appLogo from '../assets/adaptive-icon.png';
+import appLogo from '../assets/adaptive_icon.png';
 
 export default function Register() {
   const [formData, setFormData] = useState({
