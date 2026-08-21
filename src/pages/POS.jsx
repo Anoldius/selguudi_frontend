@@ -8,7 +8,10 @@ import {
   Trash2, 
   CreditCard, 
   CheckCircle2, 
-  Loader2 
+  Loader2,
+  BookOpen,
+  UserCheck,
+  X 
 } from 'lucide-react';
 
 export default function POS() {
@@ -17,11 +20,18 @@ export default function POS() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Choices za Backend Django Model: 'cash', 'mobile_money', 'bank_card'
+  // Choices za Backend: 'cash', 'mobile_money', 'bank_card', 'credit'
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
   const [isCheckout, setIsCheckout] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // State za Modal ya Kukopa
+  const [showDebtModal, setShowDebtModal] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [debtNotes, setDebtNotes] = useState('');
 
   // 1. Vuta Bidhaa Kutoka Backend
   useEffect(() => {
@@ -95,25 +105,39 @@ export default function POS() {
   const totalAmount = cart.reduce((sum, item) => sum + (parseFloat(item.selling_price) * item.quantity), 0);
   const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
 
-  // 3. Process Sale / Checkout
-  const handleCheckout = async () => {
+  // 3. Process Sale / Checkout Initiator
+  const handleInitiateCheckout = () => {
     if (cart.length === 0) return;
 
+    if (paymentMethod === 'credit') {
+      setShowDebtModal(true);
+    } else {
+      executeCheckout({});
+    }
+  };
+
+  const executeCheckout = async (debtDetails = {}) => {
     setIsCheckout(true);
     try {
       const payload = {
-        payment_method: paymentMethod, // 'cash', 'mobile_money', au 'bank_card'
+        payment_method: paymentMethod, // 'cash', 'mobile_money', 'bank_card', au 'credit'
         items: cart.map(item => ({
           product_id: String(item.id),
           quantity: Number(item.quantity)
-        }))
+        })),
+        ...debtDetails
       };
 
       await apiClient.post('sales/transactions/', payload);
       
-      setSuccessMsg('Mauzo Yamekamilika Vizuri! 🎉');
+      setSuccessMsg(paymentMethod === 'credit' ? 'Deni Limesajiliwa Vizuri! 📝' : 'Mauzo Yamekamilika Vizuri! 🎉');
       setCart([]);
       setAmountPaid('');
+      setShowDebtModal(false);
+      setCustomerName('');
+      setCustomerPhone('');
+      setDueDate('');
+      setDebtNotes('');
       fetchProducts();
 
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -137,8 +161,22 @@ export default function POS() {
     }
   };
 
+  const handleDebtSubmit = (e) => {
+    e.preventDefault();
+    if (!customerName.trim()) {
+      alert("Tafadhali weka Jina la Mteja!");
+      return;
+    }
+    executeCheckout({
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      due_date: dueDate,
+      notes: debtNotes
+    });
+  };
+
   return (
-    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6">
+    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6 relative">
       
       {/* LEFT SIDE: Product Catalog & Search */}
       <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-3xl p-5">
@@ -260,14 +298,15 @@ export default function POS() {
         {/* Payment Summary */}
         <div className="pt-4 border-t border-slate-800 space-y-3">
           
-          {/* Payment Method Selector */}
+          {/* Payment Method Selector (Njia 4) */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-1.5">
               {[
                 { id: 'cash', label: 'Cash' },
                 { id: 'mobile_money', label: 'Lipa' },
-                { id: 'bank_card', label: 'Card' }
+                { id: 'bank_card', label: 'Card' },
+                { id: 'credit', label: 'Kukopa' }
               ].map((method) => (
                 <button
                   key={method.id}
@@ -275,7 +314,9 @@ export default function POS() {
                   onClick={() => setPaymentMethod(method.id)}
                   className={`py-2 text-xs font-bold rounded-xl border capitalize transition ${
                     paymentMethod === method.id
-                      ? 'bg-emerald-500 text-slate-950 border-emerald-500'
+                      ? method.id === 'credit' 
+                        ? 'bg-amber-500 text-slate-950 border-amber-500' 
+                        : 'bg-emerald-500 text-slate-950 border-emerald-500'
                       : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                   }`}
                 >
@@ -285,20 +326,22 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Amount Paid Input */}
-          <div>
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Fedha Iliyotolewa:</span>
-              {change > 0 && <span className="text-emerald-400 font-bold">Chenji: {change.toLocaleString()} TZS</span>}
+          {/* Amount Paid Input (Haikai ikiwa ni Kukopa) */}
+          {paymentMethod !== 'credit' && (
+            <div>
+              <div className="flex justify-between text-xs text-slate-400 mb-1">
+                <span>Fedha Iliyotolewa:</span>
+                {change > 0 && <span className="text-emerald-400 font-bold">Chenji: {change.toLocaleString()} TZS</span>}
+              </div>
+              <input
+                type="number"
+                placeholder="Weka kiasi kilicholipwa..."
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+              />
             </div>
-            <input
-              type="number"
-              placeholder="Weka kiasi kilicholipwa..."
-              value={amountPaid}
-              onChange={(e) => setAmountPaid(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
-            />
-          </div>
+          )}
 
           {/* Total Price & Submit */}
           <div className="flex items-center justify-between pt-2">
@@ -307,16 +350,97 @@ export default function POS() {
           </div>
 
           <button
-            onClick={handleCheckout}
+            onClick={handleInitiateCheckout}
             disabled={cart.length === 0 || isCheckout}
-            className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+            className={`w-full py-3.5 font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 ${
+              paymentMethod === 'credit'
+                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+            }`}
           >
-            {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-            <span>Kamilisha Mauzo</span>
+            {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : paymentMethod === 'credit' ? <BookOpen className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+            <span>{paymentMethod === 'credit' ? 'Sajili Kama Deni' : 'Kamilisha Mauzo'}</span>
           </button>
         </div>
 
       </div>
+
+      {/* MODAL FORM YA SAJILI DENI */}
+      {showDebtModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+                <BookOpen className="w-5 h-5" />
+                <span>Taarifa za Mteja Anayekopa</span>
+              </div>
+              <button onClick={() => setShowDebtModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleDebtSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Jina la Mteja *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Mfano: John Doe"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Namba ya Simu</label>
+                <input
+                  type="text"
+                  placeholder="Mfano: 0712345678"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Tarehe ya Ahadi ya Kulipa</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Maelezo Ziada (Notes)</label>
+                <textarea
+                  rows="2"
+                  placeholder="Maelezo mengine ya ziada..."
+                  value={debtNotes}
+                  onChange={(e) => setDebtNotes(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-semibold">Jumla ya Deni:</span>
+                <span className="text-lg font-extrabold text-amber-400">{totalAmount.toLocaleString()} TZS</span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isCheckout}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2"
+              >
+                {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserCheck className="w-5 h-5" />}
+                <span>Hifadhi & Kamilisha Deni</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -13,7 +13,8 @@ import {
   Clock,
   PackageCheck,
   Calendar,
-  Filter
+  Filter,
+  BookOpen
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -72,7 +73,7 @@ export default function Dashboard() {
     return true;
   });
 
-  // 2. KOKOTOA HESABU KULINGANA NA FILTER ILIYOCHAGULIWA
+  // 2. KOKOTOA HESABU (CASH, LIPA, CARD, NA KUKOPA/MADENI)
   const cashTotal = filteredTransactions
     .filter(t => (t.payment_method || '').toLowerCase() === 'cash')
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
@@ -85,7 +86,11 @@ export default function Dashboard() {
     .filter(t => ['bank_card', 'card'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const totalSales = cashTotal + lipaTotal + cardTotal;
+  const creditTotal = filteredTransactions
+    .filter(t => ['credit', 'deni', 'kukopa'].includes((t.payment_method || '').toLowerCase()))
+    .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
+
+  const totalSales = cashTotal + lipaTotal + cardTotal + creditTotal;
 
   // Header Date Label Format
   const getFilterLabel = () => {
@@ -151,6 +156,13 @@ export default function Dashboard() {
       color: 'text-purple-400',
       bg: 'bg-purple-500/10 border-purple-500/20',
     },
+    {
+      title: 'Mauzo ya Kukopa (Deni)',
+      value: `${creditTotal.toLocaleString()} TZS`,
+      icon: BookOpen,
+      color: 'text-amber-400',
+      bg: 'bg-amber-500/10 border-amber-500/20',
+    },
   ];
 
   const renderPaymentBadge = (method) => {
@@ -171,6 +183,12 @@ export default function Dashboard() {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 border border-purple-500/20 text-purple-400">
           <CreditCard className="w-3.5 h-3.5" /> Card
+        </span>
+      );
+    } else if (m === 'credit' || m === 'deni' || m === 'kukopa') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          <BookOpen className="w-3.5 h-3.5" /> Kukopa / Deni
         </span>
       );
     }
@@ -267,12 +285,12 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Mchanganuo wa Njia za Malipo */}
+      {/* Mchanganuo wa Njia 4 za Malipo (Cash, Lipa, Card, na Kukopa) */}
       <div>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
           Mchanganuo wa Mauzo kwa Njia ya Malipo ({dateFilter === 'today' ? 'Leo' : dateFilter === 'yesterday' ? 'Jana' : 'Wiki Hii'})
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {paymentCards.map((card, idx) => {
             const Icon = card.icon;
             return (
@@ -314,7 +332,7 @@ export default function Dashboard() {
               <thead className="text-xs text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800">
                 <tr>
                   <th className="py-3 px-4">Saa / Tarehe</th>
-                  <th className="py-3 px-4">Bidhaa Zilizouzwa</th>
+                  <th className="py-3 px-4">Bidhaa Zilizouzwa / Mteja</th>
                   <th className="py-3 px-4">Njia ya Malipo</th>
                   <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
                 </tr>
@@ -330,6 +348,8 @@ export default function Dashboard() {
                     ? tx.items.map(item => `${item.product_name || item.product?.name || 'Bidhaa'} (${item.quantity}x)`).join(', ')
                     : 'Muamala wa Mauzo';
 
+                  const customerInfo = tx.customer_name ? ` - Mteja: ${tx.customer_name}` : '';
+
                   return (
                     <tr key={tx.id} className="hover:bg-slate-800/30 transition">
                       <td className="py-3.5 px-4 font-mono text-xs text-slate-400 flex items-center gap-1.5">
@@ -338,7 +358,7 @@ export default function Dashboard() {
                       </td>
 
                       <td className="py-3.5 px-4 font-medium text-white max-w-xs truncate">
-                        {itemsList}
+                        {itemsList} <span className="text-xs text-amber-400 font-semibold">{customerInfo}</span>
                       </td>
 
                       <td className="py-3.5 px-4">
