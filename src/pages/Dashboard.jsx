@@ -130,43 +130,60 @@ export default function Dashboard() {
     }
   };
 
-  // LOGIC YA MCHAKATO WA REFUND
+// LOGIC YA MCHAKATO WA REFUND NA KUREJESHA STOKO
   const handleExecuteRefund = async (e) => {
     e.preventDefault();
     if (!selectedTx) return;
 
     setIsRefunding(true);
     try {
-      // 1. Jaribio la kwanza: POST sales/transactions/{id}/refund/
-      await apiClient.post(`sales/transactions/${selectedTx.id}/refund/`, {
-        reason: refundReason
-      });
+      // 1. REJESHA STOKO YA KILA BIDHAA ILIYOMO KWENYE MUAMALA
+      if (selectedTx.items && Array.isArray(selectedTx.items) && selectedTx.items.length > 0) {
+        for (const item of selectedTx.items) {
+          const productId = item.product_id || item.product?.id || item.product;
+          const returnQty = Number(item.quantity || 0);
 
-      triggerToast("Muamala umerejeshwa vizuri na stoko imerejea! 🔄", "success");
+          if (productId && returnQty > 0) {
+            try {
+              // Vuta stoko ya sasa ya bidhaa
+              const prodRes = await apiClient.get(`inventory/products/${productId}/`);
+              const currentStock = Number(prodRes.data.quantity ?? prodRes.data.stock_quantity ?? 0);
+              const updatedStock = currentStock + returnQty;
+
+              // Ongeza stoko kwenye inventory
+              await apiClient.patch(`inventory/products/${productId}/`, {
+                quantity: updatedStock,
+                stock_quantity: updatedStock
+              });
+            } catch (pErr) {
+              console.error(`Imeshindikana kurejesha stoko ya product ${productId}:`, pErr);
+            }
+          }
+        }
+      }
+
+      // 2. JARIBU POST /refund/ AU DELETE TRANSACTION
+      try {
+        await apiClient.post(`sales/transactions/${selectedTx.id}/refund/`, {
+          reason: refundReason
+        });
+      } catch (err) {
+        if (err.response?.status === 404) {
+          await apiClient.delete(`sales/transactions/${selectedTx.id}/`);
+        } else {
+          throw err;
+        }
+      }
+
+      triggerToast("Muamala umerejeshwa na stoko imeongezeka kiotomatiki! 🔄", "success");
       setShowRefundModal(false);
       setSelectedTx(null);
       setRefundReason('');
       fetchDashboardData();
     } catch (err) {
       console.error("Refund Error Response:", err.response);
-
-      // Kama endpoint ya /refund/ haipo (404), jaribu DELETE
-      if (err.response?.status === 404) {
-        try {
-          await apiClient.delete(`sales/transactions/${selectedTx.id}/`);
-          triggerToast("Muamala umefutwa na stoko imerejeshwa vizuri! 🔄", "success");
-          setShowRefundModal(false);
-          setSelectedTx(null);
-          setRefundReason('');
-          fetchDashboardData();
-        } catch (deleteErr) {
-          console.error("Delete Error Response:", deleteErr.response);
-          triggerToast("Imeshindikana kufuta muamala kwenye server!", "error");
-        }
-      } else {
-        const errorMsg = err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kurejesha muamala!";
-        triggerToast(errorMsg, "error");
-      }
+      const errorMsg = err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kurejesha muamala!";
+      triggerToast(errorMsg, "error");
     } finally {
       setIsRefunding(false);
     }
