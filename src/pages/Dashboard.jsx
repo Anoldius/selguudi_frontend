@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { DollarSign, Receipt, TrendingUp, AlertTriangle, Store } from 'lucide-react';
+import { 
+  DollarSign, 
+  Receipt, 
+  TrendingUp, 
+  AlertTriangle, 
+  Store,
+  Banknote,
+  Smartphone,
+  CreditCard
+} from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -20,7 +29,6 @@ export default function Dashboard() {
       });
   }, []);
 
-  // Pata jina la duka kwa mpangilio sahihi wa vyanzo vya data
   const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
   if (loading) {
@@ -58,9 +66,34 @@ export default function Dashboard() {
     },
   ];
 
+  // Mchanganuo wa Malipo
+  const paymentCards = [
+    {
+      title: 'Mauzo ya Cash',
+      value: `${(data?.today_cash_sales ?? data?.cash_sales ?? 0).toLocaleString()} TZS`,
+      icon: Banknote,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10 border-emerald-500/20',
+    },
+    {
+      title: 'Mauzo ya Lipa (Simu)',
+      value: `${(data?.today_lipa_sales ?? data?.mobile_money_sales ?? 0).toLocaleString()} TZS`,
+      icon: Smartphone,
+      color: 'text-blue-400',
+      bg: 'bg-blue-500/10 border-blue-500/20',
+    },
+    {
+      title: 'Mauzo ya Card',
+      value: `${(data?.today_card_sales ?? data?.bank_card_sales ?? 0).toLocaleString()} TZS`,
+      icon: CreditCard,
+      color: 'text-purple-400',
+      bg: 'bg-purple-500/10 border-purple-500/20',
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Top Welcome Banner with Dynamic Business Name */}
+      {/* Top Welcome Banner */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -70,7 +103,7 @@ export default function Dashboard() {
           <p className="text-slate-400 text-sm mt-1">Hapa ndipo muhtasari halisi wa biashara yako kwa siku ya leo.</p>
         </div>
 
-        {/* Dynamic Business Name Badge */}
+        {/* Business Name Badge */}
         <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
           <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
             <Store className="w-5 h-5" />
@@ -84,7 +117,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Analytics Cards Grid */}
+      {/* Main Analytics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {statCards.map((card, idx) => {
           const Icon = card.icon;
@@ -100,6 +133,29 @@ export default function Dashboard() {
             </div>
           );
         })}
+      </div>
+
+      {/* Mchangano wa Njia za Malipo */}
+      <div>
+        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+          Mchanganuo wa Mauzo kwa Njia ya Malipo (Leo)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {paymentCards.map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <div key={idx} className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{card.title}</p>
+                  <h3 className="text-xl font-extrabold text-white font-mono">{card.value}</h3>
+                </div>
+                <div className={`p-3 rounded-xl border ${card.bg} ${card.color}`}>
+                  <Icon className="w-6 h-6" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

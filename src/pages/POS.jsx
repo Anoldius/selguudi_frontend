@@ -17,7 +17,7 @@ export default function POS() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Choice za Backend Django Model: 'cash', 'mobile_money', 'bank_card', 'credit'
+  // Choices za Backend Django Model: 'cash', 'mobile_money', 'bank_card'
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
   const [isCheckout, setIsCheckout] = useState(false);
@@ -101,7 +101,6 @@ export default function POS() {
 
     setIsCheckout(true);
     try {
-      // Tengeneza payload sahihi kwa ajili ya SaleCreateSerializer
       const payload = {
         payment_method: paymentMethod, // 'cash', 'mobile_money', au 'bank_card'
         items: cart.map(item => ({
@@ -115,7 +114,7 @@ export default function POS() {
       setSuccessMsg('Mauzo Yamekamilika Vizuri! 🎉');
       setCart([]);
       setAmountPaid('');
-      fetchProducts(); // Refresh stock counts
+      fetchProducts();
 
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
@@ -267,7 +266,7 @@ export default function POS() {
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'cash', label: 'Cash' },
-                { id: 'mobile_money', label: 'M-Pesa' },
+                { id: 'mobile_money', label: 'Lipa' },
                 { id: 'bank_card', label: 'Card' }
               ].map((method) => (
                 <button
