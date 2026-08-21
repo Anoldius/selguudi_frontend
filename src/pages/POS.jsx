@@ -20,7 +20,7 @@ export default function POS() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Choices za Backend: 'cash', 'mobile_money', 'bank_card', 'credit'
+  // Choices: 'cash', 'mobile_money', 'bank_card', 'credit'
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
   const [isCheckout, setIsCheckout] = useState(false);
@@ -33,7 +33,6 @@ export default function POS() {
   const [dueDate, setDueDate] = useState('');
   const [debtNotes, setDebtNotes] = useState('');
 
-  // 1. Vuta Bidhaa Kutoka Backend
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -49,13 +48,11 @@ export default function POS() {
     }
   };
 
-  // Filter bidhaa kwa search term
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     (p.barcode && p.barcode.includes(search))
   );
 
-  // 2. Add to Cart Logic
   const addToCart = (product) => {
     const stockAvailable = Number(product.quantity ?? product.stock_quantity ?? 0);
 
@@ -80,7 +77,6 @@ export default function POS() {
     }
   };
 
-  // Update Quantity
   const updateQuantity = (id, delta) => {
     setCart(cart.map(item => {
       if (item.id === id) {
@@ -96,16 +92,13 @@ export default function POS() {
     }).filter(Boolean));
   };
 
-  // Remove Item
   const removeFromCart = (id) => {
     setCart(cart.filter(item => item.id !== id));
   };
 
-  // Calculate Totals
   const totalAmount = cart.reduce((sum, item) => sum + (parseFloat(item.selling_price) * item.quantity), 0);
   const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
 
-  // 3. Process Sale / Checkout Initiator
   const handleInitiateCheckout = () => {
     if (cart.length === 0) return;
 
@@ -119,18 +112,60 @@ export default function POS() {
   const executeCheckout = async (debtDetails = {}) => {
     setIsCheckout(true);
     try {
-      const payload = {
-        payment_method: paymentMethod, // 'cash', 'mobile_money', 'bank_card', au 'credit'
+      // 1. KAMA NI MALIPO YA KUKOPA: TAFUTA/SAJILI MTEJA NA DENI KWENYE DEBTS MODULE
+      if (paymentMethod === 'credit') {
+        let customerId = null;
+
+        try {
+          const custRes = await apiClient.get('sales/customers/');
+          const existingCustomers = custRes.data.results || custRes.data || [];
+          
+          const match = existingCustomers.find(c => 
+            c.name?.toLowerCase() === debtDetails.customer_name?.toLowerCase() ||
+            (debtDetails.customer_phone && c.phone === debtDetails.customer_phone)
+          );
+
+          if (match) {
+            customerId = match.id;
+          } else {
+            const newCustRes = await apiClient.post('sales/customers/', {
+              name: debtDetails.customer_name,
+              phone: debtDetails.customer_phone || ''
+            });
+            customerId = newCustRes.data.id;
+          }
+        } catch (cErr) {
+          console.error("Error creating/fetching customer:", cErr);
+        }
+
+        if (customerId) {
+          const debtPayload = {
+            customer: customerId,
+            total_amount: totalAmount,
+            remaining_amount: totalAmount,
+          };
+          if (debtDetails.due_date && debtDetails.due_date.trim() !== '') {
+            debtPayload.due_date = debtDetails.due_date;
+          }
+
+          await apiClient.post('sales/debts/', debtPayload);
+        }
+      }
+
+      // 2. SAJILI SALE TRANSACTION ILI STOKO IPUNGUE NA IONEKANE KWENYE DASHBOARD
+      const salePayload = {
+        payment_method: paymentMethod,
+        customer_name: debtDetails.customer_name || '',
+        customer_phone: debtDetails.customer_phone || '',
         items: cart.map(item => ({
           product_id: String(item.id),
           quantity: Number(item.quantity)
-        })),
-        ...debtDetails
+        }))
       };
 
-      await apiClient.post('sales/transactions/', payload);
+      await apiClient.post('sales/transactions/', salePayload);
       
-      setSuccessMsg(paymentMethod === 'credit' ? 'Deni Limesajiliwa Vizuri! 📝' : 'Mauzo Yamekamilika Vizuri! 🎉');
+      setSuccessMsg(paymentMethod === 'credit' ? 'Deni Limesajiliwa Kwenye Daftari na Mauzo Yamekamilika! 📝' : 'Mauzo Yamekamilika Vizuri! 🎉');
       setCart([]);
       setAmountPaid('');
       setShowDebtModal(false);
@@ -180,8 +215,6 @@ export default function POS() {
       
       {/* LEFT SIDE: Product Catalog & Search */}
       <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-3xl p-5">
-        
-        {/* Search Bar */}
         <div className="relative mb-5">
           <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
           <input
@@ -193,7 +226,6 @@ export default function POS() {
           />
         </div>
 
-        {/* Products Grid */}
         <div className="flex-1 overflow-y-auto pr-1">
           {loading ? (
             <div className="flex items-center justify-center h-full text-slate-400 gap-2">
@@ -237,11 +269,9 @@ export default function POS() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Cart / Bill Section */}
+      {/* RIGHT SIDE: Cart Section */}
       <div className="w-full md:w-96 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
-        
         <div>
-          {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <h2 className="font-bold text-lg text-white flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-emerald-400" />
@@ -252,7 +282,6 @@ export default function POS() {
             </span>
           </div>
 
-          {/* Success Notification */}
           {successMsg && (
             <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" />
@@ -260,7 +289,6 @@ export default function POS() {
             </div>
           )}
 
-          {/* Cart Items List */}
           <div className="mt-4 max-h-64 overflow-y-auto space-y-3 pr-1">
             {cart.length === 0 ? (
               <div className="text-center py-10 text-slate-500 text-sm">
@@ -295,10 +323,8 @@ export default function POS() {
           </div>
         </div>
 
-        {/* Payment Summary */}
+        {/* Payment Options Summary */}
         <div className="pt-4 border-t border-slate-800 space-y-3">
-          
-          {/* Payment Method Selector (Njia 4) */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
             <div className="grid grid-cols-4 gap-1.5">
@@ -326,7 +352,6 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Amount Paid Input (Haikai ikiwa ni Kukopa) */}
           {paymentMethod !== 'credit' && (
             <div>
               <div className="flex justify-between text-xs text-slate-400 mb-1">
@@ -343,7 +368,6 @@ export default function POS() {
             </div>
           )}
 
-          {/* Total Price & Submit */}
           <div className="flex items-center justify-between pt-2">
             <span className="text-xs font-bold text-slate-400 uppercase">Jumla Kuu:</span>
             <span className="text-2xl font-extrabold text-emerald-400">{totalAmount.toLocaleString()} TZS</span>
@@ -362,7 +386,6 @@ export default function POS() {
             <span>{paymentMethod === 'credit' ? 'Sajili Kama Deni' : 'Kamilisha Mauzo'}</span>
           </button>
         </div>
-
       </div>
 
       {/* MODAL FORM YA SAJILI DENI */}
