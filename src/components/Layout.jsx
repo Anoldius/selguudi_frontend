@@ -40,7 +40,7 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
       
       {/* DESKTOP SIDEBAR */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800/80 flex flex-col justify-between hidden md:flex shrink-0">
+      <aside className="w-64 bg-slate-900 border-r border-slate-800/80 hidden md:flex flex-col justify-between shrink-0"> 
         <div>
           {/* Brand Header */}
           <div className="p-6 border-b border-slate-800/60 flex items-center gap-3">
