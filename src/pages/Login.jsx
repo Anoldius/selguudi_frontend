@@ -1,7 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Store, Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import appLogo from '../assets/adaptive-icon.png';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -31,13 +32,17 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4">
       <div className="w-full max-w-md">
-        {/* Brand Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-4 shadow-lg shadow-emerald-500/10">
-            <Store className="w-8 h-8" />
+        
+        {/* Brand Header na Adaptive Icon */}
+        <div className="text-center mb-6 flex flex-col items-center">
+          <div className="w-24 h-24 mb-3 flex items-center justify-center rounded-2xl bg-slate-950/40 p-2 border border-slate-800/80 shadow-2xl">
+            <img 
+              src={appLogo} 
+              alt="Selguudi POS Logo" 
+              className="w-full h-full object-contain rounded-xl"
+            />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Selguudi <span className="text-emerald-400">POS</span></h1>
-          <p className="text-slate-400 mt-2 text-sm">Mfumo wa Kisasa wa Mauzo na Stoko</p>
+          <p className="text-slate-400 text-sm font-medium">Mfumo wa Kisasa wa Mauzo na Stoko</p>
         </div>
 
         {/* Card Form */}
