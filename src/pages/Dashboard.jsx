@@ -17,7 +17,9 @@ import {
   BookOpen,
   RotateCcw,
   X,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -34,6 +36,16 @@ export default function Dashboard() {
   const [selectedTx, setSelectedTx] = useState(null);
   const [refundReason, setRefundReason] = useState('');
   const [isRefunding, setIsRefunding] = useState(false);
+
+  // Custom Toast State Badala ya Browser Alert
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -118,7 +130,7 @@ export default function Dashboard() {
     }
   };
 
- // LOGIC YA MCHAKATO WA REFUND
+  // LOGIC YA MCHAKATO WA REFUND
   const handleExecuteRefund = async (e) => {
     e.preventDefault();
     if (!selectedTx) return;
@@ -130,7 +142,7 @@ export default function Dashboard() {
         reason: refundReason
       });
 
-      alert("Muamala umerejeshwa vizuri na stoko imerejea! 🔄");
+      triggerToast("Muamala umerejeshwa vizuri na stoko imerejea! 🔄", "success");
       setShowRefundModal(false);
       setSelectedTx(null);
       setRefundReason('');
@@ -138,23 +150,22 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Refund Error Response:", err.response);
 
-      // Kama endpoint ya /refund/ haipo (404), jaribu kufuta muamala moja kwa moja (DELETE)
+      // Kama endpoint ya /refund/ haipo (404), jaribu DELETE
       if (err.response?.status === 404) {
         try {
           await apiClient.delete(`sales/transactions/${selectedTx.id}/`);
-          alert("Muamala umefutwa na stoko imerejeshwa vizuri! 🔄");
+          triggerToast("Muamala umefutwa na stoko imerejeshwa vizuri! 🔄", "success");
           setShowRefundModal(false);
           setSelectedTx(null);
           setRefundReason('');
           fetchDashboardData();
-          return;
         } catch (deleteErr) {
           console.error("Delete Error Response:", deleteErr.response);
-          alert(`Error 404 & Delete Failed: ${JSON.stringify(deleteErr.response?.data || deleteErr.message)}`);
+          triggerToast("Imeshindikana kufuta muamala kwenye server!", "error");
         }
       } else {
-        const errorData = err.response?.data;
-        alert(`Imeshindikana! Server Response:\n${JSON.stringify(errorData || err.message)}`);
+        const errorMsg = err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kurejesha muamala!";
+        triggerToast(errorMsg, "error");
       }
     } finally {
       setIsRefunding(false);
@@ -255,6 +266,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 relative">
+      
+      {/* CUSTOM TOAST NOTIFICATION BANNER */}
+      {toast.show && (
+        <div className={`fixed top-6 right-6 z-[60] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+          toast.type === 'success' 
+            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' 
+            : 'bg-red-950/90 border-red-500/50 text-red-300'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
+          <span className="text-xs font-bold tracking-wide">{toast.message}</span>
+        </div>
+      )}
+
       {/* Top Welcome Banner with Date */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
