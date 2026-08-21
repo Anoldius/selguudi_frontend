@@ -8,7 +8,6 @@ import {
   CreditCard,
   BarChart3, 
   LogOut, 
-  Store, 
   User,
   Heart,
   Menu,
@@ -42,14 +41,22 @@ export default function Layout({ children }) {
       {/* DESKTOP SIDEBAR */}
       <aside className="w-64 bg-slate-900 border-r border-slate-800/80 hidden md:flex flex-col justify-between shrink-0"> 
         <div>
-          {/* Brand Header */}
-          <div className="p-6 border-b border-slate-800/60 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Store className="w-6 h-6" />
+          {/* Brand Header with Custom Logo */}
+          <div className="p-5 border-b border-slate-800/60 flex items-center gap-3">
+            <div className="w-11 h-11 shrink-0 rounded-2xl bg-slate-950/60 border border-slate-800 p-1.5 shadow-md flex items-center justify-center">
+              <img 
+                src="/selguudiLogo.png" 
+                alt="Selguudi POS Logo" 
+                className="w-full h-full object-contain rounded-xl"
+              />
             </div>
-            <div>
-              <h1 className="font-extrabold text-lg tracking-wide text-white">Selguudi <span className="text-emerald-400">POS</span></h1>
-              <p className="text-xs text-slate-400 font-medium truncate max-w-[130px]">{user?.business_name || 'Selguudi Mart'}</p>
+            <div className="overflow-hidden">
+              <h1 className="font-extrabold text-lg tracking-wide text-white leading-tight">
+                Selguudi <span className="text-emerald-400">POS</span>
+              </h1>
+              <p className="text-xs text-slate-400 font-medium truncate max-w-[130px]">
+                {user?.business_name || 'Selguudi Mart'}
+              </p>
             </div>
           </div>
 
@@ -74,7 +81,7 @@ export default function Layout({ children }) {
               );
             })}
 
-            {/* USER PROFILE & LOGOUT BADGE (IMEVUTWA JUU HAPA BAADA YA RIPOTI!) */}
+            {/* USER PROFILE & LOGOUT BADGE */}
             <div className="pt-3 mt-3 border-t border-slate-800/60">
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
                 <div className="flex items-center gap-3 overflow-hidden">
@@ -110,8 +117,14 @@ export default function Layout({ children }) {
           <div className="w-72 bg-slate-900 h-full border-r border-slate-800 p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-5 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <Store className="w-6 h-6 text-emerald-400" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-950/60 border border-slate-800 p-1 flex items-center justify-center">
+                    <img 
+                      src="/selguudiLogo.png" 
+                      alt="Selguudi POS Logo" 
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                  </div>
                   <span className="font-extrabold text-white text-lg">Selguudi POS</span>
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white">
