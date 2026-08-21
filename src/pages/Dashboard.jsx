@@ -9,22 +9,31 @@ import {
   Store,
   Banknote,
   Smartphone,
-  CreditCard
+  CreditCard,
+  Clock,
+  PackageCheck
 } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient.get('reports/dashboard/')
-      .then(res => {
-        setData(res.data);
+    // Vuta data za Dashboard na Miamala ya Leo kwa pamoja
+    const getDashboardData = apiClient.get('reports/dashboard/');
+    const getTodayTransactions = apiClient.get('sales/transactions/');
+
+    Promise.all([getDashboardData, getTodayTransactions])
+      .then(([dashRes, transRes]) => {
+        setData(dashRes.data);
+        const transData = transRes.data.results || transRes.data || [];
+        setTransactions(transData);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching dashboard:", err);
+        console.error("Error fetching dashboard data:", err);
         setLoading(false);
       });
   }, []);
@@ -66,7 +75,6 @@ export default function Dashboard() {
     },
   ];
 
-  // Mchanganuo wa Malipo
   const paymentCards = [
     {
       title: 'Mauzo ya Cash',
@@ -91,6 +99,30 @@ export default function Dashboard() {
     },
   ];
 
+  const renderPaymentBadge = (method) => {
+    const m = (method || '').toLowerCase();
+    if (m === 'cash') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <Banknote className="w-3.5 h-3.5" /> Cash
+        </span>
+      );
+    } else if (m === 'mobile_money' || m === 'lipa' || m === 'mpesa') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 border border-blue-500/20 text-blue-400">
+          <Smartphone className="w-3.5 h-3.5" /> Lipa Namba
+        </span>
+      );
+    } else if (m === 'bank_card' || m === 'card') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 border border-purple-500/20 text-purple-400">
+          <CreditCard className="w-3.5 h-3.5" /> Card
+        </span>
+      );
+    }
+    return <span className="text-xs text-slate-400 uppercase font-semibold">{method}</span>;
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Welcome Banner */}
@@ -103,7 +135,6 @@ export default function Dashboard() {
           <p className="text-slate-400 text-sm mt-1">Hapa ndipo muhtasari halisi wa biashara yako kwa siku ya leo.</p>
         </div>
 
-        {/* Business Name Badge */}
         <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
           <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
             <Store className="w-5 h-5" />
@@ -135,7 +166,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Mchangano wa Njia za Malipo */}
+      {/* Mchanganuo wa Njia za Malipo */}
       <div>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
           Mchanganuo wa Mauzo kwa Njia ya Malipo (Leo)
@@ -156,6 +187,70 @@ export default function Dashboard() {
             );
           })}
         </div>
+      </div>
+
+      {/* ORODHA YA MAUZO NA BIDHAA ZILIZOUZWA LEO */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <PackageCheck className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-base font-bold text-white">Orodha ya Mauzo na Bidhaa Zilizouzwa Leo</h2>
+          </div>
+          <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
+            Jumla: {transactions.length} Miamala
+          </span>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="text-center py-10 text-slate-500 text-sm">
+            Bado hakuna mauzo yaliyofanyika siku ya leo.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-300">
+              <thead className="text-xs text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800">
+                <tr>
+                  <th className="py-3 px-4">Saa / Muda</th>
+                  <th className="py-3 px-4">Bidhaa Zilizouzwa</th>
+                  <th className="py-3 px-4">Njia ya Malipo</th>
+                  <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {transactions.map((tx) => {
+                  const txTime = tx.created_at 
+                    ? new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '--:--';
+
+                  const itemsList = tx.items && tx.items.length > 0 
+                    ? tx.items.map(item => `${item.product_name || item.product?.name || 'Bidhaa'} (${item.quantity}x)`).join(', ')
+                    : 'Muamala wa Mauzo';
+
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-800/30 transition">
+                      <td className="py-3.5 px-4 font-mono text-xs text-slate-400 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        {txTime}
+                      </td>
+
+                      <td className="py-3.5 px-4 font-medium text-white max-w-xs truncate">
+                        {itemsList}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {renderPaymentBadge(tx.payment_method)}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400 font-mono">
+                        {Number(tx.total_amount || tx.amount_paid || 0).toLocaleString()} TZS
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
