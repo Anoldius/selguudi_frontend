@@ -11,7 +11,8 @@ import {
   Loader2,
   BookOpen,
   UserCheck,
-  X 
+  X,
+  AlertCircle
 } from 'lucide-react';
 
 export default function POS() {
@@ -24,7 +25,6 @@ export default function POS() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
   const [isCheckout, setIsCheckout] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
 
   // State za Modal ya Kukopa
   const [showDebtModal, setShowDebtModal] = useState(false);
@@ -32,6 +32,16 @@ export default function POS() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [debtNotes, setDebtNotes] = useState('');
+
+  // Custom Toast State (Badala ya Alert ya Browser)
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -57,14 +67,14 @@ export default function POS() {
     const stockAvailable = Number(product.quantity ?? product.stock_quantity ?? 0);
 
     if (stockAvailable <= 0) {
-      alert("Bidhaa hii imeisha stoko!");
+      triggerToast("Bidhaa hii imeisha stoko!", "error");
       return;
     }
 
     const existing = cart.find(item => item.id === product.id);
     if (existing) {
       if (existing.quantity >= stockAvailable) {
-        alert("Huwezi kuongeza zaidi ya stoko iliyopo!");
+        triggerToast("Huwezi kuongeza zaidi ya stoko iliyopo!", "error");
         return;
       }
       setCart(cart.map(item => 
@@ -83,7 +93,7 @@ export default function POS() {
         const newQty = item.quantity + delta;
         if (newQty <= 0) return null;
         if (newQty > item.availableStock) {
-          alert("Umezidi stoko iliyopo!");
+          triggerToast("Umezidi stoko iliyopo!", "error");
           return item;
         }
         return { ...item, quantity: newQty };
@@ -112,7 +122,6 @@ export default function POS() {
   const executeCheckout = async (debtDetails = {}) => {
     setIsCheckout(true);
     try {
-      // 1. KAMA NI MALIPO YA KUKOPA: TAFUTA/SAJILI MTEJA NA DENI KWENYE DEBTS MODULE
       if (paymentMethod === 'credit') {
         let customerId = null;
 
@@ -152,7 +161,6 @@ export default function POS() {
         }
       }
 
-      // 2. SAJILI SALE TRANSACTION ILI STOKO IPUNGUE NA IONEKANE KWENYE DASHBOARD
       const salePayload = {
         payment_method: paymentMethod,
         customer_name: debtDetails.customer_name || '',
@@ -165,7 +173,13 @@ export default function POS() {
 
       await apiClient.post('sales/transactions/', salePayload);
       
-      setSuccessMsg(paymentMethod === 'credit' ? 'Deni Limesajiliwa Kwenye Daftari na Mauzo Yamekamilika! 📝' : 'Mauzo Yamekamilika Vizuri! 🎉');
+      triggerToast(
+        paymentMethod === 'credit' 
+          ? 'Deni Limesajiliwa Kwenye Daftari na Mauzo Yamekamilika! 📝' 
+          : 'Mauzo Yamekamilika Vizuri! 🎉', 
+        'success'
+      );
+      
       setCart([]);
       setAmountPaid('');
       setShowDebtModal(false);
@@ -174,22 +188,18 @@ export default function POS() {
       setDueDate('');
       setDebtNotes('');
       fetchProducts();
-
-      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       console.error("Full Sale Error Response:", err.response);
 
       if (err.response?.data) {
         const errorData = err.response.data;
-        if (errorData.errors) {
-          alert(`Validation Error: ${JSON.stringify(errorData.errors)}`);
-        } else if (errorData.stock_error) {
-          alert(errorData.stock_error);
+        if (errorData.stock_error) {
+          triggerToast(errorData.stock_error, 'error');
         } else {
-          alert(`Error: ${JSON.stringify(errorData)}`);
+          triggerToast("Imeshindikana kukamilisha mauzo. Angalia taarifa ulinganishe na stoko!", 'error');
         }
       } else {
-        alert('Imeshindikana kuunganisha na server!');
+        triggerToast('Imeshindikana kuunganisha na server!', 'error');
       }
     } finally {
       setIsCheckout(false);
@@ -199,7 +209,7 @@ export default function POS() {
   const handleDebtSubmit = (e) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      alert("Tafadhali weka Jina la Mteja!");
+      triggerToast("Tafadhali weka Jina la Mteja!", "error");
       return;
     }
     executeCheckout({
@@ -213,6 +223,18 @@ export default function POS() {
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6 relative">
       
+      {/* CUSTOM TOAST NOTIFICATION BANNER */}
+      {toast.show && (
+        <div className={`fixed top-6 right-6 z-[60] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+          toast.type === 'success' 
+            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' 
+            : 'bg-red-950/90 border-red-500/50 text-red-300'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
+          <span className="text-xs font-bold tracking-wide">{toast.message}</span>
+        </div>
+      )}
+
       {/* LEFT SIDE: Product Catalog & Search */}
       <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-3xl p-5">
         <div className="relative mb-5">
@@ -281,13 +303,6 @@ export default function POS() {
               {cart.reduce((a, b) => a + b.quantity, 0)} Items
             </span>
           </div>
-
-          {successMsg && (
-            <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>{successMsg}</span>
-            </div>
-          )}
 
           <div className="mt-4 max-h-64 overflow-y-auto space-y-3 pr-1">
             {cart.length === 0 ? (
