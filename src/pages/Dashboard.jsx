@@ -11,17 +11,18 @@ import {
   Smartphone,
   CreditCard,
   Clock,
-  PackageCheck
+  PackageCheck,
+  Calendar
 } from 'lucide-react';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
-  const [transactions, setTransactions] = useState([]);
+  const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vuta data za Dashboard na Miamala ya Leo kwa pamoja
+    // Vuta data za Dashboard na Miamala yote kwa pamoja
     const getDashboardData = apiClient.get('reports/dashboard/');
     const getTodayTransactions = apiClient.get('sales/transactions/');
 
@@ -29,7 +30,7 @@ export default function Dashboard() {
       .then(([dashRes, transRes]) => {
         setData(dashRes.data);
         const transData = transRes.data.results || transRes.data || [];
-        setTransactions(transData);
+        setAllTransactions(transData);
         setLoading(false);
       })
       .catch(err => {
@@ -40,34 +41,52 @@ export default function Dashboard() {
 
   const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
+  // Tarehe ya Leo (Mfano: Ijumaa, 21 Agosti 2026)
+  const today = new Date();
+  const formattedDate = today.toLocaleDateString('sw-TZ', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
   if (loading) {
     return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari wa leo...</div>;
   }
 
-  // 1. Calculate Totals kwa kutumia Orodha ya Transactions
-  const cashTotal = transactions
+  // 1. Chuja Miamala ya Leo PEKEE
+  const todayTransactions = allTransactions.filter(tx => {
+    if (!tx.created_at) return false;
+    const txDate = new Date(tx.created_at);
+    return txDate.toDateString() === today.toDateString();
+  });
+
+  // 2. Calculate Totals kwa Miamala ya Leo Pekee
+  const cashTotal = todayTransactions
     .filter(t => (t.payment_method || '').toLowerCase() === 'cash')
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const lipaTotal = transactions
+  const lipaTotal = todayTransactions
     .filter(t => ['mobile_money', 'lipa', 'mpesa'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const cardTotal = transactions
+  const cardTotal = todayTransactions
     .filter(t => ['bank_card', 'card'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
+
+  const todayTotalSales = cashTotal + lipaTotal + cardTotal;
 
   const statCards = [
     {
       title: 'Mauzo ya Leo',
-      value: `${data?.today_total_sales?.toLocaleString() || 0} TZS`,
+      value: `${todayTotalSales.toLocaleString()} TZS`,
       icon: DollarSign,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10 border-emerald-500/20',
     },
     {
       title: 'Risiti Zilizotoka',
-      value: data?.today_receipts || 0,
+      value: todayTransactions.length,
       icon: Receipt,
       color: 'text-blue-400',
       bg: 'bg-blue-500/10 border-blue-500/20',
@@ -88,7 +107,6 @@ export default function Dashboard() {
     },
   ];
 
-  // 2. Tumia Kiasi Kilichokokotolewa Moja kwa Moja
   const paymentCards = [
     {
       title: 'Mauzo ya Cash',
@@ -139,14 +157,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top Welcome Banner */}
+      {/* Top Welcome Banner with Date */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <span>Karibu Kwenye Selguudi Dashboard</span>
             <span className="text-xl">👋</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Hapa ndipo muhtasari halisi wa biashara yako kwa siku ya leo.</p>
+          
+          {/* Dynamic Date Display */}
+          <div className="flex items-center gap-2 text-slate-400 text-sm mt-2">
+            <Calendar className="w-4 h-4 text-emerald-400" />
+            <span className="capitalize font-medium text-slate-300">{formattedDate}</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
@@ -203,7 +226,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ORODHA YA MAUZO NA BIDHAA ZILIZOUZWA LEO */}
+      {/* ORODHA YA MAUZO YA LEO PEKEE */}
       <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-slate-800">
           <div className="flex items-center gap-2">
@@ -211,11 +234,11 @@ export default function Dashboard() {
             <h2 className="text-base font-bold text-white">Orodha ya Mauzo na Bidhaa Zilizouzwa Leo</h2>
           </div>
           <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
-            Jumla: {transactions.length} Miamala
+            Jumla: {todayTransactions.length} Miamala
           </span>
         </div>
 
-        {transactions.length === 0 ? (
+        {todayTransactions.length === 0 ? (
           <div className="text-center py-10 text-slate-500 text-sm">
             Bado hakuna mauzo yaliyofanyika siku ya leo.
           </div>
@@ -231,7 +254,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {transactions.map((tx) => {
+                {todayTransactions.map((tx) => {
                   const txTime = tx.created_at 
                     ? new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : '--:--';
