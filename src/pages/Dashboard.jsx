@@ -44,6 +44,19 @@ export default function Dashboard() {
     return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari wa leo...</div>;
   }
 
+  // 1. Calculate Totals kwa kutumia Orodha ya Transactions
+  const cashTotal = transactions
+    .filter(t => (t.payment_method || '').toLowerCase() === 'cash')
+    .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
+
+  const lipaTotal = transactions
+    .filter(t => ['mobile_money', 'lipa', 'mpesa'].includes((t.payment_method || '').toLowerCase()))
+    .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
+
+  const cardTotal = transactions
+    .filter(t => ['bank_card', 'card'].includes((t.payment_method || '').toLowerCase()))
+    .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
+
   const statCards = [
     {
       title: 'Mauzo ya Leo',
@@ -75,24 +88,25 @@ export default function Dashboard() {
     },
   ];
 
+  // 2. Tumia Kiasi Kilichokokotolewa Moja kwa Moja
   const paymentCards = [
     {
       title: 'Mauzo ya Cash',
-      value: `${(data?.today_cash_sales ?? data?.cash_sales ?? 0).toLocaleString()} TZS`,
+      value: `${cashTotal.toLocaleString()} TZS`,
       icon: Banknote,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10 border-emerald-500/20',
     },
     {
       title: 'Mauzo ya Lipa (Simu)',
-      value: `${(data?.today_lipa_sales ?? data?.mobile_money_sales ?? 0).toLocaleString()} TZS`,
+      value: `${lipaTotal.toLocaleString()} TZS`,
       icon: Smartphone,
       color: 'text-blue-400',
       bg: 'bg-blue-500/10 border-blue-500/20',
     },
     {
       title: 'Mauzo ya Card',
-      value: `${(data?.today_card_sales ?? data?.bank_card_sales ?? 0).toLocaleString()} TZS`,
+      value: `${cardTotal.toLocaleString()} TZS`,
       icon: CreditCard,
       color: 'text-purple-400',
       bg: 'bg-purple-500/10 border-purple-500/20',
