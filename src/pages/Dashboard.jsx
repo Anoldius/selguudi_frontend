@@ -14,7 +14,10 @@ import {
   PackageCheck,
   Calendar,
   Filter,
-  BookOpen
+  BookOpen,
+  RotateCcw,
+  X,
+  Loader2
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -26,8 +29,18 @@ export default function Dashboard() {
   // State ya Date Filter: 'today', 'yesterday', au 'week'
   const [dateFilter, setDateFilter] = useState('today');
 
+  // State za Refund Modal
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [isRefunding, setIsRefunding] = useState(false);
+
   useEffect(() => {
-    // Vuta data za Dashboard na Miamala yote kwa pamoja
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = () => {
+    setLoading(true);
     const getDashboardData = apiClient.get('reports/dashboard/');
     const getTodayTransactions = apiClient.get('sales/transactions/');
 
@@ -42,7 +55,7 @@ export default function Dashboard() {
         console.error("Error fetching dashboard data:", err);
         setLoading(false);
       });
-  }, []);
+  };
 
   const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
@@ -73,20 +86,22 @@ export default function Dashboard() {
     return true;
   });
 
-  // 2. KOKOTOA HESABU (CASH, LIPA, CARD, NA KUKOPA/MADENI)
-  const cashTotal = filteredTransactions
+  // 2. KOKOTOA HESABU (Ondoa miamala iliyo na status 'REFUNDED')
+  const validTransactions = filteredTransactions.filter(t => t.status !== 'REFUNDED');
+
+  const cashTotal = validTransactions
     .filter(t => (t.payment_method || '').toLowerCase() === 'cash')
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const lipaTotal = filteredTransactions
+  const lipaTotal = validTransactions
     .filter(t => ['mobile_money', 'lipa', 'mpesa'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const cardTotal = filteredTransactions
+  const cardTotal = validTransactions
     .filter(t => ['bank_card', 'card'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const creditTotal = filteredTransactions
+  const creditTotal = validTransactions
     .filter(t => ['credit', 'deni', 'kukopa'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
@@ -103,6 +118,30 @@ export default function Dashboard() {
     }
   };
 
+  // LOGIC YA MCHAKATO WA REFUND
+  const handleExecuteRefund = async (e) => {
+    e.preventDefault();
+    if (!selectedTx) return;
+
+    setIsRefunding(true);
+    try {
+      await apiClient.post(`sales/transactions/${selectedTx.id}/refund/`, {
+        reason: refundReason
+      });
+
+      alert("Muamala umerejeshwa vizuri na stoko imerejea! 🔄");
+      setShowRefundModal(false);
+      setSelectedTx(null);
+      setRefundReason('');
+      fetchDashboardData();
+    } catch (err) {
+      console.error("Refund Error:", err.response);
+      alert(err.response?.data?.message || err.response?.data?.error || "Imeshindikana kurejesha muamala huu!");
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
   const statCards = [
     {
       title: dateFilter === 'today' ? 'Mauzo ya Leo' : dateFilter === 'yesterday' ? 'Mauzo ya Jana' : 'Mauzo ya Wiki Hii',
@@ -113,7 +152,7 @@ export default function Dashboard() {
     },
     {
       title: 'Risiti Zilizotoka',
-      value: filteredTransactions.length,
+      value: validTransactions.length,
       icon: Receipt,
       color: 'text-blue-400',
       bg: 'bg-blue-500/10 border-blue-500/20',
@@ -196,7 +235,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* Top Welcome Banner with Date */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -285,7 +324,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Mchanganuo wa Njia 4 za Malipo (Cash, Lipa, Card, na Kukopa) */}
+      {/* Mchanganuo wa Njia 4 za Malipo */}
       <div>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
           Mchanganuo wa Mauzo kwa Njia ya Malipo ({dateFilter === 'today' ? 'Leo' : dateFilter === 'yesterday' ? 'Jana' : 'Wiki Hii'})
@@ -335,10 +374,12 @@ export default function Dashboard() {
                   <th className="py-3 px-4">Bidhaa Zilizouzwa / Mteja</th>
                   <th className="py-3 px-4">Njia ya Malipo</th>
                   <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
+                  <th className="py-3 px-4 text-center">Vitendo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {filteredTransactions.map((tx) => {
+                  const isRefunded = tx.status === 'REFUNDED';
                   const txDateObj = new Date(tx.created_at);
                   const txDisplayTime = dateFilter === 'today' 
                     ? txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -351,7 +392,7 @@ export default function Dashboard() {
                   const customerInfo = tx.customer_name ? ` - Mteja: ${tx.customer_name}` : '';
 
                   return (
-                    <tr key={tx.id} className="hover:bg-slate-800/30 transition">
+                    <tr key={tx.id} className={`hover:bg-slate-800/30 transition ${isRefunded ? 'opacity-40 bg-red-950/10' : ''}`}>
                       <td className="py-3.5 px-4 font-mono text-xs text-slate-400 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-slate-500" />
                         {txDisplayTime}
@@ -359,14 +400,30 @@ export default function Dashboard() {
 
                       <td className="py-3.5 px-4 font-medium text-white max-w-xs truncate">
                         {itemsList} <span className="text-xs text-amber-400 font-semibold">{customerInfo}</span>
+                        {isRefunded && <span className="block text-[10px] text-red-400 font-bold uppercase">(Muamala Umerejeshwa/Refunded)</span>}
                       </td>
 
                       <td className="py-3.5 px-4">
                         {renderPaymentBadge(tx.payment_method)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400 font-mono">
+                      <td className={`py-3.5 px-4 text-right font-extrabold font-mono ${isRefunded ? 'line-through text-slate-500' : 'text-emerald-400'}`}>
                         {Number(tx.total_amount || tx.amount_paid || 0).toLocaleString()} TZS
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        {!isRefunded ? (
+                          <button
+                            onClick={() => { setSelectedTx(tx); setShowRefundModal(true); }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition"
+                            title="Rejesha Muamala Huu"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Refund</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] font-bold text-red-400/80">Refunded</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -376,6 +433,71 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* MODAL YA REFUND */}
+      {showRefundModal && selectedTx && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-base">
+                <RotateCcw className="w-5 h-5" />
+                <span>Thibitisha Kurejesha Muamala</span>
+              </div>
+              <button onClick={() => setShowRefundModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Kiasi cha Kurejesha:</span>
+                <span className="text-emerald-400 font-extrabold font-mono text-sm">
+                  {Number(selectedTx.total_amount || selectedTx.amount_paid || 0).toLocaleString()} TZS
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Njia ya Malipo:</span>
+                <span className="text-white font-semibold uppercase">{selectedTx.payment_method}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleExecuteRefund} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">
+                  Sababu ya Kurejesha (Refund Reason) *
+                </label>
+                <textarea
+                  required
+                  rows="3"
+                  placeholder="Mfano: Mteja kaleta bidhaa yenye kasoro / Cashier amekosea kiasi..."
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowRefundModal(false)}
+                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition"
+                >
+                  Ghairi
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRefunding}
+                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2"
+                >
+                  {isRefunding ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />}
+                  <span>Thibitisha Refund</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
