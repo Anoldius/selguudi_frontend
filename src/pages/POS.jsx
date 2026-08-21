@@ -33,7 +33,7 @@ export default function POS() {
   const [dueDate, setDueDate] = useState('');
   const [debtNotes, setDebtNotes] = useState('');
 
-  // Custom Toast State (Badala ya Alert ya Browser)
+  // Floating Toast Notification State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const triggerToast = (message, type = 'success') => {
@@ -196,7 +196,7 @@ export default function POS() {
         if (errorData.stock_error) {
           triggerToast(errorData.stock_error, 'error');
         } else {
-          triggerToast("Imeshindikana kukamilisha mauzo. Angalia taarifa ulinganishe na stoko!", 'error');
+          triggerToast("Imeshindikana kukamilisha mauzo!", 'error');
         }
       } else {
         triggerToast('Imeshindikana kuunganisha na server!', 'error');
@@ -221,14 +221,14 @@ export default function POS() {
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6 relative">
+    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6">
       
-      {/* CUSTOM TOAST NOTIFICATION BANNER */}
+      {/* FLOATING TOAST NOTIFICATION TOP RIGHT (Z-INDEX 9999) */}
       {toast.show && (
-        <div className={`fixed top-6 right-6 z-[60] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+        <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
           toast.type === 'success' 
-            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' 
-            : 'bg-red-950/90 border-red-500/50 text-red-300'
+            ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50' 
+            : 'bg-red-950/95 border-red-500/50 text-red-300 shadow-red-950/50'
         }`}>
           {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
           <span className="text-xs font-bold tracking-wide">{toast.message}</span>
