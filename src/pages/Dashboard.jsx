@@ -12,7 +12,8 @@ import {
   CreditCard,
   Clock,
   PackageCheck,
-  Calendar
+  Calendar,
+  Filter
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -20,6 +21,9 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // State ya Date Filter: 'today', 'yesterday', au 'week'
+  const [dateFilter, setDateFilter] = useState('today');
 
   useEffect(() => {
     // Vuta data za Dashboard na Miamala yote kwa pamoja
@@ -41,52 +45,70 @@ export default function Dashboard() {
 
   const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
-  // Tarehe ya Leo (Mfano: Ijumaa, 21 Agosti 2026)
-  const today = new Date();
-  const formattedDate = today.toLocaleDateString('sw-TZ', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-
   if (loading) {
-    return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari wa leo...</div>;
+    return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari...</div>;
   }
 
-  // 1. Chuja Miamala ya Leo PEKEE
-  const todayTransactions = allTransactions.filter(tx => {
+  // 1. TAREHE NA FILTER LOGIC
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  // Chuja Miamala Kulingana na Filter Iliyochaguliwa
+  const filteredTransactions = allTransactions.filter(tx => {
     if (!tx.created_at) return false;
     const txDate = new Date(tx.created_at);
-    return txDate.toDateString() === today.toDateString();
+
+    if (dateFilter === 'today') {
+      return txDate.toDateString() === today.toDateString();
+    } else if (dateFilter === 'yesterday') {
+      return txDate.toDateString() === yesterday.toDateString();
+    } else if (dateFilter === 'week') {
+      return txDate >= sevenDaysAgo && txDate <= today;
+    }
+    return true;
   });
 
-  // 2. Calculate Totals kwa Miamala ya Leo Pekee
-  const cashTotal = todayTransactions
+  // 2. KOKOTOA HESABU KULINGANA NA FILTER ILIYOCHAGULIWA
+  const cashTotal = filteredTransactions
     .filter(t => (t.payment_method || '').toLowerCase() === 'cash')
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const lipaTotal = todayTransactions
+  const lipaTotal = filteredTransactions
     .filter(t => ['mobile_money', 'lipa', 'mpesa'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const cardTotal = todayTransactions
+  const cardTotal = filteredTransactions
     .filter(t => ['bank_card', 'card'].includes((t.payment_method || '').toLowerCase()))
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
-  const todayTotalSales = cashTotal + lipaTotal + cardTotal;
+  const totalSales = cashTotal + lipaTotal + cardTotal;
+
+  // Header Date Label Format
+  const getFilterLabel = () => {
+    if (dateFilter === 'today') {
+      return today.toLocaleDateString('sw-TZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } else if (dateFilter === 'yesterday') {
+      return `Jana (${yesterday.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'long', year: 'numeric' })})`;
+    } else if (dateFilter === 'week') {
+      return `Siku 7 Zilizopita (${sevenDaysAgo.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })} - ${today.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })})`;
+    }
+  };
 
   const statCards = [
     {
-      title: 'Mauzo ya Leo',
-      value: `${todayTotalSales.toLocaleString()} TZS`,
+      title: dateFilter === 'today' ? 'Mauzo ya Leo' : dateFilter === 'yesterday' ? 'Mauzo ya Jana' : 'Mauzo ya Wiki Hii',
+      value: `${totalSales.toLocaleString()} TZS`,
       icon: DollarSign,
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10 border-emerald-500/20',
     },
     {
       title: 'Risiti Zilizotoka',
-      value: todayTransactions.length,
+      value: filteredTransactions.length,
       icon: Receipt,
       color: 'text-blue-400',
       bg: 'bg-blue-500/10 border-blue-500/20',
@@ -165,10 +187,9 @@ export default function Dashboard() {
             <span className="text-xl">👋</span>
           </h1>
           
-          {/* Dynamic Date Display */}
           <div className="flex items-center gap-2 text-slate-400 text-sm mt-2">
             <Calendar className="w-4 h-4 text-emerald-400" />
-            <span className="capitalize font-medium text-slate-300">{formattedDate}</span>
+            <span className="capitalize font-medium text-slate-300">{getFilterLabel()}</span>
           </div>
         </div>
 
@@ -182,6 +203,49 @@ export default function Dashboard() {
               {businessName}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* DATE FILTER BUTTONS SECTION */}
+      <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 p-3 rounded-2xl">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider px-2">
+          <Filter className="w-4 h-4 text-emerald-400" />
+          <span>Chagua Kipindi:</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setDateFilter('today')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              dateFilter === 'today'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            Leo
+          </button>
+
+          <button
+            onClick={() => setDateFilter('yesterday')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              dateFilter === 'yesterday'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            Jana
+          </button>
+
+          <button
+            onClick={() => setDateFilter('week')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              dateFilter === 'week'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            Wiki Hii (Siku 7)
+          </button>
         </div>
       </div>
 
@@ -206,7 +270,7 @@ export default function Dashboard() {
       {/* Mchanganuo wa Njia za Malipo */}
       <div>
         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
-          Mchanganuo wa Mauzo kwa Njia ya Malipo (Leo)
+          Mchanganuo wa Mauzo kwa Njia ya Malipo ({dateFilter === 'today' ? 'Leo' : dateFilter === 'yesterday' ? 'Jana' : 'Wiki Hii'})
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {paymentCards.map((card, idx) => {
@@ -226,38 +290,41 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ORODHA YA MAUZO YA LEO PEKEE */}
+      {/* ORODHA YA MAUZO KULINGANA NA FILTER */}
       <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <PackageCheck className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">Orodha ya Mauzo na Bidhaa Zilizouzwa Leo</h2>
+            <h2 className="text-base font-bold text-white">
+              Orodha ya Mauzo ({dateFilter === 'today' ? 'Leo' : dateFilter === 'yesterday' ? 'Jana' : 'Wiki Hii'})
+            </h2>
           </div>
           <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
-            Jumla: {todayTransactions.length} Miamala
+            Jumla: {filteredTransactions.length} Miamala
           </span>
         </div>
 
-        {todayTransactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <div className="text-center py-10 text-slate-500 text-sm">
-            Bado hakuna mauzo yaliyofanyika siku ya leo.
+            Hakuna mauzo yaliyopatikana kwa kipindi hiki.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="text-xs text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800">
                 <tr>
-                  <th className="py-3 px-4">Saa / Muda</th>
+                  <th className="py-3 px-4">Saa / Tarehe</th>
                   <th className="py-3 px-4">Bidhaa Zilizouzwa</th>
                   <th className="py-3 px-4">Njia ya Malipo</th>
                   <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {todayTransactions.map((tx) => {
-                  const txTime = tx.created_at 
-                    ? new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    : '--:--';
+                {filteredTransactions.map((tx) => {
+                  const txDateObj = new Date(tx.created_at);
+                  const txDisplayTime = dateFilter === 'today' 
+                    ? txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : `${txDateObj.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })} ${txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
                   const itemsList = tx.items && tx.items.length > 0 
                     ? tx.items.map(item => `${item.product_name || item.product?.name || 'Bidhaa'} (${item.quantity}x)`).join(', ')
@@ -267,7 +334,7 @@ export default function Dashboard() {
                     <tr key={tx.id} className="hover:bg-slate-800/30 transition">
                       <td className="py-3.5 px-4 font-mono text-xs text-slate-400 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        {txTime}
+                        {txDisplayTime}
                       </td>
 
                       <td className="py-3.5 px-4 font-medium text-white max-w-xs truncate">
