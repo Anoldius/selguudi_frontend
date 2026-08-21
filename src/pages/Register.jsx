@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/axios';
-import { Store, User, Lock, Phone, Mail, Building2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Store, User, Lock, Phone, Mail, Building2, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     business_type: 'supermarket',
     phone: '',
-    owner_email: '', // <--- Email imeongezwa kwenye state
+    owner_email: '',
     owner_username: '',
     owner_password: '',
+    owner_confirm_password: '',
     owner_full_name: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -25,10 +28,20 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Verification ya Confirm Password
+    if (formData.owner_password !== formData.owner_confirm_password) {
+      setError("Nenosiri (Password) na Kithibitisho cha Nenosiri havifanani!");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await apiClient.post('auth/register/', formData);
+      // Tuma payload bila confirm_password field
+      const { owner_confirm_password, ...payload } = formData;
+      
+      await apiClient.post('auth/register/', payload);
       setIsSubmitting(false);
       navigate('/login', { state: { message: 'Usajili umekamilika! Ingia sasa.' } });
     } catch (err) {
@@ -173,21 +186,22 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Owner Username & Password */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username ya Mmiliki</label>
-                <input
-                  type="text"
-                  name="owner_username"
-                  required
-                  value={formData.owner_username}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                  placeholder="anoldius_owner"
-                />
-              </div>
+            {/* Owner Username */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username ya Mmiliki</label>
+              <input
+                type="text"
+                name="owner_username"
+                required
+                value={formData.owner_username}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                placeholder="anoldius_owner"
+              />
+            </div>
 
+            {/* Owner Password & Confirm Password */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Nenosiri (Password)</label>
                 <div className="relative">
@@ -195,14 +209,46 @@ export default function Register() {
                     <Lock className="w-5 h-5" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="owner_password"
                     required
                     value={formData.owner_password}
                     onChange={handleChange}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full pl-11 pr-11 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Thibitisha Nenosiri</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="owner_confirm_password"
+                    required
+                    value={formData.owner_confirm_password}
+                    onChange={handleChange}
+                    className="w-full pl-11 pr-11 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
             </div>
