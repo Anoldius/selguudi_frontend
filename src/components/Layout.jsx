@@ -73,29 +73,34 @@ export default function Layout({ children }) {
                 </Link>
               );
             })}
+
+            {/* USER PROFILE & LOGOUT BADGE (IMEVUTWA JUU HAPA BAADA YA RIPOTI!) */}
+            <div className="pt-3 mt-3 border-t border-slate-800/60">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-9 h-9 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-sm font-semibold text-white truncate">{user?.username}</p>
+                    <p className="text-xs text-slate-400 capitalize truncate">{user?.role || 'Owner'}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                  title="Toka (Logout)"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
           </nav>
         </div>
 
-        {/* User Profile & Logout */}
-        <div className="p-4 border-t border-slate-800/60">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-9 h-9 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
-                <User className="w-5 h-5" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-semibold text-white truncate">{user?.username}</p>
-                <p className="text-xs text-slate-400 capitalize truncate">{user?.role || 'Cashier'}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
-              title="Toka (Logout)"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
+        {/* Sidebar Bottom Copyright */}
+        <div className="p-4 border-t border-slate-800/40 text-[11px] text-slate-600 font-medium">
+          &copy; {currentYear} Selguudi POS
         </div>
       </aside>
 
@@ -134,17 +139,30 @@ export default function Layout({ children }) {
                     </Link>
                   );
                 })}
-              </nav>
-            </div>
 
-            <div className="pt-4 border-t border-slate-800">
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 font-semibold text-sm transition"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Toka (Logout)</span>
-              </button>
+                {/* USER PROFILE & LOGOUT BADGE FOR MOBILE DRAWER */}
+                <div className="pt-3 mt-3 border-t border-slate-800">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800 mb-3">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-9 h-9 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-semibold text-white truncate">{user?.username}</p>
+                        <p className="text-xs text-slate-400 capitalize truncate">{user?.role || 'Owner'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 font-semibold text-sm transition"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Toka (Logout)</span>
+                  </button>
+                </div>
+              </nav>
             </div>
           </div>
           <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
