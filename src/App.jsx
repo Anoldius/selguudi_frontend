@@ -10,6 +10,7 @@ import POS from './pages/POS';
 import Inventory from './pages/Inventory';
 import Reports from './pages/Reports';
 import Debts from './pages/Debts';
+import BillingSuccess from './pages/BillingSuccess';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -85,6 +86,16 @@ export default function App() {
                 <Layout>
                   <Reports />
                 </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Billing Success Route */}
+          <Route
+            path="/billing/success"
+            element={
+              <ProtectedRoute>
+                <BillingSuccess />
               </ProtectedRoute>
             }
           />

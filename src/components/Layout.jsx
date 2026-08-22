@@ -1,6 +1,7 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import apiClient from '../api/axios';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -11,7 +12,11 @@ import {
   User,
   Heart,
   Menu,
-  X
+  X,
+  Clock,
+  Lock,
+  Zap,
+  Loader2
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -20,11 +25,49 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // States za Billing & Subscription Status
+  const [billingInfo, setBillingInfo] = useState(null);
+  const [loadingBilling, setLoadingBilling] = useState(true);
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+
   const currentYear = new Date().getFullYear();
+
+  useEffect(() => {
+    fetchBillingStatus();
+  }, []);
+
+  const fetchBillingStatus = async () => {
+    try {
+      const res = await apiClient.get('auth/billing/status/');
+      setBillingInfo(res.data);
+    } catch (err) {
+      console.error("Billing status fetch error:", err);
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  // Logic ya Kuanzisha Malipo PesaPal
+  const handlePayWithPesaPal = async () => {
+    setIsInitiatingPayment(true);
+    try {
+      const res = await apiClient.post('auth/billing/initiate/');
+      if (res.data && res.data.redirect_url) {
+        window.location.href = res.data.redirect_url; // Mwelekeze PesaPal Checkout Page
+      } else {
+        alert("Imeshindikana kupata Link ya Malipo. Jaribu tena.");
+      }
+    } catch (err) {
+      console.error("Payment initiation error:", err);
+      alert("Imeshindikana kuunganisha na PesaPal Gateway.");
+    } finally {
+      setIsInitiatingPayment(false);
+    }
   };
 
   const navItems = [
@@ -34,6 +77,64 @@ export default function Layout({ children }) {
     { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard },
     { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3 },
   ];
+
+  // KAMA ACCESS IMEISHA (Siku 7 zimekamilika na hajalipia)
+  if (!loadingBilling && billingInfo && !billingInfo.has_active_access) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
+          
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
+            <Lock className="w-10 h-10" />
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              Siku 7 za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
+            </p>
+          </div>
+
+          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-400">Gharama za Mwezi:</span>
+              <span className="text-emerald-400 font-extrabold font-mono text-lg">20,000 TZS</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-800/80 pt-2">
+              <span>Njia za Malipo:</span>
+              <span className="text-slate-300 font-medium">M-Pesa, TigoPesa, Airtel, Cards</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handlePayWithPesaPal}
+            disabled={isInitiatingPayment}
+            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200"
+          >
+            {isInitiatingPayment ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Inafungua PesaPal...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-5 h-5 fill-slate-950" />
+                <span>Lipa TZS 20,000 Sasa (PesaPal)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="text-xs text-slate-500 hover:text-slate-300 transition"
+          >
+            Toka (Logout)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
@@ -185,6 +286,25 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
+        {/* TRIAL COUNTDOWN BANNER JUU YA MAIN CONTENT */}
+        {billingInfo && billingInfo.days_left_in_trial > 0 && !billingInfo.subscription_end_date && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400" />
+              <span>
+                Trial ya Bure: Zimebaki <strong className="text-white underline">{billingInfo.days_left_in_trial} siku</strong> za kutumia mfumo bure.
+              </span>
+            </div>
+            <button
+              onClick={handlePayWithPesaPal}
+              disabled={isInitiatingPayment}
+              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20"
+            >
+              {isInitiatingPayment ? 'Inafungua...' : 'Lipa 20,000 Sasa'}
+            </button>
+          </div>
+        )}
+
         {/* Top Header */}
         <header className="h-16 bg-slate-900/60 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-10">
           <div className="flex items-center gap-3">
