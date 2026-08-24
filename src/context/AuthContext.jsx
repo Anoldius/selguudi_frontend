@@ -17,6 +17,27 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // MULTI-TAB LOGOUT & LOGIN SYNC
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      // 1. Kama mteja amejilogout kwenye tab nyingine
+      if (event.key === 'logout_event' || (event.key === 'access_token' && !event.newValue)) {
+        setUser(null);
+      }
+      
+      // 2. Kama mteja amejilogin kwenye tab nyingine
+      if (event.key === 'user_info' && event.newValue) {
+        setUser(JSON.parse(event.newValue));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   const login = async (username, password) => {
     try {
       const response = await apiClient.post('auth/login/', { username, password });
@@ -42,6 +63,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_info');
+    
+    // Tuma signal kwa tabs zingine zote kupitia localStorage event
+    localStorage.setItem('logout_event', Date.now().toString());
+    
     setUser(null);
   };
 
@@ -52,7 +77,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// HII NDIYO EXPORT ILIYOKUWA INAKOSEKANA NA KUFANYA VERCEL I-FAIL BUILD:
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
