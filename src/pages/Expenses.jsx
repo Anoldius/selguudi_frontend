@@ -9,7 +9,8 @@ import {
   Receipt,
   Calendar,
   User,
-  AlertCircle
+  Clock,
+  TrendingDown
 } from 'lucide-react';
 
 export default function Expenses() {
@@ -77,7 +78,44 @@ export default function Expenses() {
     }
   };
 
-  // Kokotoa Jumla ya Matumizi yote
+  // --- LOGIC YA KUKOKOTOA MATUMIZI YA LEO, JANA, WIKI HII NA JUMLA YOTE ---
+  const now = new Date();
+  
+  // Tarehe ya Leo (YYYY-MM-DD)
+  const todayStr = now.toISOString().split('T')[0];
+
+  // Tarehe ya Jana (YYYY-MM-DD)
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  // Tarehe ya Kuanzia Wiki Hii (Jumatatu iliyopita)
+  const startOfWeek = new Date(now);
+  const dayOfWeek = now.getDay();
+  const distanceToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfWeek.setDate(now.getDate() - distanceToMonday);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // 1. Matumizi ya Leo
+  const todayExpenses = expenses
+    .filter(item => item.created_at && item.created_at.startsWith(todayStr))
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  // 2. Matumizi ya Jana
+  const yesterdayExpenses = expenses
+    .filter(item => item.created_at && item.created_at.startsWith(yesterdayStr))
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  // 3. Matumizi ya Wiki Hii
+  const thisWeekExpenses = expenses
+    .filter(item => {
+      if (!item.created_at) return false;
+      const itemDate = new Date(item.created_at);
+      return itemDate >= startOfWeek;
+    })
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  // 4. Jumla Kuu ya Matumizi Yote
   const totalExpense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const getCategoryBadge = (cat) => {
@@ -102,22 +140,62 @@ export default function Expenses() {
         </div>
       )}
 
-      {/* Top Action & Summary Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Wallet className="w-7 h-7 text-emerald-400" />
-            <span>Matumizi ya Duka (Expenses)</span>
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Sajili matumizi ya kila siku ili kupata hesabu halisi za faida.</p>
+      {/* Header */}
+      <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <Wallet className="w-7 h-7 text-emerald-400" />
+          <span>Matumizi ya Duka (Expenses)</span>
+        </h1>
+        <p className="text-slate-400 text-sm mt-1">Sajili matumizi ya kila siku ili kupata hesabu halisi za faida.</p>
+      </div>
+
+      {/* SUMMARY CARDS: LEO, JANA, WIKI HII, JUMLA YOTE */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* Card 1: Leo */}
+        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Leo</span>
+            <Clock className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-xl font-extrabold text-emerald-400 font-mono">
+            {todayExpenses.toLocaleString()} TZS
+          </p>
         </div>
 
-        <div className="bg-slate-950 px-6 py-3 rounded-2xl border border-slate-800 text-right">
-          <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Jumla ya Matumizi</p>
-          <p className="text-2xl font-extrabold text-amber-400 font-mono mt-0.5">
+        {/* Card 2: Jana */}
+        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Jana</span>
+            <Calendar className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-xl font-extrabold text-blue-400 font-mono">
+            {yesterdayExpenses.toLocaleString()} TZS
+          </p>
+        </div>
+
+        {/* Card 3: Wiki Hii */}
+        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Wiki Hii</span>
+            <TrendingDown className="w-4 h-4 text-purple-400" />
+          </div>
+          <p className="text-xl font-extrabold text-purple-400 font-mono">
+            {thisWeekExpenses.toLocaleString()} TZS
+          </p>
+        </div>
+
+        {/* Card 4: Jumla Kuu */}
+        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Jumla Yote</span>
+            <Receipt className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-xl font-extrabold text-amber-400 font-mono">
             {totalExpense.toLocaleString()} TZS
           </p>
         </div>
+
       </div>
 
       {/* Main Grid: Form + Table */}
