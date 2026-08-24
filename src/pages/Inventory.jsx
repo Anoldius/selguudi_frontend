@@ -10,7 +10,8 @@ import {
   X, 
   Loader2, 
   Check,
-  Scan
+  Scan,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -19,6 +20,9 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // State ya Pop-up Toast Notification
+  const [toastMessage, setToastMessage] = useState(null);
 
   // References kwa ajili ya ku-control cursor focus (Barcode Hardware Scanner)
   const barcodeInputRef = useRef(null);
@@ -41,6 +45,14 @@ export default function Inventory() {
     fetchProducts();
   }, []);
 
+  // Function ya Kuonyesha Notification kwa sekunde 3
+  const triggerNotification = (message) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
   // Weka cursor kwenye Barcode Input kiotomatiki mara tu Modal inapofunguka
   useEffect(() => {
     if (showModal) {
@@ -50,24 +62,23 @@ export default function Inventory() {
     }
   }, [showModal]);
 
- const fetchProducts = async () => {
-  try {
-    // Inaomba bidhaa zote bila kizuizi cha kurasa
-    const res = await apiClient.get('inventory/products/?page_size=10000');
-    
-    if (Array.isArray(res.data)) {
-      setProducts(res.data);
-    } else if (res.data && Array.isArray(res.data.results)) {
-      setProducts(res.data.results);
-    } else {
-      setProducts([]);
+  const fetchProducts = async () => {
+    try {
+      const res = await apiClient.get('inventory/products/?page_size=10000');
+      
+      if (Array.isArray(res.data)) {
+        setProducts(res.data);
+      } else if (res.data && Array.isArray(res.data.results)) {
+        setProducts(res.data.results);
+      } else {
+        setProducts([]);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setLoading(false);
     }
-    setLoading(false);
-  } catch (err) {
-    console.error("Error fetching products:", err);
-    setLoading(false);
-  }
-};
+  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,8 +87,8 @@ export default function Inventory() {
   // Logic ya kukamata 'Enter' kutoka kwa Barcode Scanner
   const handleBarcodeKeyDown = (e) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); // Zuia form kuji-submit kabla ya wakati
-      nameInputRef.current?.focus(); // Hamisha cursor kwenye Jina la Bidhaa
+      e.preventDefault();
+      nameInputRef.current?.focus();
     }
   };
 
@@ -116,8 +127,10 @@ export default function Inventory() {
     try {
       if (editId) {
         await apiClient.put(`inventory/products/${editId}/`, formData);
+        triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`);
       } else {
         await apiClient.post('inventory/products/', formData);
+        triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`);
       }
       setIsSubmitting(false);
       setShowModal(false);
@@ -128,10 +141,11 @@ export default function Inventory() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Je, una uhakika unataka kufuta bidhaa hii?")) {
+  const handleDelete = async (id, productName) => {
+    if (window.confirm(`Je, una uhakika unataka kufuta bidhaa ya "${productName}"?`)) {
       try {
         await apiClient.delete(`inventory/products/${id}/`);
+        triggerNotification(`Bidhaa ya "${productName}" imefutwa!`);
         fetchProducts();
       } catch (err) {
         alert("Imeshindikana kufuta bidhaa!");
@@ -145,7 +159,16 @@ export default function Inventory() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      
+      {/* POP-UP TOAST NOTIFICATION */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-emerald-500 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400 animate-bounce">
+          <CheckCircle2 className="w-5 h-5" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Top Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
         <div>
@@ -230,7 +253,7 @@ export default function Inventory() {
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id)}
+                          onClick={() => handleDelete(p.id, p.name)}
                           className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
                           title="Futa (Delete)"
                         >
@@ -265,7 +288,7 @@ export default function Inventory() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* BARCODE INPUT (With Hardware Scanner Auto-Focus) */}
+              {/* BARCODE INPUT */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
                   <Scan className="w-4 h-4 text-emerald-400" />
