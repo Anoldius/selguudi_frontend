@@ -36,7 +36,7 @@ export default function Dashboard() {
   const [refundReason, setRefundReason] = useState('');
   const [isRefunding, setIsRefunding] = useState(false);
 
-  // Custom Toast State Badala ya Browser Alert
+  // Custom Toast State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const triggerToast = (message, type = 'success') => {
@@ -74,23 +74,37 @@ export default function Dashboard() {
     return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari...</div>;
   }
 
-  // 1. TAREHE NA FILTER LOGIC
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
+  // --- LOGIC MPYA NA SAHIHI YA CHUJO LA TAREHE (TANZANIA TIMEZONE SAFE) ---
+  const getLocalDateString = (d) => {
+    const dateObj = new Date(d);
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 7);
+  const today = new Date();
+  const todayStr = getLocalDateString(today);
+
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayStr = getLocalDateString(yesterday);
+
+  // Siku 7 zilizopita kuanzia Saa 00:00:00
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
 
   // Chuja Miamala Kulingana na Filter Iliyochaguliwa
   const filteredTransactions = allTransactions.filter(tx => {
     if (!tx.created_at) return false;
+    const txDateStr = getLocalDateString(tx.created_at);
     const txDate = new Date(tx.created_at);
 
     if (dateFilter === 'today') {
-      return txDate.toDateString() === today.toDateString();
+      return txDateStr === todayStr;
     } else if (dateFilter === 'yesterday') {
-      return txDate.toDateString() === yesterday.toDateString();
+      return txDateStr === yesterdayStr;
     } else if (dateFilter === 'week') {
       return txDate >= sevenDaysAgo && txDate <= today;
     }
@@ -129,7 +143,7 @@ export default function Dashboard() {
     }
   };
 
-  // LOGIC YA MCHAKATO WA REFUND NA KUREJESHA STOKO
+  // LOGIC YA MCHAKATO WA REFUND
   const handleExecuteRefund = async (e) => {
     e.preventDefault();
     if (!selectedTx) return;
@@ -291,7 +305,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Top Welcome Banner with Date & Logo */}
+      {/* Top Welcome Banner */}
       <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
