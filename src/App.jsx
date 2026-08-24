@@ -8,15 +8,17 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import POS from './pages/POS';
 import Inventory from './pages/Inventory';
+import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Debts from './pages/Debts';
 import BillingSuccess from './pages/BillingSuccess';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+
 // Component ya kudhibiti Root Route (/) na Fallback (*)
 const RootRedirect = () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   return token ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 };
 
@@ -63,6 +65,18 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <Inventory />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Route Mpya ya Matumizi (Expenses) */}
+          <Route
+            path="/expenses"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Expenses />
                 </Layout>
               </ProtectedRoute>
             }

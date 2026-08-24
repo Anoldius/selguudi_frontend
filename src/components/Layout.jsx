@@ -8,6 +8,7 @@ import {
   Package, 
   CreditCard,
   BarChart3, 
+  Wallet,
   LogOut, 
   User,
   Heart,
@@ -17,8 +18,7 @@ import {
   Lock,
   Zap,
   Loader2,
-  ChevronLeft,
-  ChevronRight
+  ChevronLeft
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -77,10 +77,12 @@ export default function Layout({ children }) {
     }
   };
 
+  // Imeweka Matumizi (Expenses) kwenye Orodha ya Navigation
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart },
     { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package },
+    { name: 'Matumizi', path: '/expenses', icon: Wallet },
     { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard },
     { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3 },
   ];
