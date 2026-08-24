@@ -81,8 +81,8 @@ export default function Layout({ children }) {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart },
-    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package },
     { name: 'Matumizi', path: '/expenses', icon: Wallet },
+    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package },
     { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard },
     { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3 },
   ];
