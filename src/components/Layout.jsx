@@ -16,14 +16,21 @@ import {
   Clock,
   Lock,
   Zap,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function Layout({ children }) {
   const { user, logout } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Mobile Menu State
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Desktop Sidebar Collapse / Expand State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // States za Billing & Subscription Status
   const [billingInfo, setBillingInfo] = useState(null);
@@ -58,7 +65,7 @@ export default function Layout({ children }) {
     try {
       const res = await apiClient.post('auth/billing/initiate/');
       if (res.data && res.data.redirect_url) {
-        window.location.href = res.data.redirect_url; // Mwelekeze PesaPal Checkout Page
+        window.location.href = res.data.redirect_url;
       } else {
         alert("Imeshindikana kupata Link ya Malipo. Jaribu tena.");
       }
@@ -78,13 +85,13 @@ export default function Layout({ children }) {
     { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3 },
   ];
 
-  // KAMA ACCESS IMEISHA (Siku 7 zimekamilika na hajalipia)
+  // KAMA ACCESS IMEISHA
   if (!loadingBilling && billingInfo && !billingInfo.has_active_access) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
-          
+
           <div className="w-20 h-20 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
             <Lock className="w-10 h-10" />
           </div>
@@ -92,7 +99,7 @@ export default function Layout({ children }) {
           <div>
             <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Siku 7 za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
+              Siku za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
             </p>
           </div>
 
@@ -138,31 +145,48 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
-      
-      {/* DESKTOP SIDEBAR */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800/80 hidden md:flex flex-col justify-between shrink-0"> 
+
+      {/* DESKTOP SIDEBAR WITH COLLAPSIBLE TOGGLE */}
+      <aside 
+        className={`bg-slate-900 border-r border-slate-800/80 hidden md:flex flex-col justify-between shrink-0 transition-all duration-300 ${
+          isSidebarCollapsed ? 'w-20' : 'w-64'
+        }`}
+      > 
         <div>
-          {/* Brand Header with Custom Logo */}
-          <div className="p-5 border-b border-slate-800/60 flex items-center gap-3">
-            <div className="w-11 h-11 shrink-0 rounded-2xl bg-slate-950/60 border border-slate-800 p-1.5 shadow-md flex items-center justify-center">
-              <img 
-                src="/selguudiLogo.png" 
-                alt="Selguudi POS Logo" 
-                className="w-full h-full object-contain rounded-xl"
-              />
+          {/* Brand Header with Logo & Toggle Button */}
+          <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between ${isSidebarCollapsed ? 'flex-col gap-3' : ''}`}>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-10 h-10 shrink-0 rounded-2xl bg-slate-950/60 border border-slate-800 p-1.5 shadow-md flex items-center justify-center">
+                <img 
+                  src="/selguudiLogo.png" 
+                  alt="Selguudi POS Logo" 
+                  className="w-full h-full object-contain rounded-xl"
+                />
+              </div>
+              {!isSidebarCollapsed && (
+                <div className="overflow-hidden">
+                  <h1 className="font-extrabold text-base tracking-wide text-white leading-tight">
+                    Selguudi <span className="text-emerald-400">POS</span>
+                  </h1>
+                  <p className="text-xs text-slate-400 font-medium truncate max-w-[120px]">
+                    {user?.business_name || 'Supermarket'}
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="overflow-hidden">
-              <h1 className="font-extrabold text-lg tracking-wide text-white leading-tight">
-                Selguudi <span className="text-emerald-400">POS</span>
-              </h1>
-              <p className="text-xs text-slate-400 font-medium truncate max-w-[130px]">
-                {user?.business_name || 'Selguudi Mart'}
-              </p>
-            </div>
+
+            {/* Desktop Hamburger / Collapse Toggle Button */}
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition"
+              title={isSidebarCollapsed ? "Panua Sidebar" : "Kunja Sidebar"}
+            >
+              {isSidebarCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+            </button>
           </div>
 
           {/* Navigation Menu */}
-          <nav className="p-4 space-y-1.5">
+          <nav className="p-3 space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -170,46 +194,56 @@ export default function Layout({ children }) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                  title={isSidebarCollapsed ? item.name : ''}
+                  className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
                     isActive
                       ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-bold'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
+                  } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
+                  <Icon className="w-5 h-5 shrink-0" />
+                  {!isSidebarCollapsed && <span>{item.name}</span>}
                 </Link>
               );
             })}
 
             {/* USER PROFILE & LOGOUT BADGE */}
             <div className="pt-3 mt-3 border-t border-slate-800/60">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-9 h-9 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
-                    <User className="w-5 h-5" />
+              <div className={`flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 ${
+                isSidebarCollapsed ? 'justify-center' : ''
+              }`}>
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
+                    <User className="w-4 h-4" />
                   </div>
-                  <div className="overflow-hidden">
-                    <p className="text-sm font-semibold text-white truncate">{user?.username}</p>
-                    <p className="text-xs text-slate-400 capitalize truncate">{user?.role || 'Owner'}</p>
-                  </div>
+                  {!isSidebarCollapsed && (
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-semibold text-white truncate">{user?.username}</p>
+                      <p className="text-[10px] text-slate-400 capitalize truncate">{user?.role || 'Owner'}</p>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
-                  title="Toka (Logout)"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
+
+                {!isSidebarCollapsed && (
+                  <button
+                    onClick={handleLogout}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Toka (Logout)"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </nav>
         </div>
 
         {/* Sidebar Bottom Copyright */}
-        <div className="p-4 border-t border-slate-800/40 text-[11px] text-slate-600 font-medium">
-          &copy; {currentYear} Selguudi POS
-        </div>
+        {!isSidebarCollapsed && (
+          <div className="p-4 border-t border-slate-800/40 text-[11px] text-slate-600 font-medium">
+            &copy; {currentYear} Selguudi POS
+          </div>
+        )}
       </aside>
 
       {/* MOBILE SIDEBAR DRAWER */}
@@ -254,7 +288,6 @@ export default function Layout({ children }) {
                   );
                 })}
 
-                {/* USER PROFILE & LOGOUT BADGE FOR MOBILE DRAWER */}
                 <div className="pt-3 mt-3 border-t border-slate-800">
                   <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800 mb-3">
                     <div className="flex items-center gap-3 overflow-hidden">
@@ -285,7 +318,7 @@ export default function Layout({ children }) {
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        
+
         {/* TRIAL COUNTDOWN BANNER JUU YA MAIN CONTENT */}
         {billingInfo && billingInfo.days_left_in_trial > 0 && !billingInfo.subscription_end_date && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
