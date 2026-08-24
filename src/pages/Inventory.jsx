@@ -50,16 +50,24 @@ export default function Inventory() {
     }
   }, [showModal]);
 
-  const fetchProducts = async () => {
-    try {
-      const res = await apiClient.get('inventory/products/');
-      setProducts(res.data.results || res.data);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setLoading(false);
+ const fetchProducts = async () => {
+  try {
+    // Inaomba bidhaa zote bila kizuizi cha kurasa
+    const res = await apiClient.get('inventory/products/?page_size=10000');
+    
+    if (Array.isArray(res.data)) {
+      setProducts(res.data);
+    } else if (res.data && Array.isArray(res.data.results)) {
+      setProducts(res.data.results);
+    } else {
+      setProducts([]);
     }
-  };
+    setLoading(false);
+  } catch (err) {
+    console.error("Error fetching products:", err);
+    setLoading(false);
+  }
+};
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
