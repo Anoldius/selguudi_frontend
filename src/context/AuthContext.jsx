@@ -8,34 +8,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check kama mteja alilogin kabla
-    const token = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('user_info');
+    // Angalia kama mteja ana session kwenye tab hii
+    const token = sessionStorage.getItem('access_token');
+    const storedUser = sessionStorage.getItem('user_info');
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
     }
     setLoading(false);
-  }, []);
-
-  // MULTI-TAB LOGOUT & LOGIN SYNC
-  useEffect(() => {
-    const handleStorageChange = (event) => {
-      // 1. Kama mteja amejilogout kwenye tab nyingine
-      if (event.key === 'logout_event' || (event.key === 'access_token' && !event.newValue)) {
-        setUser(null);
-      }
-      
-      // 2. Kama mteja amejilogin kwenye tab nyingine
-      if (event.key === 'user_info' && event.newValue) {
-        setUser(JSON.parse(event.newValue));
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, []);
 
   const login = async (username, password) => {
@@ -43,11 +22,12 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.post('auth/login/', { username, password });
       const { access, refresh, business_name, role, username: uname } = response.data;
 
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
+      // Hifadhi kwenye sessionStorage (Inafutika tab ikifungwa)
+      sessionStorage.setItem('access_token', access);
+      sessionStorage.setItem('refresh_token', refresh);
       
       const userData = { username: uname, business_name, role };
-      localStorage.setItem('user_info', JSON.stringify(userData));
+      sessionStorage.setItem('user_info', JSON.stringify(userData));
       
       setUser(userData);
       return { success: true };
@@ -60,12 +40,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_info');
-    
-    // Tuma signal kwa tabs zingine zote kupitia localStorage event
-    localStorage.setItem('logout_event', Date.now().toString());
+    // Safisha session data yote
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user_info');
+    sessionStorage.clear();
     
     setUser(null);
   };

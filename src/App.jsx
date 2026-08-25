@@ -15,10 +15,9 @@ import BillingSuccess from './pages/BillingSuccess';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
-
-// Component ya kudhibiti Root Route (/) na Fallback (*)
+// Inasoma sessionStorage ili browser ikifungwa iondoe access
 const RootRedirect = () => {
-  const token = localStorage.getItem('access_token');
+  const token = sessionStorage.getItem('access_token');
   return token ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 };
 
@@ -27,16 +26,16 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Root Route (Mtu akiingia selguudi-frontend.vercel.app/) */}
+          {/* Root Route */}
           <Route path="/" element={<RootRedirect />} />
 
-          {/* Public Routes (Hazihitaji Login) */}
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           
-          {/* Protected Routes (Zinahitaji Login + Layout) */}
+          {/* Protected Routes */}
           <Route
             path="/dashboard"
             element={
@@ -70,7 +69,6 @@ export default function App() {
             }
           />
 
-          {/* Route Mpya ya Matumizi (Expenses) */}
           <Route
             path="/expenses"
             element={
