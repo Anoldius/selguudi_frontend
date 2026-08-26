@@ -38,6 +38,15 @@ export default function Inventory() {
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Custom Confirmation Modal State (Badala ya window.confirm)
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    type: '', // 'product' au 'category'
+    id: null,
+    title: '',
+    name: ''
+  });
   
   // Category Filter State
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
@@ -169,7 +178,7 @@ export default function Inventory() {
       setShowModal(false);
       fetchInventoryData();
     } catch (err) {
-      alert(err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kuhifadhi bidhaa!");
+      triggerNotification(err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kuhifadhi bidhaa!");
       setIsSubmitting(false);
     }
   };
@@ -185,33 +194,52 @@ export default function Inventory() {
       setNewCategoryName('');
       fetchInventoryData();
     } catch (err) {
-      alert(err.response?.data?.detail || err.response?.data?.name?.[0] || "Imeshindikana kusajili kundi!");
+      triggerNotification(err.response?.data?.detail || err.response?.data?.name?.[0] || "Imeshindikana kusajili kundi!");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteCategory = async (catId, catName) => {
-    if (window.confirm(`Je, una uhakika unataka kufuta kundi la "${catName}"? Bidhaa zote za kundi hili zitawekwa "Bila Kundi".`)) {
-      try {
-        await apiClient.delete(`inventory/categories/${catId}/`);
-        triggerNotification("Kundi limefutwa!");
-        fetchInventoryData();
-      } catch (err) {
-        alert("Imeshindikana kufuta kundi!");
-      }
-    }
+  // FUNGUA MODAL YA KUTHIBITISHA KUFUTA (BIDHAA AU KUNDI)
+  const promptDeleteProduct = (id, name) => {
+    setConfirmModal({
+      show: true,
+      type: 'product',
+      id,
+      title: 'Kufuta Bidhaa',
+      name
+    });
   };
 
-  const handleDelete = async (id, productName) => {
-    if (window.confirm(`Je, una uhakika unataka kufuta bidhaa ya "${productName}"?`)) {
-      try {
+  const promptDeleteCategory = (id, name) => {
+    setConfirmModal({
+      show: true,
+      type: 'category',
+      id,
+      title: 'Kufuta Kundi la Bidhaa',
+      name
+    });
+  };
+
+  // MCHAKATO WA KUFUTA HALISI BAADA YA KUBONYEZA THIBITISHA
+  const handleExecuteDelete = async () => {
+    const { type, id, name } = confirmModal;
+    setIsSubmitting(true);
+
+    try {
+      if (type === 'product') {
         await apiClient.delete(`inventory/products/${id}/`);
-        triggerNotification(`Bidhaa ya "${productName}" imefutwa!`);
-        fetchInventoryData();
-      } catch (err) {
-        alert("Imeshindikana kufuta bidhaa!");
+        triggerNotification(`Bidhaa ya "${name}" imefutwa!`);
+      } else if (type === 'category') {
+        await apiClient.delete(`inventory/categories/${id}/`);
+        triggerNotification(`Kundi la "${name}" limefutwa!`);
       }
+      setConfirmModal({ show: false, type: '', id: null, title: '', name: '' });
+      fetchInventoryData();
+    } catch (err) {
+      triggerNotification("Imeshindikana kufuta!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -266,7 +294,6 @@ export default function Inventory() {
 
       {/* INVENTORY VALUE SUMMARY CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Card 1: Thamani ya Stoko (Cost Price) */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani ya Stoko (Gharama)</span>
@@ -280,7 +307,6 @@ export default function Inventory() {
           <p className="text-[11px] text-slate-500 mt-1">Gharama za kununulia bidhaa zilizopo dukani hivi sasa</p>
         </div>
 
-        {/* Card 2: Thamani Tarajiwa ya Mauzo (Retail Price) */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani Tarajiwa ya Mauzo</span>
@@ -294,7 +320,6 @@ export default function Inventory() {
           <p className="text-[11px] text-slate-500 mt-1">Jumla ya fedha zitakazopatikana stoko yote ikiuzwa</p>
         </div>
 
-        {/* Card 3: Faida Iliyopo Kwenye Stoko */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faida Iliyopo Kwenye Stoko</span>
@@ -430,7 +455,7 @@ export default function Inventory() {
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(p.id, p.name)}
+                          onClick={() => promptDeleteProduct(p.id, p.name)}
                           className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
                           title="Futa (Delete)"
                         >
@@ -465,7 +490,6 @@ export default function Inventory() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* BARCODE INPUT */}
               <div>
                 <label className="flex text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 items-center gap-2">
                   <Scan className="w-4 h-4 text-emerald-400" />
@@ -483,7 +507,6 @@ export default function Inventory() {
                 />
               </div>
 
-              {/* PRODUCT NAME INPUT */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Bidhaa *</label>
                 <input
@@ -498,7 +521,6 @@ export default function Inventory() {
                 />
               </div>
 
-              {/* CATEGORY SELECTOR DROPDOWN */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kundi la Bidhaa (Category)</label>
                 <select
@@ -647,7 +669,7 @@ export default function Inventory() {
                       </span>
                     </div>
                     <button
-                      onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                      onClick={() => promptDeleteCategory(cat.id, cat.name)}
                       className="text-slate-500 hover:text-red-400 p-1 transition"
                       title="Futa Kundi"
                     >
@@ -656,6 +678,54 @@ export default function Inventory() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL (BADALA YA WINDOW.CONFIRM) */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-base">
+                <AlertTriangle className="w-5 h-5" />
+                <span>{confirmModal.title}</span>
+              </div>
+              <button 
+                onClick={() => setConfirmModal({ show: false, type: '', id: null, title: '', name: '' })} 
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-sm text-slate-300">
+              Je, una uhakika unataka kufuta {confirmModal.type === 'product' ? 'bidhaa ya' : 'kundi la'} <span className="font-extrabold text-white">"{confirmModal.name}"</span>?
+              {confirmModal.type === 'category' && (
+                <p className="text-xs text-amber-400 mt-2">
+                  * Bidhaa zote zilizokuwa kwenye kundi hili zitawekwa "Bila Kundi".
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal({ show: false, type: '', id: null, title: '', name: '' })}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition text-sm"
+              >
+                Ghairi
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={isSubmitting}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 text-sm"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span>Thibitisha Kufuta</span>
+              </button>
             </div>
           </div>
         </div>
