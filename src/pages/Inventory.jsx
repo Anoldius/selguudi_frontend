@@ -413,7 +413,7 @@ export default function Inventory() {
               
               {/* BARCODE INPUT */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <label className="flex text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 items-center gap-2">
                   <Scan className="w-4 h-4 text-emerald-400" />
                   <span>Barcode (Scan au Andika)</span>
                 </label>
