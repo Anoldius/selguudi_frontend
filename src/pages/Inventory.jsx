@@ -14,7 +14,10 @@ import {
   CheckCircle2,
   Layers,
   Filter,
-  Tag
+  Tag,
+  Wallet,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -23,6 +26,14 @@ export default function Inventory() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   
+  // State ya Thamani ya Stoko (Summary Metrics)
+  const [summaryData, setSummaryData] = useState({
+    total_current_cost: 0,
+    total_potential_retail: 0,
+    expected_stock_profit: 0,
+    total_products_count: 0
+  });
+
   // Modals state
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -64,7 +75,6 @@ export default function Inventory() {
     }, 3000);
   };
 
-  // Cursor focus kwenye Barcode Input mara tu Modal inapofunguka
   useEffect(() => {
     if (showModal) {
       setTimeout(() => {
@@ -76,9 +86,10 @@ export default function Inventory() {
   const fetchInventoryData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes] = await Promise.all([
+      const [prodRes, catRes, sumRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
-        apiClient.get('inventory/categories/')
+        apiClient.get('inventory/categories/'),
+        apiClient.get('inventory/products/summary/')
       ]);
       
       const prodData = prodRes.data.results || prodRes.data || [];
@@ -86,6 +97,9 @@ export default function Inventory() {
       
       setProducts(Array.isArray(prodData) ? prodData : []);
       setCategories(Array.isArray(catData) ? catData : []);
+      if (sumRes.data) {
+        setSummaryData(sumRes.data);
+      }
       setLoading(false);
     } catch (err) {
       console.error("Error fetching inventory data:", err);
@@ -134,7 +148,6 @@ export default function Inventory() {
     setShowModal(true);
   };
 
-  // KUSHIFADHI AU KUBADILISHA BIDHAA
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -161,7 +174,6 @@ export default function Inventory() {
     }
   };
 
-  // KUSHAJILI KUNDI JIPYA (CATEGORY)
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
     if (!newCategoryName.trim()) return;
@@ -179,7 +191,6 @@ export default function Inventory() {
     }
   };
 
-  // KUFUTA KUNDI
   const handleDeleteCategory = async (catId, catName) => {
     if (window.confirm(`Je, una uhakika unataka kufuta kundi la "${catName}"? Bidhaa zote za kundi hili zitawekwa "Bila Kundi".`)) {
       try {
@@ -192,7 +203,6 @@ export default function Inventory() {
     }
   };
 
-  // KUFUTA BIDHAA
   const handleDelete = async (id, productName) => {
     if (window.confirm(`Je, una uhakika unataka kufuta bidhaa ya "${productName}"?`)) {
       try {
@@ -205,7 +215,6 @@ export default function Inventory() {
     }
   };
 
-  // CHUJO LA BIDHAA (SEARCH & CATEGORY TABS)
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
                           (p.barcode && p.barcode.includes(search));
@@ -252,6 +261,51 @@ export default function Inventory() {
             <Plus className="w-5 h-5" />
             <span>Ongeza Bidhaa Mpya</span>
           </button>
+        </div>
+      </div>
+
+      {/* INVENTORY VALUE SUMMARY CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Card 1: Thamani ya Stoko (Cost Price) */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani ya Stoko (Gharama)</span>
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <Wallet className="w-5 h-5" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-extrabold text-white font-mono">
+            {Number(summaryData.total_current_cost || 0).toLocaleString()} TZS
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-1">Gharama za kununulia bidhaa zilizopo dukani hivi sasa</p>
+        </div>
+
+        {/* Card 2: Thamani Tarajiwa ya Mauzo (Retail Price) */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani Tarajiwa ya Mauzo</span>
+            <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-extrabold text-white font-mono">
+            {Number(summaryData.total_potential_retail || 0).toLocaleString()} TZS
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-1">Jumla ya fedha zitakazopatikana stoko yote ikiuzwa</p>
+        </div>
+
+        {/* Card 3: Faida Iliyopo Kwenye Stoko */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faida Iliyopo Kwenye Stoko</span>
+            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <h3 className="text-2xl font-extrabold text-purple-400 font-mono">
+            {Number(summaryData.expected_stock_profit || 0).toLocaleString()} TZS
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-1">Kadirio la faida itakayopatikana baada ya stoko kuisha</p>
         </div>
       </div>
 
@@ -559,7 +613,6 @@ export default function Inventory() {
               </button>
             </div>
 
-            {/* Form ya Kuongeza Category Mpya */}
             <form onSubmit={handleCategorySubmit} className="flex gap-2">
               <input
                 type="text"
@@ -579,7 +632,6 @@ export default function Inventory() {
               </button>
             </form>
 
-            {/* Orodha ya Categories Zilizopo */}
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Makundi Yaliyopo ({categories.length})</h4>
               {categories.length === 0 ? (
