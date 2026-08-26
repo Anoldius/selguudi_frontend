@@ -74,7 +74,7 @@ export default function Dashboard() {
     return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari...</div>;
   }
 
-  // --- LOGIC MPYA NA SAHIHI YA CHUJO LA TAREHE (TANZANIA TIMEZONE SAFE) ---
+  // --- LOGIC YA CHUJO LA TAREHE (TANZANIA TIMEZONE SAFE) ---
   const getLocalDateString = (d) => {
     const dateObj = new Date(d);
     const year = dateObj.getFullYear();
@@ -131,6 +131,23 @@ export default function Dashboard() {
     .reduce((sum, t) => sum + Number(t.total_amount || t.amount_paid || 0), 0);
 
   const totalSales = cashTotal + lipaTotal + cardTotal + creditTotal;
+
+  // --- KOKOTOA FAIDA HALISI KULINGANA NA FILTER ILIYOCHAGULIWA ---
+  const dynamicEstimatedProfit = validTransactions.reduce((totalProfit, tx) => {
+    if (!tx.items || !Array.isArray(tx.items)) return totalProfit;
+
+    const txProfit = tx.items.reduce((itemProfit, item) => {
+      const qty = Number(item.quantity || 0);
+      const sellingPrice = Number(item.unit_price || item.price || 0);
+      const buyingPrice = Number(item.buying_price || item.product?.buying_price || item.cost_price || 0);
+
+      // Kama buying price haipo au ni 0, tumia profit margin ya dynamic
+      const profitPerUnit = buyingPrice > 0 ? (sellingPrice - buyingPrice) : (sellingPrice * 0.2);
+      return itemProfit + (profitPerUnit * qty);
+    }, 0);
+
+    return totalProfit + txProfit;
+  }, 0);
 
   // Header Date Label Format
   const getFilterLabel = () => {
@@ -215,7 +232,7 @@ export default function Dashboard() {
     },
     {
       title: 'Kadirio la Faida',
-      value: `${data?.today_estimated_profit?.toLocaleString() || 0} TZS`,
+      value: `${dynamicEstimatedProfit.toLocaleString()} TZS`,
       icon: TrendingUp,
       color: 'text-purple-400',
       bg: 'bg-purple-500/10 border-purple-500/20',
