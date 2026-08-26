@@ -11,27 +11,39 @@ import {
   Loader2, 
   Check,
   Scan,
-  CheckCircle2
+  CheckCircle2,
+  Layers,
+  Filter,
+  Tag
 } from 'lucide-react';
 
 export default function Inventory() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Modals state
   const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Category Filter State
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
+  const [newCategoryName, setNewCategoryName] = useState('');
 
-  // State ya Pop-up Toast Notification
+  // Toast Notification
   const [toastMessage, setToastMessage] = useState(null);
 
-  // References kwa ajili ya ku-control cursor focus (Barcode Hardware Scanner)
+  // References kwa ajili ya Barcode Hardware Scanner
   const barcodeInputRef = useRef(null);
   const nameInputRef = useRef(null);
 
-  // Form State
+  // Form State ya Bidhaa
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
+    category: '',
     buying_price: '',
     selling_price: '',
     quantity: '',
@@ -42,10 +54,9 @@ export default function Inventory() {
   const [editId, setEditId] = useState(null);
 
   useEffect(() => {
-    fetchProducts();
+    fetchInventoryData();
   }, []);
 
-  // Function ya Kuonyesha Notification kwa sekunde 3
   const triggerNotification = (message) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -53,7 +64,7 @@ export default function Inventory() {
     }, 3000);
   };
 
-  // Weka cursor kwenye Barcode Input kiotomatiki mara tu Modal inapofunguka
+  // Cursor focus kwenye Barcode Input mara tu Modal inapofunguka
   useEffect(() => {
     if (showModal) {
       setTimeout(() => {
@@ -62,20 +73,22 @@ export default function Inventory() {
     }
   }, [showModal]);
 
-  const fetchProducts = async () => {
+  const fetchInventoryData = async () => {
+    setLoading(true);
     try {
-      const res = await apiClient.get('inventory/products/?page_size=10000');
+      const [prodRes, catRes] = await Promise.all([
+        apiClient.get('inventory/products/?page_size=10000'),
+        apiClient.get('inventory/categories/')
+      ]);
       
-      if (Array.isArray(res.data)) {
-        setProducts(res.data);
-      } else if (res.data && Array.isArray(res.data.results)) {
-        setProducts(res.data.results);
-      } else {
-        setProducts([]);
-      }
+      const prodData = prodRes.data.results || prodRes.data || [];
+      const catData = catRes.data.results || catRes.data || [];
+      
+      setProducts(Array.isArray(prodData) ? prodData : []);
+      setCategories(Array.isArray(catData) ? catData : []);
       setLoading(false);
     } catch (err) {
-      console.error("Error fetching products:", err);
+      console.error("Error fetching inventory data:", err);
       setLoading(false);
     }
   };
@@ -84,7 +97,6 @@ export default function Inventory() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Logic ya kukamata 'Enter' kutoka kwa Barcode Scanner
   const handleBarcodeKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -97,6 +109,7 @@ export default function Inventory() {
     setFormData({
       name: '',
       barcode: '',
+      category: '',
       buying_price: '',
       selling_price: '',
       quantity: '',
@@ -111,6 +124,7 @@ export default function Inventory() {
     setFormData({
       name: product.name,
       barcode: product.barcode || '',
+      category: product.category || '',
       buying_price: product.buying_price,
       selling_price: product.selling_price,
       quantity: product.quantity,
@@ -120,43 +134,86 @@ export default function Inventory() {
     setShowModal(true);
   };
 
+  // KUSHIFADHI AU KUBADILISHA BIDHAA
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const payload = {
+      ...formData,
+      category: formData.category || null
+    };
+
     try {
       if (editId) {
-        await apiClient.put(`inventory/products/${editId}/`, formData);
+        await apiClient.put(`inventory/products/${editId}/`, payload);
         triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`);
       } else {
-        await apiClient.post('inventory/products/', formData);
+        await apiClient.post('inventory/products/', payload);
         triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`);
       }
       setIsSubmitting(false);
       setShowModal(false);
-      fetchProducts();
+      fetchInventoryData();
     } catch (err) {
-      alert(err.response?.data?.message || "Imeshindikana kuhifadhi bidhaa!");
+      alert(err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kuhifadhi bidhaa!");
       setIsSubmitting(false);
     }
   };
 
+  // KUSHAJILI KUNDI JIPYA (CATEGORY)
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('inventory/categories/', { name: newCategoryName.trim() });
+      triggerNotification(`Kundi la "${newCategoryName}" limesajiliwa!`);
+      setNewCategoryName('');
+      fetchInventoryData();
+    } catch (err) {
+      alert(err.response?.data?.detail || err.response?.data?.name?.[0] || "Imeshindikana kusajili kundi!");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // KUFUTA KUNDI
+  const handleDeleteCategory = async (catId, catName) => {
+    if (window.confirm(`Je, una uhakika unataka kufuta kundi la "${catName}"? Bidhaa zote za kundi hili zitawekwa "Bila Kundi".`)) {
+      try {
+        await apiClient.delete(`inventory/categories/${catId}/`);
+        triggerNotification("Kundi limefutwa!");
+        fetchInventoryData();
+      } catch (err) {
+        alert("Imeshindikana kufuta kundi!");
+      }
+    }
+  };
+
+  // KUFUTA BIDHAA
   const handleDelete = async (id, productName) => {
     if (window.confirm(`Je, una uhakika unataka kufuta bidhaa ya "${productName}"?`)) {
       try {
         await apiClient.delete(`inventory/products/${id}/`);
         triggerNotification(`Bidhaa ya "${productName}" imefutwa!`);
-        fetchProducts();
+        fetchInventoryData();
       } catch (err) {
         alert("Imeshindikana kufuta bidhaa!");
       }
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.barcode && p.barcode.includes(search))
-  );
+  // CHUJO LA BIDHAA (SEARCH & CATEGORY TABS)
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+                          (p.barcode && p.barcode.includes(search));
+    
+    if (selectedCategoryFilter === 'ALL') return matchesSearch;
+    if (selectedCategoryFilter === 'UNCATEGORIZED') return matchesSearch && !p.category;
+    return matchesSearch && p.category === selectedCategoryFilter;
+  });
 
   return (
     <div className="space-y-6 relative">
@@ -176,28 +233,83 @@ export default function Inventory() {
             <Package className="w-7 h-7 text-emerald-400" />
             <span>Usimamizi wa Stoko & Bidhaa</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">Ongeza bidhaa mpya au badilisha taarifa za bei na stoko.</p>
+          <p className="text-slate-400 text-sm mt-1">Sajili bidhaa mpya, husianisha na makundi, na badilisha taarifa za bei na stoko.</p>
         </div>
 
-        <button
-          onClick={openAddModal}
-          className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Ongeza Bidhaa Mpya</span>
-        </button>
+        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
+          >
+            <Layers className="w-5 h-5 text-purple-400" />
+            <span>Manage Makundi ({categories.length})</span>
+          </button>
+
+          <button
+            onClick={openAddModal}
+            className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Ongeza Bidhaa Mpya</span>
+          </button>
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Tafuta bidhaa kwa jina au Barcode..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-slate-900/80 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-        />
+      {/* Search Bar & Category Filter Buttons */}
+      <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-4">
+        <div className="relative">
+          <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Tafuta bidhaa kwa jina au Barcode..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-1 scrollbar-none">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-2 whitespace-nowrap">
+            <Filter className="w-3.5 h-3.5 text-emerald-400" /> Kundi:
+          </span>
+
+          <button
+            onClick={() => setSelectedCategoryFilter('ALL')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              selectedCategoryFilter === 'ALL'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            Bidhaa Zote ({products.length})
+          </button>
+
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategoryFilter(cat.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                selectedCategoryFilter === cat.id
+                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              {cat.name} ({cat.products_count ?? 0})
+            </button>
+          ))}
+
+          <button
+            onClick={() => setSelectedCategoryFilter('UNCATEGORIZED')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              selectedCategoryFilter === 'UNCATEGORIZED'
+                ? 'bg-amber-500 text-slate-950'
+                : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+            }`}
+          >
+            Bila Kundi
+          </button>
+        </div>
       </div>
 
       {/* Products Table */}
@@ -209,7 +321,7 @@ export default function Inventory() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-16 text-slate-500">
-            Hakuna bidhaa iliyopatikana kwenye mfumo.
+            Hakuna bidhaa iliyopatikana kwenye kundi hili.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -217,6 +329,7 @@ export default function Inventory() {
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
                   <th className="py-4 px-6">Bidhaa</th>
+                  <th className="py-4 px-6">Kundi (Category)</th>
                   <th className="py-4 px-6">Barcode</th>
                   <th className="py-4 px-6">Bei ya Kununua</th>
                   <th className="py-4 px-6">Bei ya Kuuzia</th>
@@ -231,9 +344,18 @@ export default function Inventory() {
                   return (
                     <tr key={p.id} className="hover:bg-slate-800/30 transition">
                       <td className="py-4 px-6 font-semibold text-white">{p.name}</td>
+                      
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                          <Tag className="w-3 h-3 text-purple-400" />
+                          {p.category_name || 'Bila Kundi'}
+                        </span>
+                      </td>
+
                       <td className="py-4 px-6 text-slate-400 font-mono">{p.barcode || 'N/A'}</td>
                       <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
                       <td className="py-4 px-6 text-emerald-400 font-bold">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
+                      
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                           isLowStock 
@@ -244,6 +366,7 @@ export default function Inventory() {
                           {p.quantity} {p.unit}
                         </span>
                       </td>
+
                       <td className="py-4 px-6 text-right space-x-2">
                         <button
                           onClick={() => openEditModal(p)}
@@ -269,7 +392,7 @@ export default function Inventory() {
         )}
       </div>
 
-      {/* MODAL FOR ADD / EDIT PRODUCT */}
+      {/* MODAL 1: FOR ADD / EDIT PRODUCT */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5">
@@ -294,23 +417,21 @@ export default function Inventory() {
                   <Scan className="w-4 h-4 text-emerald-400" />
                   <span>Barcode (Scan au Andika)</span>
                 </label>
-                <div className="relative">
-                  <input
-                    ref={barcodeInputRef}
-                    type="text"
-                    name="barcode"
-                    value={formData.barcode}
-                    onChange={handleInputChange}
-                    onKeyDown={handleBarcodeKeyDown}
-                    placeholder="Elekeza Scanner au andika kodi..."
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
+                <input
+                  ref={barcodeInputRef}
+                  type="text"
+                  name="barcode"
+                  value={formData.barcode}
+                  onChange={handleInputChange}
+                  onKeyDown={handleBarcodeKeyDown}
+                  placeholder="Elekeza Scanner au andika kodi..."
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
               </div>
 
               {/* PRODUCT NAME INPUT */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Bidhaa</label>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Bidhaa *</label>
                 <input
                   ref={nameInputRef}
                   type="text"
@@ -321,6 +442,22 @@ export default function Inventory() {
                   placeholder="Mfano: Azam Juice 1L"
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              {/* CATEGORY SELECTOR DROPDOWN */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kundi la Bidhaa (Category)</label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="">-- Bila Kundi --</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -404,6 +541,70 @@ export default function Inventory() {
               </button>
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: MANAGE CATEGORIES */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-purple-400" />
+                <span>Simamia Makundi ya Bidhaa</span>
+              </h3>
+              <button onClick={() => setShowCategoryModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form ya Kuongeza Category Mpya */}
+            <form onSubmit={handleCategorySubmit} className="flex gap-2">
+              <input
+                type="text"
+                required
+                placeholder="Mfano: Vinywaji, Sigara, Mikate..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500"
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition flex items-center gap-1"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                <span>Sajili</span>
+              </button>
+            </form>
+
+            {/* Orodha ya Categories Zilizopo */}
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Makundi Yaliyopo ({categories.length})</h4>
+              {categories.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">Bado hujasajili kundi lolote.</p>
+              ) : (
+                categories.map((cat) => (
+                  <div key={cat.id} className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm font-bold text-white">{cat.name}</span>
+                      <span className="text-[10px] bg-slate-900 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/20">
+                        {cat.products_count ?? 0} Bidhaa
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                      className="text-slate-500 hover:text-red-400 p-1 transition"
+                      title="Futa Kundi"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

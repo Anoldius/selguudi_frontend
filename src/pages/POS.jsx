@@ -12,12 +12,15 @@ import {
   BookOpen,
   UserCheck,
   X,
-  AlertCircle
+  AlertCircle,
+  Filter
 } from 'lucide-react';
 
 export default function POS() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -44,24 +47,33 @@ export default function POS() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
-      const res = await apiClient.get('inventory/products/');
-      setProducts(res.data.results || res.data);
-      setLoading(false);
+      const [prodRes, catRes] = await Promise.all([
+        apiClient.get('inventory/products/'),
+        apiClient.get('inventory/categories/')
+      ]);
+      setProducts(prodRes.data.results || prodRes.data || []);
+      setCategories(catRes.data.results || catRes.data || []);
     } catch (err) {
-      console.error("Error fetching products:", err);
+      console.error("Error fetching POS data:", err);
+    } finally {
       setLoading(false);
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.barcode && p.barcode.includes(search))
-  );
+  // CHUJO LA BIDHAA KWA KUTUMIA SEARCH & CATEGORY
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+                          (p.barcode && p.barcode.includes(search));
+    
+    if (selectedCategory === 'ALL') return matchesSearch;
+    if (selectedCategory === 'UNCATEGORIZED') return matchesSearch && !p.category;
+    return matchesSearch && p.category === selectedCategory;
+  });
 
   const addToCart = (product) => {
     const stockAvailable = Number(product.quantity ?? product.stock_quantity ?? 0);
@@ -187,7 +199,7 @@ export default function POS() {
       setCustomerPhone('');
       setDueDate('');
       setDebtNotes('');
-      fetchProducts();
+      fetchData(); // Refresh products to get updated stock
     } catch (err) {
       console.error("Full Sale Error Response:", err.response);
 
@@ -223,7 +235,7 @@ export default function POS() {
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6">
       
-      {/* FLOATING TOAST NOTIFICATION TOP RIGHT (Z-INDEX 9999) */}
+      {/* FLOATING TOAST NOTIFICATION TOP RIGHT */}
       {toast.show && (
         <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
           toast.type === 'success' 
@@ -237,7 +249,9 @@ export default function POS() {
 
       {/* LEFT SIDE: Product Catalog & Search */}
       <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-3xl p-5">
-        <div className="relative mb-5">
+        
+        {/* Search Bar */}
+        <div className="relative mb-3">
           <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
           <input
             type="text"
@@ -248,6 +262,50 @@ export default function POS() {
           />
         </div>
 
+        {/* Category Filter Horizontal Scroll */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-2 scrollbar-none border-b border-slate-800/50">
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 whitespace-nowrap">
+            <Filter className="w-3 h-3 text-emerald-400" /> Kundi:
+          </span>
+
+          <button
+            onClick={() => setSelectedCategory('ALL')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              selectedCategory === 'ALL'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            Zote
+          </button>
+
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                selectedCategory === cat.id
+                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+
+          <button
+            onClick={() => setSelectedCategory('UNCATEGORIZED')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              selectedCategory === 'UNCATEGORIZED'
+                ? 'bg-amber-500 text-slate-950'
+                : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+            }`}
+          >
+            Bila Kundi
+          </button>
+        </div>
+
+        {/* Product Grid */}
         <div className="flex-1 overflow-y-auto pr-1">
           {loading ? (
             <div className="flex items-center justify-center h-full text-slate-400 gap-2">
@@ -273,6 +331,7 @@ export default function POS() {
                   >
                     <div>
                       <h3 className="font-semibold text-white group-hover:text-emerald-400 transition truncate">{product.name}</h3>
+                      <p className="text-[10px] text-purple-400 mt-0.5 truncate">{product.category_name || 'Bila Kundi'}</p>
                       <p className="text-xs text-slate-400 mt-1">
                         Stoko: <span className={isLow ? 'text-amber-400 font-bold' : 'text-slate-200'}>{stock} {product.unit || 'pcs'}</span>
                       </p>

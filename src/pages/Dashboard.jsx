@@ -18,7 +18,8 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Tag
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -141,7 +142,6 @@ export default function Dashboard() {
       const sellingPrice = Number(item.unit_price || item.price || 0);
       const buyingPrice = Number(item.buying_price || item.product?.buying_price || item.cost_price || 0);
 
-      // Kama buying price haipo au ni 0, tumia profit margin ya dynamic
       const profitPerUnit = buyingPrice > 0 ? (sellingPrice - buyingPrice) : (sellingPrice * 0.2);
       return itemProfit + (profitPerUnit * qty);
     }, 0);
@@ -461,7 +461,7 @@ export default function Dashboard() {
               <thead className="text-xs text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800">
                 <tr>
                   <th className="py-3 px-4">Saa / Tarehe</th>
-                  <th className="py-3 px-4">Bidhaa Zilizouzwa / Mteja</th>
+                  <th className="py-3 px-4">Bidhaa Zilizouzwa [Kundi] / Mteja</th>
                   <th className="py-3 px-4">Njia ya Malipo</th>
                   <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
                   <th className="py-3 px-4 text-center">Vitendo</th>
@@ -475,8 +475,13 @@ export default function Dashboard() {
                     ? txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : `${txDateObj.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })} ${txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
+                  // Format bidhaa ikiwa na Category Label
                   const itemsList = tx.items && tx.items.length > 0 
-                    ? tx.items.map(item => `${item.product_name || item.product?.name || 'Bidhaa'} (${item.quantity}x)`).join(', ')
+                    ? tx.items.map(item => {
+                        const prodName = item.product_name || item.product?.name || 'Bidhaa';
+                        const catName = item.category_name || item.product?.category_name || item.product?.category?.name || 'Bila Kundi';
+                        return `${prodName} [${catName}] (${item.quantity}x)`;
+                      }).join(', ')
                     : 'Muamala wa Mauzo';
 
                   const customerInfo = tx.customer_name ? ` - Mteja: ${tx.customer_name}` : '';
