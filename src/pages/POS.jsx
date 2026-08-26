@@ -95,8 +95,27 @@ export default function POS() {
           : item
       ));
     } else {
-      setCart([...cart, { ...product, quantity: 1, availableStock: stockAvailable }]);
+      setCart([...cart, { 
+        ...product, 
+        quantity: 1, 
+        availableStock: stockAvailable,
+        selling_price: product.selling_price // Hii inaweza kueditiwa kwenye cart
+      }]);
     }
+  };
+
+  // BADILISHA BEI YA KUUZIA KWENYE KIKAPU TU
+  const updateCartPrice = (id, newPrice) => {
+    const priceVal = parseFloat(newPrice);
+    setCart(cart.map(item => {
+      if (item.id === id) {
+        return { 
+          ...item, 
+          selling_price: newPrice === '' ? '' : (isNaN(priceVal) ? 0 : priceVal) 
+        };
+      }
+      return item;
+    }));
   };
 
   const updateQuantity = (id, delta) => {
@@ -118,7 +137,7 @@ export default function POS() {
     setCart(cart.filter(item => item.id !== id));
   };
 
-  const totalAmount = cart.reduce((sum, item) => sum + (parseFloat(item.selling_price) * item.quantity), 0);
+  const totalAmount = cart.reduce((sum, item) => sum + ((parseFloat(item.selling_price) || 0) * item.quantity), 0);
   const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
 
   const handleInitiateCheckout = () => {
@@ -179,7 +198,8 @@ export default function POS() {
         customer_phone: debtDetails.customer_phone || '',
         items: cart.map(item => ({
           product_id: String(item.id),
-          quantity: Number(item.quantity)
+          quantity: Number(item.quantity),
+          unit_price: Number(item.selling_price) // Tunatuma bei iliyobadilishwa kwenda backend!
         }))
       };
 
@@ -250,7 +270,7 @@ export default function POS() {
       {/* LEFT SIDE: Product Catalog & Search */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0 space-y-4 overflow-hidden">
         
-        {/* CARD 1: SEARCH & CATEGORY FILTERS (Separated Card like Inventory) */}
+        {/* CARD 1: SEARCH & CATEGORY FILTERS */}
         <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-3 flex-shrink-0">
           {/* Search Bar */}
           <div className="relative">
@@ -308,7 +328,7 @@ export default function POS() {
           </div>
         </div>
 
-        {/* CARD 2: PRODUCT CATALOG GRID (Separated Card) */}
+        {/* CARD 2: PRODUCT CATALOG GRID */}
         <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-3xl p-5 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-full text-slate-400 gap-2">
@@ -353,7 +373,7 @@ export default function POS() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Cart Section (Fixed Width & Flex-Shrink-0) */}
+      {/* RIGHT SIDE: Cart Section (Fixed Width & Dynamic Editable Prices) */}
       <div className="w-full md:w-96 flex-shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -372,30 +392,57 @@ export default function POS() {
                 Kikapu kipo wazi. Bonyeza bidhaa kuongeza.
               </div>
             ) : (
-              cart.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
-                  <div className="overflow-hidden pr-2">
-                    <h4 className="text-sm font-semibold text-white truncate">{item.name}</h4>
-                    <p className="text-xs text-emerald-400">{Number(item.selling_price).toLocaleString()} TZS</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
-                      <button onClick={() => updateQuantity(item.id, -1)} className="p-1 text-slate-400 hover:text-white">
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="px-2 text-xs font-bold text-white">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} className="p-1 text-slate-400 hover:text-white">
-                        <Plus className="w-3.5 h-3.5" />
+              cart.map((item) => {
+                const isBelowCost = Number(item.selling_price) < Number(item.buying_price || 0);
+
+                return (
+                  <div key={item.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-white truncate max-w-[180px]">{item.name}</h4>
+                      
+                      <button onClick={() => removeFromCart(item.id)} className="text-slate-500 hover:text-red-400 p-1 transition">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <button onClick={() => removeFromCart(item.id)} className="text-slate-500 hover:text-red-400 p-1 transition">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-900">
+                      {/* DYNAMIC EDITABLE PRICE INPUT */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Bei:</span>
+                        <input
+                          type="number"
+                          value={item.selling_price}
+                          onChange={(e) => updateCartPrice(item.id, e.target.value)}
+                          className={`w-24 px-2 py-1 bg-slate-900 border rounded-lg text-xs font-mono font-bold focus:outline-none transition ${
+                            isBelowCost 
+                              ? 'border-red-500 text-red-400 bg-red-950/20' 
+                              : 'border-slate-800 text-emerald-400 focus:border-emerald-500'
+                          }`}
+                        />
+                        <span className="text-[10px] text-slate-500 font-bold">TZS</span>
+                      </div>
+
+                      {/* QUANTITY BUTTONS */}
+                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
+                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 text-slate-400 hover:text-white">
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="px-2 text-xs font-bold text-white">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 text-slate-400 hover:text-white">
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* WARNING ALERTS IF BELOW BUYING PRICE */}
+                    {isBelowCost && (
+                      <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 pt-0.5">
+                        ⚠️ Chini ya gharama ({Number(item.buying_price).toLocaleString()} TZS)!
+                      </p>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
