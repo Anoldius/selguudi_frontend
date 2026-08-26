@@ -52,10 +52,9 @@ export default function ForgotPassword() {
                 Kama email hiyo imesajiliwa, angalia terminal ya backend (au inbox yako) kupata Code/Token ya Reset.
               </p>
             </div>
-
             <Link 
               to="/reset-password" 
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl flex items-center justify-center transition block text-sm"
+              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl flex items-center justify-center transition text-sm"
             >
               Weka Code / Reset Password
             </Link>

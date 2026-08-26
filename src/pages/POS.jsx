@@ -199,7 +199,7 @@ export default function POS() {
       setCustomerPhone('');
       setDueDate('');
       setDebtNotes('');
-      fetchData(); // Refresh products to get updated stock
+      fetchData();
     } catch (err) {
       console.error("Full Sale Error Response:", err.response);
 
@@ -233,7 +233,7 @@ export default function POS() {
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6">
+    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6 overflow-hidden">
       
       {/* FLOATING TOAST NOTIFICATION TOP RIGHT */}
       {toast.show && (
@@ -248,73 +248,76 @@ export default function POS() {
       )}
 
       {/* LEFT SIDE: Product Catalog & Search */}
-      <div className="flex-1 flex flex-col min-h-0 bg-slate-900/60 border border-slate-800 rounded-3xl p-5">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 space-y-4 overflow-hidden">
         
-        {/* Search Bar */}
-        <div className="relative mb-3">
-          <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Tafuta bidhaa kwa jina au kuanza kuscann Barcode..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-          />
-        </div>
+        {/* CARD 1: SEARCH & CATEGORY FILTERS (Separated Card like Inventory) */}
+        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-3 flex-shrink-0">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Tafuta bidhaa kwa jina au kuanza kuscann Barcode..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
 
-        {/* Category Filter Horizontal Scroll */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-2 scrollbar-none border-b border-slate-800/50">
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 whitespace-nowrap">
-            <Filter className="w-3 h-3 text-emerald-400" /> Kundi:
-          </span>
+          {/* Category Filter Horizontal Scroll */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
+              <Filter className="w-3 h-3 text-emerald-400" /> KUNDI:
+            </span>
 
-          <button
-            onClick={() => setSelectedCategory('ALL')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              selectedCategory === 'ALL'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Zote
-          </button>
-
-          {categories.map((cat) => (
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                selectedCategory === cat.id
-                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+              onClick={() => setSelectedCategory('ALL')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                selectedCategory === 'ALL'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                   : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
               }`}
             >
-              {cat.name}
+              Bidhaa Zote ({products.length})
             </button>
-          ))}
 
-          <button
-            onClick={() => setSelectedCategory('UNCATEGORIZED')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              selectedCategory === 'UNCATEGORIZED'
-                ? 'bg-amber-500 text-slate-950'
-                : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
-            }`}
-          >
-            Bila Kundi
-          </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                  selectedCategory === cat.id
+                    ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                    : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                {cat.name} ({cat.products_count ?? 0})
+              </button>
+            ))}
+
+            <button
+              onClick={() => setSelectedCategory('UNCATEGORIZED')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                selectedCategory === 'UNCATEGORIZED'
+                  ? 'bg-amber-500 text-slate-950'
+                  : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+              }`}
+            >
+              Bila Kundi
+            </button>
+          </div>
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto pr-1">
+        {/* CARD 2: PRODUCT CATALOG GRID (Separated Card) */}
+        <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-3xl p-5 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-full text-slate-400 gap-2">
               <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
               <span>Inapakia bidhaa...</span>
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              Hakuna bidhaa iliyopatikana.
+            <div className="text-center py-12 text-slate-500 text-sm">
+              Hakuna bidhaa iliyopatikana kwenye kundi hili.
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -350,8 +353,8 @@ export default function POS() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Cart Section */}
-      <div className="w-full md:w-96 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
+      {/* RIGHT SIDE: Cart Section (Fixed Width & Flex-Shrink-0) */}
+      <div className="w-full md:w-96 flex-shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <h2 className="font-bold text-lg text-white flex items-center gap-2">
