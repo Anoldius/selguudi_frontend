@@ -18,8 +18,7 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle,
-  Tag
+  AlertCircle
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -75,7 +74,7 @@ export default function Dashboard() {
     return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari...</div>;
   }
 
-  // --- LOGIC YA CHUJO LA TAREHE (TANZANIA TIMEZONE SAFE) ---
+  // --- LOGIC YA CHUJO LA TAREHE ---
   const getLocalDateString = (d) => {
     const dateObj = new Date(d);
     const year = dateObj.getFullYear();
@@ -91,12 +90,10 @@ export default function Dashboard() {
   yesterday.setDate(today.getDate() - 1);
   const yesterdayStr = getLocalDateString(yesterday);
 
-  // Siku 7 zilizopita kuanzia Saa 00:00:00
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  // Chuja Miamala Kulingana na Filter Iliyochaguliwa
   const filteredTransactions = allTransactions.filter(tx => {
     if (!tx.created_at) return false;
     const txDateStr = getLocalDateString(tx.created_at);
@@ -112,7 +109,6 @@ export default function Dashboard() {
     return true;
   });
 
-  // 2. KOKOTOA HESABU (Ondoa miamala iliyo na status 'REFUNDED')
   const validTransactions = filteredTransactions.filter(t => t.status !== 'REFUNDED');
 
   const cashTotal = validTransactions
@@ -133,7 +129,6 @@ export default function Dashboard() {
 
   const totalSales = cashTotal + lipaTotal + cardTotal + creditTotal;
 
-  // --- KOKOTOA FAIDA HALISI KULINGANA NA FILTER ILIYOCHAGULIWA ---
   const dynamicEstimatedProfit = validTransactions.reduce((totalProfit, tx) => {
     if (!tx.items || !Array.isArray(tx.items)) return totalProfit;
 
@@ -149,7 +144,6 @@ export default function Dashboard() {
     return totalProfit + txProfit;
   }, 0);
 
-  // Header Date Label Format
   const getFilterLabel = () => {
     if (dateFilter === 'today') {
       return today.toLocaleDateString('sw-TZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -160,7 +154,6 @@ export default function Dashboard() {
     }
   };
 
-  // LOGIC YA MCHAKATO WA REFUND
   const handleExecuteRefund = async (e) => {
     e.preventDefault();
     if (!selectedTx) return;
@@ -461,7 +454,7 @@ export default function Dashboard() {
               <thead className="text-xs text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800">
                 <tr>
                   <th className="py-3 px-4">Saa / Tarehe</th>
-                  <th className="py-3 px-4">Bidhaa Zilizouzwa [Kundi] / Mteja</th>
+                  <th className="py-3 px-4">Bidhaa Zilizouzwa / Mteja</th>
                   <th className="py-3 px-4">Njia ya Malipo</th>
                   <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
                   <th className="py-3 px-4 text-center">Vitendo</th>
@@ -475,15 +468,6 @@ export default function Dashboard() {
                     ? txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     : `${txDateObj.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })} ${txDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-                  // Format bidhaa ikiwa na Category Label
-                  const itemsList = tx.items && tx.items.length > 0 
-                    ? tx.items.map(item => {
-                        const prodName = item.product_name || item.product?.name || 'Bidhaa';
-                        const catName = item.category_name || item.product?.category_name || item.product?.category?.name || 'Bila Kundi';
-                        return `${prodName} [${catName}] (${item.quantity}x)`;
-                      }).join(', ')
-                    : 'Muamala wa Mauzo';
-
                   const customerInfo = tx.customer_name ? ` - Mteja: ${tx.customer_name}` : '';
 
                   return (
@@ -493,9 +477,27 @@ export default function Dashboard() {
                         {txDisplayTime}
                       </td>
 
-                      <td className="py-3.5 px-4 font-medium text-white max-w-xs truncate">
-                        {itemsList} <span className="text-xs text-amber-400 font-semibold">{customerInfo}</span>
-                        {isRefunded && <span className="block text-[10px] text-red-400 font-bold uppercase">(Muamala Umerejeshwa/Refunded)</span>}
+                      <td className="py-3.5 px-4 font-medium text-white max-w-md">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {tx.items && tx.items.length > 0 ? (
+                            tx.items.map((item, i) => {
+                              const cat = item.category_name || item.product?.category_name || item.product?.category?.name || 'Bila Kundi';
+                              return (
+                                <span key={i} className="inline-flex items-center gap-1 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
+                                  <span>{item.product_name || item.product?.name || 'Bidhaa'}</span>
+                                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-lg border border-purple-500/30 font-bold uppercase tracking-wider">
+                                    {cat}
+                                  </span>
+                                  <span className="text-emerald-400 font-bold font-mono">({item.quantity}x)</span>
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span>Muamala wa Mauzo</span>
+                          )}
+                          {customerInfo && <span className="text-xs text-amber-400 font-semibold">{customerInfo}</span>}
+                        </div>
+                        {isRefunded && <span className="block text-[10px] text-red-400 font-bold uppercase mt-1">(Muamala Umerejeshwa/Refunded)</span>}
                       </td>
 
                       <td className="py-3.5 px-4">
