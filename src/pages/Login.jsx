@@ -59,7 +59,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Input */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username au Simu</label>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username ya Duka</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <User className="w-5 h-5" />
@@ -70,7 +70,7 @@ export default function Login() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
-                  placeholder="Weka username yako"
+                  placeholder="Weka username ya duka unalotaka kuingia"
                 />
               </div>
             </div>
