@@ -28,12 +28,13 @@ export default function Inventory() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // State ya Permissions
+  // State ya Permissions (Imeongezwa show_stock_summary_cards)
   const [permissions, setPermissions] = useState({
     show_profit_to_cashier: false,
     allow_cashier_debts: true,
     allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false
+    show_buying_price_to_cashier: false,
+    show_stock_summary_cards: false
   });
   
   // State ya Thamani ya Stoko (Summary Metrics)
@@ -131,8 +132,8 @@ export default function Inventory() {
   };
 
   // KUANGALIA TOGGLES ZA BUSINESS PERMISSIONS MOJA KWA MOJA
-  const canSeeBuyingPrice = Boolean(permissions?.show_buying_price_to_cashier);
-  const canSeeSummaryCards = Boolean(permissions?.show_profit_to_cashier) && Boolean(permissions?.show_buying_price_to_cashier);
+  const canSeeBuyingPrice = user?.role === 'owner' || Boolean(permissions?.show_buying_price_to_cashier);
+  const canSeeSummaryCards = user?.role === 'owner' || Boolean(permissions?.show_stock_summary_cards);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
