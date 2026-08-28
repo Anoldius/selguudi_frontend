@@ -38,12 +38,13 @@ export default function Settings() {
   const [formError, setFormError] = useState('');
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
-  // State ya Permissions za Cashier
+  // State ya Permissions za Cashier (Pamoja na show_stock_summary_cards)
   const [permissions, setPermissions] = useState({
     show_profit_to_cashier: false,
     allow_cashier_debts: true,
     allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false
+    show_buying_price_to_cashier: false,
+    show_stock_summary_cards: false
   });
 
   const [loadingPermissions, setLoadingPermissions] = useState(false);
@@ -496,7 +497,23 @@ export default function Settings() {
                   </button>
                 </div>
 
-                {/* Toggle 3: Debts Access */}
+                {/* Toggle 3: Show Stock Summary Cards (FIELD MPYA) */}
+                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Ruhusu Cashier kuona Kadi za Thamani & Faida ya Stoko</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">Kama imezimwa, Kadi 3 za muhtasari wa Thamani ya Stoko na Faida zitaondolewa kwenye ukurasa wa Stoko.</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggleChange('show_stock_summary_cards')}
+                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${
+                      permissions.show_stock_summary_cards ? 'bg-emerald-500 justify-end' : 'bg-slate-800 justify-start'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-slate-950 shadow-md transform transition" />
+                  </button>
+                </div>
+
+                {/* Toggle 4: Debts Access */}
                 <div className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800">
                   <div>
                     <h4 className="text-sm font-bold text-white">Ruhusu Cashier kuingia Kwenye Daftari la Madeni</h4>
@@ -512,7 +529,7 @@ export default function Settings() {
                   </button>
                 </div>
 
-                {/* Toggle 4: Custom Price on POS */}
+                {/* Toggle 5: Custom Price on POS */}
                 <div className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800">
                   <div>
                     <h4 className="text-sm font-bold text-white">Ruhusu Cashier Kupunguza Bei Kwenye POS (Custom Price)</h4>
