@@ -22,12 +22,20 @@ import {
 } from 'lucide-react';
 
 export default function Inventory() {
-  const { user, permissions } = useAuth();
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // State ya Permissions
+  const [permissions, setPermissions] = useState({
+    show_profit_to_cashier: false,
+    allow_cashier_debts: true,
+    allow_cashier_custom_price: true,
+    show_buying_price_to_cashier: false
+  });
+  
   // State ya Thamani ya Stoko (Summary Metrics)
   const [summaryData, setSummaryData] = useState({
     total_current_cost: 0,
@@ -97,10 +105,11 @@ export default function Inventory() {
   const fetchInventoryData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, sumRes] = await Promise.all([
+      const [prodRes, catRes, sumRes, permRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
         apiClient.get('inventory/categories/'),
-        apiClient.get('inventory/products/summary/')
+        apiClient.get('inventory/products/summary/'),
+        apiClient.get('auth/business-permissions/')
       ]);
       
       const prodData = prodRes.data.results || prodRes.data || [];
@@ -108,6 +117,9 @@ export default function Inventory() {
       
       setProducts(Array.isArray(prodData) ? prodData : []);
       setCategories(Array.isArray(catData) ? catData : []);
+      if (permRes.data) {
+        setPermissions(permRes.data);
+      }
       if (sumRes.data) {
         setSummaryData(sumRes.data);
       }
@@ -118,12 +130,9 @@ export default function Inventory() {
     }
   };
 
-  // Kagua Haki za Mtumiaji (Owner vs Cashier)
-  const isOwner = user?.role === 'owner';
-  const canSeeBuyingPrice = isOwner || Boolean(permissions?.show_buying_price_to_cashier);
-  
-  // KADI ZITAONEKANA KAMA NI BOSI (OWNER) AU CASHIER AMBAYE AMERUHUSIWA KUONA PEKEE
-  const canSeeSummaryCards = isOwner || (Boolean(permissions?.show_profit_to_cashier) && Boolean(permissions?.show_buying_price_to_cashier));
+  // KUANGALIA TOGGLES ZA BUSINESS PERMISSIONS MOJA KWA MOJA
+  const canSeeBuyingPrice = Boolean(permissions?.show_buying_price_to_cashier);
+  const canSeeSummaryCards = Boolean(permissions?.show_profit_to_cashier) && Boolean(permissions?.show_buying_price_to_cashier);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -281,15 +290,13 @@ export default function Inventory() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          {isOwner && (
-            <button
-              onClick={() => setShowCategoryModal(true)}
-              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
-            >
-              <Layers className="w-5 h-5 text-purple-400" />
-              <span>Manage Makundi ({categories.length})</span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
+          >
+            <Layers className="w-5 h-5 text-purple-400" />
+            <span>Manage Makundi ({categories.length})</span>
+          </button>
 
           <button
             onClick={openAddModal}
@@ -301,7 +308,7 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* INVENTORY VALUE SUMMARY CARDS (ONESHWA KWA BOSI PEKEE AU CASHIER MERYERUHUSIWA) */}
+      {/* INVENTORY VALUE SUMMARY CARDS (INATEGEMEA TOGGLES ZA SETTINGS) */}
       {canSeeSummaryCards && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
@@ -467,15 +474,13 @@ export default function Inventory() {
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        {isOwner && (
-                          <button
-                            onClick={() => promptDeleteProduct(p.id, p.name)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
-                            title="Futa (Delete)"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => promptDeleteProduct(p.id, p.name)}
+                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
+                          title="Futa (Delete)"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -685,15 +690,13 @@ export default function Inventory() {
                         {cat.products_count ?? 0} Bidhaa
                       </span>
                     </div>
-                    {isOwner && (
-                      <button
-                        onClick={() => promptDeleteCategory(cat.id, cat.name)}
-                        className="text-slate-500 hover:text-red-400 p-1 transition"
-                        title="Futa Kundi"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => promptDeleteCategory(cat.id, cat.name)}
+                      className="text-slate-500 hover:text-red-400 p-1 transition"
+                      title="Futa Kundi"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))
               )}
