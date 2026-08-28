@@ -3,7 +3,6 @@ import apiClient from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { 
   Settings as SettingsIcon, 
-  User, 
   Store, 
   Lock, 
   KeyRound, 
@@ -12,21 +11,26 @@ import {
   ShieldCheck,
   Phone,
   Mail,
-  ShieldAlert
+  ShieldAlert,
+  Save
 } from 'lucide-react';
 
 export default function Settings() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
 
+  // State ya Jina la Duka
+  const [businessName, setBusinessName] = useState(user?.business_name || user?.business?.name || '');
+  const [isUpdatingBusiness, setIsUpdatingBusiness] = useState(false);
+
   // State ya Change Login Password
   const [passwordData, setPasswordData] = useState({
-    current_password: '',
     new_password: '',
     confirm_password: ''
   });
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Toast State
   const [toastMessage, setToastMessage] = useState(null);
 
   const triggerNotification = (msg) => {
@@ -34,6 +38,26 @@ export default function Settings() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // 1. KUBADILISHA JINA LA DUKA
+  const handleUpdateBusinessName = async (e) => {
+    e.preventDefault();
+    if (!businessName.trim()) {
+      triggerNotification("Tafadhali ingiza jina la duka!");
+      return;
+    }
+
+    setIsUpdatingBusiness(true);
+    try {
+      const res = await apiClient.put('auth/update-business-name/', { name: businessName });
+      triggerNotification(res.data?.message || "Jina la duka limebadilishwa kikamilifu! 🏪");
+    } catch (err) {
+      triggerNotification(err.response?.data?.error || "Imeshindikana kubadilisha jina la duka!");
+    } finally {
+      setIsUpdatingBusiness(false);
+    }
+  };
+
+  // 2. KUBADILISHA NENOSIRI
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
   };
@@ -46,16 +70,15 @@ export default function Settings() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmittingPassword(true);
     try {
-      // API call ya kubadili login password (au tumia endpoint yako ya password update)
       await apiClient.post('auth/set-settings-password/', {
         new_settings_password: passwordData.new_password,
         confirm_settings_password: passwordData.confirm_password
       });
 
       triggerNotification("Nenosiri limebadilishwa kikamilifu! 🔒");
-      setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
+      setPasswordData({ new_password: '', confirm_password: '' });
     } catch (err) {
       const errRes = err.response?.data;
       let errMsg = "Imeshindikana kubadilisha nenosiri!";
@@ -70,7 +93,7 @@ export default function Settings() {
       }
       triggerNotification(errMsg);
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingPassword(false);
     }
   };
 
@@ -122,7 +145,7 @@ export default function Settings() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* SEHEMU YA 1: TAARIFA ZA DUKA NA BOSI */}
+        {/* SEHEMU YA 1: KUBADILISHA JINA LA DUKA & MAWASILIANO */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-5">
           <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
             <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl">
@@ -130,37 +153,49 @@ export default function Settings() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-white">Taarifa za Biashara</h3>
-              <p className="text-xs text-slate-400">Profile ya Duka na Mmiliki</p>
+              <p className="text-xs text-slate-400">Badilisha Jina la Duka / Supermarket</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-1">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Jina la Duka / Supermarket</span>
-              <span className="text-base font-extrabold text-emerald-400 uppercase font-mono">
-                {user?.business_name || user?.business?.name || 'Selguudi Retail'}
-              </span>
+          <form onSubmit={handleUpdateBusinessName} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                Jina la Duka / Supermarket *
+              </label>
+              <input
+                type="text"
+                required
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="Mfano: Selguudi Supermarket"
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-bold focus:outline-none focus:border-blue-500 uppercase text-sm"
+              />
             </div>
 
-            <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-1">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Username ya Bosi</span>
-              <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                <User className="w-4 h-4 text-slate-400" />
-                <span>@{user?.username}</span>
-              </div>
-            </div>
+            <button
+              type="submit"
+              disabled={isUpdatingBusiness}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 transition text-sm"
+            >
+              {isUpdatingBusiness ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>Hifadhi Jina Jipya la Duka</span>
+            </button>
+          </form>
 
+          {/* Mawasiliano ya Bosi */}
+          <div className="pt-3 border-t border-slate-800 space-y-3">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mawasiliano ya Bosi</h4>
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Simu</span>
+              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 block">Simu</span>
                 <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300">
                   <Phone className="w-3.5 h-3.5 text-slate-500" />
                   <span>{user?.phone || 'N/A'}</span>
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500 block">Email</span>
+              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 block">Email</span>
                 <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 truncate">
                   <Mail className="w-3.5 h-3.5 text-slate-500" />
                   <span className="truncate">{user?.email || 'N/A'}</span>
@@ -215,10 +250,10 @@ export default function Settings() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition mt-2"
+              disabled={isSubmittingPassword}
+              className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition text-sm mt-2"
             >
-              {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Lock className="w-5 h-5" />}
+              {isSubmittingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
               <span>Hifadhi Nenosiri Jipya</span>
             </button>
           </form>
