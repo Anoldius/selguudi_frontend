@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth(); // <--- ONGEZA updateUser HAPA
   const isOwner = user?.role === 'owner';
 
   // State ya Jina la Duka
@@ -49,6 +49,16 @@ export default function Settings() {
     setIsUpdatingBusiness(true);
     try {
       const res = await apiClient.put('auth/update-business-name/', { name: businessName });
+      const updatedName = res.data?.business_name || businessName;
+
+      // UPDATE CONTEXT NA LOCALSTORAGE KIOTOMATIKI!
+      if (updateUser) {
+        updateUser({ 
+          business_name: updatedName,
+          business: { ...(user?.business || {}), name: updatedName }
+        });
+      }
+
       triggerNotification(res.data?.message || "Jina la duka limebadilishwa kikamilifu! 🏪");
     } catch (err) {
       triggerNotification(err.response?.data?.error || "Imeshindikana kubadilisha jina la duka!");

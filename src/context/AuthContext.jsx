@@ -58,6 +58,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // FUNCTION MPYA: KUSASISHA TAARIFA ZA USER (KAMA JINA LA DUKA) BILA KULOGOUT
+  const updateUser = (newUserData) => {
+    setUser((prevUser) => {
+      const updatedUser = { ...prevUser, ...newUserData };
+      sessionStorage.setItem('user_info', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  };
+
   const logout = () => {
     sessionStorage.removeItem('access_token');
     sessionStorage.removeItem('refresh_token');
@@ -68,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, permissions, fetchPermissions, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, permissions, fetchPermissions, updateUser, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
