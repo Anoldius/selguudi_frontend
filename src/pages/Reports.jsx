@@ -11,7 +11,8 @@ import {
   PackageCheck,
   Filter,
   RefreshCw,
-  Lock
+  Lock,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function Reports() {
@@ -26,7 +27,8 @@ export default function Reports() {
     show_profit_to_cashier: false,
     allow_cashier_debts: true,
     allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false
+    show_buying_price_to_cashier: false,
+    show_stock_summary_cards: false
   });
 
   // Filter choice: 'today', 'yesterday', 'week', au 'month'
@@ -60,8 +62,32 @@ export default function Reports() {
     }
   };
 
-  // SOMA TOGGLE YA BIASHARA MOJA KWA MOJA BILA KUGUSIA USER ROLE
+  // SOMA TOGGLE YA BIASHARA MOJA KWA MOJA
   const canSeeProfit = Boolean(permissions?.show_profit_to_cashier);
+
+  // KAMA TOGGLE YA FAIDA NA TAKWIMU IPO OFF, BLOCK UKURASA MZIMA!
+  if (!loading && !canSeeProfit) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
+        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 max-w-md text-center space-y-4 shadow-2xl">
+          <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-white">Huwezi Kuona Ukurasa Huu</h3>
+            <p className="text-sm text-slate-400">
+              Ruhusa ya kuona Ripoti & Takwimu imezimwa kwenye Mipangilio ya Duka na Mmiliki (Boss).
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-500">
+            Tafadhali wasiliana na Bosi wako ili akuruhusu kuona takwimu za mauzo na faida.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // TAREHE LOGIC FOR FILTERING
   const today = new Date();
@@ -123,10 +149,8 @@ export default function Reports() {
 
   const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
 
-  // 3. FAIDA KWA KIPINDI HICHO (INATOKANA NA BACKEND MOJA KWA MOJA)
-  const displayProfit = canSeeProfit 
-    ? (dashboardSummary?.today_estimated_profit ?? 0)
-    : 0;
+  // 3. FAIDA KWA KIPINDI HICHO
+  const displayProfit = dashboardSummary?.today_estimated_profit ?? 0;
 
   // 4. LOW STOCK ALERT COUNT
   const lowStockCount = dashboardSummary?.low_stock_items_count ?? products.filter(p => {
@@ -222,19 +246,17 @@ export default function Reports() {
               <p className="mt-2 text-xs text-slate-400">Jumla ya fedha zilizoingia</p>
             </div>
 
-            {/* Estimated Profit Card (HONORS PERMISSIONS TOGGLE DIRECTLY) */}
+            {/* Estimated Profit Card */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
-                <div className={`p-3 rounded-2xl border ${
-                  canSeeProfit ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
-                }`}>
-                  {canSeeProfit ? <TrendingUp className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
+                <div className="p-3 rounded-2xl border bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
+                  <TrendingUp className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className={`text-2xl font-extrabold font-mono ${canSeeProfit ? 'text-emerald-400' : 'text-slate-600'}`}>
-                  {canSeeProfit ? `${Number(displayProfit).toLocaleString()} TZS` : '*** TZS'}
+                <h3 className="text-2xl font-extrabold font-mono text-emerald-400">
+                  {Number(displayProfit).toLocaleString()} TZS
                 </h3>
               </div>
               <p className="mt-2 text-xs text-slate-400">Mauzo minus Bei za kununulia</p>
