@@ -22,20 +22,12 @@ import {
 } from 'lucide-react';
 
 export default function Inventory() {
-  const { user } = useAuth();
+  const { user, permissions } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // State ya Permissions
-  const [permissions, setPermissions] = useState({
-    show_profit_to_cashier: false,
-    allow_cashier_debts: true,
-    allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false
-  });
-  
   // State ya Thamani ya Stoko (Summary Metrics)
   const [summaryData, setSummaryData] = useState({
     total_current_cost: 0,
@@ -105,11 +97,10 @@ export default function Inventory() {
   const fetchInventoryData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, sumRes, permRes] = await Promise.all([
+      const [prodRes, catRes, sumRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
         apiClient.get('inventory/categories/'),
-        apiClient.get('inventory/products/summary/'),
-        apiClient.get('auth/business-permissions/')
+        apiClient.get('inventory/products/summary/')
       ]);
       
       const prodData = prodRes.data.results || prodRes.data || [];
@@ -117,9 +108,6 @@ export default function Inventory() {
       
       setProducts(Array.isArray(prodData) ? prodData : []);
       setCategories(Array.isArray(catData) ? catData : []);
-      if (permRes.data) {
-        setPermissions(permRes.data);
-      }
       if (sumRes.data) {
         setSummaryData(sumRes.data);
       }
@@ -133,6 +121,8 @@ export default function Inventory() {
   // Kagua Haki za Mtumiaji (Owner vs Cashier)
   const isOwner = user?.role === 'owner';
   const canSeeBuyingPrice = isOwner || Boolean(permissions?.show_buying_price_to_cashier);
+  
+  // KADI ZITAONEKANA KAMA NI BOSI (OWNER) AU CASHIER AMBAYE AMERUHUSIWA KUONA PEKEE
   const canSeeSummaryCards = isOwner || (Boolean(permissions?.show_profit_to_cashier) && Boolean(permissions?.show_buying_price_to_cashier));
 
   const handleInputChange = (e) => {
@@ -311,7 +301,7 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* INVENTORY VALUE SUMMARY CARDS (ZITAONEKANA KAMA canSeeSummaryCards NI TRUE PEKEE) */}
+      {/* INVENTORY VALUE SUMMARY CARDS (ONESHWA KWA BOSI PEKEE AU CASHIER MERYERUHUSIWA) */}
       {canSeeSummaryCards && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">

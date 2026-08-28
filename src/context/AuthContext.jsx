@@ -5,14 +5,33 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState({
+    show_profit_to_cashier: false,
+    allow_cashier_debts: true,
+    allow_cashier_custom_price: true,
+    show_buying_price_to_cashier: false
+  });
   const [loading, setLoading] = useState(true);
 
+  // Pakua Taarifa za Business Permissions
+  const fetchPermissions = async () => {
+    try {
+      const res = await apiClient.get('auth/business-permissions/');
+      if (res.data) {
+        setPermissions(res.data);
+      }
+    } catch (err) {
+      console.error("Error fetching permissions in AuthContext:", err);
+    }
+  };
+
   useEffect(() => {
-    // Angalia kama mteja ana session kwenye tab hii
     const token = sessionStorage.getItem('access_token');
     const storedUser = sessionStorage.getItem('user_info');
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      fetchPermissions();
     }
     setLoading(false);
   }, []);
@@ -22,7 +41,6 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.post('auth/login/', { username, password });
       const { access, refresh, business_name, role, username: uname } = response.data;
 
-      // Hifadhi kwenye sessionStorage (Inafutika tab ikifungwa)
       sessionStorage.setItem('access_token', access);
       sessionStorage.setItem('refresh_token', refresh);
       
@@ -30,6 +48,7 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.setItem('user_info', JSON.stringify(userData));
       
       setUser(userData);
+      await fetchPermissions();
       return { success: true };
     } catch (error) {
       return { 
@@ -40,7 +59,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Safisha session data yote
     sessionStorage.removeItem('access_token');
     sessionStorage.removeItem('refresh_token');
     sessionStorage.removeItem('user_info');
@@ -50,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, permissions, fetchPermissions, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
