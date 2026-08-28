@@ -19,7 +19,8 @@ import {
   Zap,
   Loader2,
   ChevronLeft,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Users as UsersIcon
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -78,7 +79,7 @@ export default function Layout({ children }) {
     }
   };
 
-  // Orodha Kamili ya Menyu
+  // Orodha Kamili ya Menyu (Wafanyakazi imeongezwa kwa Owner pekee)
   const allNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: true },
     { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
@@ -86,6 +87,7 @@ export default function Layout({ children }) {
     { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package, ownerOnly: false },
     { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard, ownerOnly: false },
     { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3, ownerOnly: true },
+    { name: 'Wafanyakazi', path: '/users', icon: UsersIcon, ownerOnly: true },
     { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
   ];
 
