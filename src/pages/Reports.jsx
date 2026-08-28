@@ -60,9 +60,8 @@ export default function Reports() {
     }
   };
 
-  // Kagua Haki za Mtumiaji (Owner vs Cashier)
-  const isOwner = user?.role === 'owner';
-  const canSeeProfit = isOwner || Boolean(permissions?.show_profit_to_cashier);
+  // SOMA TOGGLE YA BIASHARA MOJA KWA MOJA BILA KUGUSIA USER ROLE
+  const canSeeProfit = Boolean(permissions?.show_profit_to_cashier);
 
   // TAREHE LOGIC FOR FILTERING
   const today = new Date();
@@ -98,7 +97,7 @@ export default function Reports() {
     return sum + Number(tx.total_amount || tx.amount_paid || 0);
   }, 0);
 
-  // 2. KOKOTOA TOP SELLING PRODUCTS & FAIDA KWA KIPINDI HICHO
+  // 2. KOKOTOA TOP SELLING PRODUCTS
   const productSalesMap = {};
 
   filteredTransactions.forEach(tx => {
@@ -107,27 +106,24 @@ export default function Reports() {
         const pName = item.product_name || item.product?.name || item.product__name || 'Bidhaa';
         const qty = Number(item.quantity || item.total_quantity_sold || 0);
         const price = Number(item.unit_price || item.product?.selling_price || 0);
-        const buyingPrice = Number(item.buying_price || item.product?.buying_price || 0);
 
         if (!productSalesMap[pName]) {
           productSalesMap[pName] = {
             product__name: pName,
             total_quantity_sold: 0,
-            total_revenue: 0,
-            total_cost: 0
+            total_revenue: 0
           };
         }
 
         productSalesMap[pName].total_quantity_sold += qty;
         productSalesMap[pName].total_revenue += (price * qty);
-        productSalesMap[pName].total_cost += (buyingPrice * qty);
       });
     }
   });
 
   const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
 
-  // 3. FAIDA KWA KIPINDI HICHO (ESTIMATED PROFIT FROM BACKEND OR CALCULATED)
+  // 3. FAIDA KWA KIPINDI HICHO (INATOKANA NA BACKEND MOJA KWA MOJA)
   const displayProfit = canSeeProfit 
     ? (dashboardSummary?.today_estimated_profit ?? 0)
     : 0;
@@ -226,7 +222,7 @@ export default function Reports() {
               <p className="mt-2 text-xs text-slate-400">Jumla ya fedha zilizoingia</p>
             </div>
 
-            {/* Estimated Profit Card (HONORS PERMISSIONS) */}
+            {/* Estimated Profit Card (HONORS PERMISSIONS TOGGLE DIRECTLY) */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
