@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -9,14 +10,24 @@ import {
   Loader2,
   PackageCheck,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Lock
 } from 'lucide-react';
 
 export default function Reports() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [allTransactions, setAllTransactions] = useState([]);
   const [dashboardSummary, setDashboardSummary] = useState(null);
   const [products, setProducts] = useState([]);
+
+  // State ya Permissions
+  const [permissions, setPermissions] = useState({
+    show_profit_to_cashier: false,
+    allow_cashier_debts: true,
+    allow_cashier_custom_price: true,
+    show_buying_price_to_cashier: false
+  });
 
   // Filter choice: 'today', 'yesterday', 'week', au 'month'
   const [period, setPeriod] = useState('today');
@@ -28,10 +39,11 @@ export default function Reports() {
   const fetchReportData = async () => {
     setLoading(true);
     try {
-      const [summaryRes, transRes, prodRes] = await Promise.all([
+      const [summaryRes, transRes, prodRes, permRes] = await Promise.all([
         apiClient.get('reports/dashboard/'),
         apiClient.get('sales/transactions/'),
-        apiClient.get('inventory/products/')
+        apiClient.get('inventory/products/'),
+        apiClient.get('auth/business-permissions/')
       ]);
 
       if (summaryRes.data) setDashboardSummary(summaryRes.data);
@@ -40,12 +52,17 @@ export default function Reports() {
 
       setAllTransactions(transData);
       setProducts(prodData);
+      setPermissions(permRes.data);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching reports:", err);
       setLoading(false);
     }
   };
+
+  // Kagua Haki za Mtumiaji (Owner vs Cashier)
+  const isOwner = user?.role === 'owner';
+  const canSeeProfit = isOwner || permissions.show_profit_to_cashier;
 
   // TAREHE LOGIC FOR FILTERING
   const today = new Date();
@@ -213,17 +230,19 @@ export default function Reports() {
               <p className="mt-2 text-xs text-slate-400">Jumla ya fedha zilizoingia</p>
             </div>
 
-            {/* Estimated Profit Card */}
+            {/* Estimated Profit Card (HONORS PERMISSIONS) */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl">
-                  <TrendingUp className="w-6 h-6" />
+                <div className={`p-3 rounded-2xl border ${
+                  canSeeProfit ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800/40 border-slate-800 text-slate-500'
+                }`}>
+                  {canSeeProfit ? <TrendingUp className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-emerald-400 font-mono">
-                  {Number(displayProfit).toLocaleString()} <span className="text-xs font-normal text-slate-400">TZS</span>
+                <h3 className={`text-2xl font-extrabold font-mono ${canSeeProfit ? 'text-emerald-400' : 'text-slate-600'}`}>
+                  {canSeeProfit ? `${Number(displayProfit).toLocaleString()} TZS` : '*** TZS'}
                 </h3>
               </div>
               <p className="mt-2 text-xs text-slate-400">Mauzo minus Bei za kununulia</p>

@@ -18,7 +18,8 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -26,6 +27,14 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // State ya Permissions
+  const [permissions, setPermissions] = useState({
+    show_profit_to_cashier: false,
+    allow_cashier_debts: true,
+    allow_cashier_custom_price: true,
+    show_buying_price_to_cashier: false
+  });
 
   // State ya Date Filter: 'today', 'yesterday', au 'week'
   const [dateFilter, setDateFilter] = useState('today');
@@ -54,12 +63,14 @@ export default function Dashboard() {
     setLoading(true);
     const getDashboardData = apiClient.get('reports/dashboard/');
     const getTodayTransactions = apiClient.get('sales/transactions/');
+    const getPermissions = apiClient.get('auth/business-permissions/');
 
-    Promise.all([getDashboardData, getTodayTransactions])
-      .then(([dashRes, transRes]) => {
+    Promise.all([getDashboardData, getTodayTransactions, getPermissions])
+      .then(([dashRes, transRes, permRes]) => {
         setData(dashRes.data);
         const transData = transRes.data.results || transRes.data || [];
         setAllTransactions(transData);
+        setPermissions(permRes.data);
         setLoading(false);
       })
       .catch(err => {
@@ -68,6 +79,8 @@ export default function Dashboard() {
       });
   };
 
+  const isOwner = user?.role === 'owner';
+  const canSeeProfit = isOwner || permissions.show_profit_to_cashier;
   const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
   if (loading) {
@@ -225,10 +238,11 @@ export default function Dashboard() {
     },
     {
       title: 'Kadirio la Faida',
-      value: `${dynamicEstimatedProfit.toLocaleString()} TZS`,
-      icon: TrendingUp,
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10 border-purple-500/20',
+      value: canSeeProfit ? `${dynamicEstimatedProfit.toLocaleString()} TZS` : '*** TZS',
+      isLocked: !canSeeProfit,
+      icon: canSeeProfit ? TrendingUp : Lock,
+      color: canSeeProfit ? 'text-purple-400' : 'text-slate-500',
+      bg: canSeeProfit ? 'bg-purple-500/10 border-purple-500/20' : 'bg-slate-800/40 border-slate-800',
     },
     {
       title: 'Stoko Ndogo Alert',
@@ -401,7 +415,9 @@ export default function Dashboard() {
                   <Icon className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-extrabold text-white font-mono">{card.value}</h3>
+              <h3 className={`text-2xl font-extrabold font-mono ${card.isLocked ? 'text-slate-600' : 'text-white'}`}>
+                {card.value}
+              </h3>
             </div>
           );
         })}

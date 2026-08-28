@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import { 
   Plus, 
   Search, 
@@ -21,10 +22,19 @@ import {
 } from 'lucide-react';
 
 export default function Inventory() {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // State ya Permissions
+  const [permissions, setPermissions] = useState({
+    show_profit_to_cashier: false,
+    allow_cashier_debts: true,
+    allow_cashier_custom_price: true,
+    show_buying_price_to_cashier: false
+  });
   
   // State ya Thamani ya Stoko (Summary Metrics)
   const [summaryData, setSummaryData] = useState({
@@ -39,10 +49,10 @@ export default function Inventory() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Custom Confirmation Modal State (Badala ya window.confirm)
+  // Custom Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState({
     show: false,
-    type: '', // 'product' au 'category'
+    type: '', 
     id: null,
     title: '',
     name: ''
@@ -95,10 +105,11 @@ export default function Inventory() {
   const fetchInventoryData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, sumRes] = await Promise.all([
+      const [prodRes, catRes, sumRes, permRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
         apiClient.get('inventory/categories/'),
-        apiClient.get('inventory/products/summary/')
+        apiClient.get('inventory/products/summary/'),
+        apiClient.get('auth/business-permissions/')
       ]);
       
       const prodData = prodRes.data.results || prodRes.data || [];
@@ -106,6 +117,7 @@ export default function Inventory() {
       
       setProducts(Array.isArray(prodData) ? prodData : []);
       setCategories(Array.isArray(catData) ? catData : []);
+      setPermissions(permRes.data);
       if (sumRes.data) {
         setSummaryData(sumRes.data);
       }
@@ -115,6 +127,11 @@ export default function Inventory() {
       setLoading(false);
     }
   };
+
+  // Kagua Haki za Mtumiaji (Owner vs Cashier)
+  const isOwner = user?.role === 'owner';
+  const canSeeBuyingPrice = isOwner || permissions.show_buying_price_to_cashier;
+  const canSeeSummaryCards = isOwner || (permissions.show_profit_to_cashier && permissions.show_buying_price_to_cashier);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -200,7 +217,6 @@ export default function Inventory() {
     }
   };
 
-  // FUNGUA MODAL YA KUTHIBITISHA KUFUTA (BIDHAA AU KUNDI)
   const promptDeleteProduct = (id, name) => {
     setConfirmModal({
       show: true,
@@ -221,7 +237,6 @@ export default function Inventory() {
     });
   };
 
-  // MCHAKATO WA KUFUTA HALISI BAADA YA KUBONYEZA THIBITISHA
   const handleExecuteDelete = async () => {
     const { type, id, name } = confirmModal;
     setIsSubmitting(true);
@@ -274,13 +289,15 @@ export default function Inventory() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <button
-            onClick={() => setShowCategoryModal(true)}
-            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
-          >
-            <Layers className="w-5 h-5 text-purple-400" />
-            <span>Manage Makundi ({categories.length})</span>
-          </button>
+          {isOwner && (
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
+            >
+              <Layers className="w-5 h-5 text-purple-400" />
+              <span>Manage Makundi ({categories.length})</span>
+            </button>
+          )}
 
           <button
             onClick={openAddModal}
@@ -292,47 +309,49 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* INVENTORY VALUE SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani ya Stoko (Gharama)</span>
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Wallet className="w-5 h-5" />
+      {/* INVENTORY VALUE SUMMARY CARDS (ONESHWA KWA BOSI PEKEE AU CASHIER WENYE RUHUSA) */}
+      {canSeeSummaryCards && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani ya Stoko (Gharama)</span>
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <Wallet className="w-5 h-5" />
+              </div>
             </div>
+            <h3 className="text-2xl font-extrabold text-white font-mono">
+              {Number(summaryData.total_current_cost || 0).toLocaleString()} TZS
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Gharama za kununulia bidhaa zilizopo dukani hivi sasa</p>
           </div>
-          <h3 className="text-2xl font-extrabold text-white font-mono">
-            {Number(summaryData.total_current_cost || 0).toLocaleString()} TZS
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-1">Gharama za kununulia bidhaa zilizopo dukani hivi sasa</p>
-        </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani Tarajiwa ya Mauzo</span>
-            <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-              <TrendingUp className="w-5 h-5" />
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani Tarajiwa ya Mauzo</span>
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <TrendingUp className="w-5 h-5" />
+              </div>
             </div>
+            <h3 className="text-2xl font-extrabold text-white font-mono">
+              {Number(summaryData.total_potential_retail || 0).toLocaleString()} TZS
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Jumla ya fedha zitakazopatikana stoko yote ikiuzwa</p>
           </div>
-          <h3 className="text-2xl font-extrabold text-white font-mono">
-            {Number(summaryData.total_potential_retail || 0).toLocaleString()} TZS
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-1">Jumla ya fedha zitakazopatikana stoko yote ikiuzwa</p>
-        </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faida Iliyopo Kwenye Stoko</span>
-            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-              <DollarSign className="w-5 h-5" />
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faida Iliyopo Kwenye Stoko</span>
+              <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                <DollarSign className="w-5 h-5" />
+              </div>
             </div>
+            <h3 className="text-2xl font-extrabold text-purple-400 font-mono">
+              {Number(summaryData.expected_stock_profit || 0).toLocaleString()} TZS
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Kadirio la faida itakayopatikana baada ya stoko kuisha</p>
           </div>
-          <h3 className="text-2xl font-extrabold text-purple-400 font-mono">
-            {Number(summaryData.expected_stock_profit || 0).toLocaleString()} TZS
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-1">Kadirio la faida itakayopatikana baada ya stoko kuisha</p>
         </div>
-      </div>
+      )}
 
       {/* Search Bar & Category Filter Buttons */}
       <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-4">
@@ -410,7 +429,7 @@ export default function Inventory() {
                   <th className="py-4 px-6">Bidhaa</th>
                   <th className="py-4 px-6">Kundi (Category)</th>
                   <th className="py-4 px-6">Barcode</th>
-                  <th className="py-4 px-6">Bei ya Kununua</th>
+                  {canSeeBuyingPrice && <th className="py-4 px-6">Bei ya Kununua</th>}
                   <th className="py-4 px-6">Bei ya Kuuzia</th>
                   <th className="py-4 px-6">Stoko Iliyopo</th>
                   <th className="py-4 px-6 text-right">Vitendo</th>
@@ -432,7 +451,9 @@ export default function Inventory() {
                       </td>
 
                       <td className="py-4 px-6 text-slate-400 font-mono">{p.barcode || 'N/A'}</td>
-                      <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
+                      {canSeeBuyingPrice && (
+                        <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
+                      )}
                       <td className="py-4 px-6 text-emerald-400 font-bold">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
                       
                       <td className="py-4 px-6">
@@ -454,13 +475,15 @@ export default function Inventory() {
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => promptDeleteProduct(p.id, p.name)}
-                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
-                          title="Futa (Delete)"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isOwner && (
+                          <button
+                            onClick={() => promptDeleteProduct(p.id, p.name)}
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
+                            title="Futa (Delete)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -536,20 +559,22 @@ export default function Inventory() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kununua (TZS)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="buying_price"
-                    required
-                    value={formData.buying_price}
-                    onChange={handleInputChange}
-                    placeholder="2000"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
+              <div className={`grid ${canSeeBuyingPrice ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                {canSeeBuyingPrice && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kununua (TZS)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="buying_price"
+                      required
+                      value={formData.buying_price}
+                      onChange={handleInputChange}
+                      placeholder="2000"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kuuzia (TZS)</label>
                   <input
@@ -668,13 +693,15 @@ export default function Inventory() {
                         {cat.products_count ?? 0} Bidhaa
                       </span>
                     </div>
-                    <button
-                      onClick={() => promptDeleteCategory(cat.id, cat.name)}
-                      className="text-slate-500 hover:text-red-400 p-1 transition"
-                      title="Futa Kundi"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isOwner && (
+                      <button
+                        onClick={() => promptDeleteCategory(cat.id, cat.name)}
+                        className="text-slate-500 hover:text-red-400 p-1 transition"
+                        title="Futa Kundi"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -683,7 +710,7 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* CUSTOM CONFIRMATION MODAL (BADALA YA WINDOW.CONFIRM) */}
+      {/* CUSTOM CONFIRMATION MODAL */}
       {confirmModal.show && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
