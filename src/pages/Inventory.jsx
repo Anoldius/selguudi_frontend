@@ -117,7 +117,9 @@ export default function Inventory() {
       
       setProducts(Array.isArray(prodData) ? prodData : []);
       setCategories(Array.isArray(catData) ? catData : []);
-      setPermissions(permRes.data);
+      if (permRes.data) {
+        setPermissions(permRes.data);
+      }
       if (sumRes.data) {
         setSummaryData(sumRes.data);
       }
@@ -130,8 +132,8 @@ export default function Inventory() {
 
   // Kagua Haki za Mtumiaji (Owner vs Cashier)
   const isOwner = user?.role === 'owner';
-  const canSeeBuyingPrice = isOwner || permissions.show_buying_price_to_cashier;
-  const canSeeSummaryCards = isOwner || (permissions.show_profit_to_cashier && permissions.show_buying_price_to_cashier);
+  const canSeeBuyingPrice = isOwner || Boolean(permissions?.show_buying_price_to_cashier);
+  const canSeeSummaryCards = isOwner || (Boolean(permissions?.show_profit_to_cashier) && Boolean(permissions?.show_buying_price_to_cashier));
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -309,7 +311,7 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* INVENTORY VALUE SUMMARY CARDS (ONESHWA KWA BOSI PEKEE AU CASHIER WENYE RUHUSA) */}
+      {/* INVENTORY VALUE SUMMARY CARDS (ZITAONEKANA KAMA canSeeSummaryCards NI TRUE PEKEE) */}
       {canSeeSummaryCards && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
