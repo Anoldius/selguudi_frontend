@@ -79,9 +79,9 @@ export default function Layout({ children }) {
     }
   };
 
-  // Orodha Kamili ya Menyu (Wafanyakazi imeongezwa kwa Owner pekee)
+  // Orodha Kamili ya Menyu (Dashboard sasa inapatikana kwa wote)
   const allNavItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: true },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: false },
     { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
     { name: 'Matumizi', path: '/expenses', icon: Wallet, ownerOnly: false },
     { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package, ownerOnly: false },
@@ -91,7 +91,7 @@ export default function Layout({ children }) {
     { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
   ];
 
-  // Chuja menyu kulingana na Role ya mtumiaji (Owner anaona zote, Cashier anaona za kawaida)
+  // Chuja menyu kulingana na Role ya mtumiaji (Owner anaona zote, Cashier anaona zisizo za ownerOnly)
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
