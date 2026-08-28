@@ -23,20 +23,13 @@ import {
 
 export default function Inventory() {
   const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // State ya Permissions (Imeongezwa show_stock_summary_cards)
-  const [permissions, setPermissions] = useState({
-    show_profit_to_cashier: false,
-    allow_cashier_debts: true,
-    allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false,
-    show_stock_summary_cards: false
-  });
-  
   // State ya Thamani ya Stoko (Summary Metrics)
   const [summaryData, setSummaryData] = useState({
     total_current_cost: 0,
@@ -106,34 +99,41 @@ export default function Inventory() {
   const fetchInventoryData = async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, sumRes, permRes] = await Promise.all([
+      const [prodRes, catRes, sumRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
         apiClient.get('inventory/categories/'),
-        apiClient.get('inventory/products/summary/'),
-        apiClient.get('auth/business-permissions/')
+        apiClient.get('inventory/products/summary/')
       ]);
       
       const prodData = prodRes.data.results || prodRes.data || [];
       const catData = catRes.data.results || catRes.data || [];
       
-      setProducts(Array.isArray(prodData) ? prodData : []);
+      const productList = Array.isArray(prodData) ? prodData : [];
+      setProducts(productList);
       setCategories(Array.isArray(catData) ? catData : []);
-      if (permRes.data) {
-        setPermissions(permRes.data);
-      }
-      if (sumRes.data) {
+
+      // HESABU YA FALLBACK (KAMA SUMMARY API IKIRUDISHA ZEROS AMA SIO SET)
+      if (sumRes.data && Number(sumRes.data.total_current_cost) > 0) {
         setSummaryData(sumRes.data);
+      } else {
+        // Kokotoa Thamani Halisi za Stoko moja kwa moja kutoka kwenye Orodha ya Bidhaa
+        const cost = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.buying_price || 0)), 0);
+        const retail = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.selling_price || 0)), 0);
+        
+        setSummaryData({
+          total_current_cost: cost,
+          total_potential_retail: retail,
+          expected_stock_profit: retail - cost,
+          total_products_count: productList.length
+        });
       }
+
       setLoading(false);
     } catch (err) {
       console.error("Error fetching inventory data:", err);
       setLoading(false);
     }
   };
-
-  // KUANGALIA TOGGLES ZA BUSINESS PERMISSIONS MOJA KWA MOJA
-  const canSeeBuyingPrice = user?.role === 'owner' || Boolean(permissions?.show_buying_price_to_cashier);
-  const canSeeSummaryCards = user?.role === 'owner' || Boolean(permissions?.show_stock_summary_cards);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -309,8 +309,8 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* INVENTORY VALUE SUMMARY CARDS (INATEGEMEA TOGGLES ZA SETTINGS) */}
-      {canSeeSummaryCards && (
+      {/* INVENTORY VALUE SUMMARY CARDS (ZINAONEKANA KWA OWNER PEKEE) */}
+      {isOwner && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
             <div className="flex items-center justify-between mb-3">
@@ -429,7 +429,7 @@ export default function Inventory() {
                   <th className="py-4 px-6">Bidhaa</th>
                   <th className="py-4 px-6">Kundi (Category)</th>
                   <th className="py-4 px-6">Barcode</th>
-                  {canSeeBuyingPrice && <th className="py-4 px-6">Bei ya Kununua</th>}
+                  {isOwner && <th className="py-4 px-6">Bei ya Kununua</th>}
                   <th className="py-4 px-6">Bei ya Kuuzia</th>
                   <th className="py-4 px-6">Stoko Iliyopo</th>
                   <th className="py-4 px-6 text-right">Vitendo</th>
@@ -451,7 +451,7 @@ export default function Inventory() {
                       </td>
 
                       <td className="py-4 px-6 text-slate-400 font-mono">{p.barcode || 'N/A'}</td>
-                      {canSeeBuyingPrice && (
+                      {isOwner && (
                         <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
                       )}
                       <td className="py-4 px-6 text-emerald-400 font-bold">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
@@ -557,8 +557,8 @@ export default function Inventory() {
                 </select>
               </div>
 
-              <div className={`grid ${canSeeBuyingPrice ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                {canSeeBuyingPrice && (
+              <div className={`grid ${isOwner ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                {isOwner && (
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kununua (TZS)</label>
                     <input
