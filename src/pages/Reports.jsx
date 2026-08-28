@@ -34,13 +34,13 @@ export default function Reports() {
 
   useEffect(() => {
     fetchReportData();
-  }, []);
+  }, [period]);
 
   const fetchReportData = async () => {
     setLoading(true);
     try {
       const [summaryRes, transRes, prodRes, permRes] = await Promise.all([
-        apiClient.get('reports/dashboard/'),
+        apiClient.get(`reports/dashboard/?period=${period}`),
         apiClient.get('sales/transactions/'),
         apiClient.get('inventory/products/'),
         apiClient.get('auth/business-permissions/')
@@ -52,7 +52,7 @@ export default function Reports() {
 
       setAllTransactions(transData);
       setProducts(prodData);
-      setPermissions(permRes.data);
+      if (permRes.data) setPermissions(permRes.data);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching reports:", err);
@@ -62,7 +62,7 @@ export default function Reports() {
 
   // Kagua Haki za Mtumiaji (Owner vs Cashier)
   const isOwner = user?.role === 'owner';
-  const canSeeProfit = isOwner || permissions.show_profit_to_cashier;
+  const canSeeProfit = isOwner || Boolean(permissions?.show_profit_to_cashier);
 
   // TAREHE LOGIC FOR FILTERING
   const today = new Date();
@@ -94,7 +94,7 @@ export default function Reports() {
   });
 
   // 1. MAUZO YA KIPINDI HUSIKA
-  const totalSalesAmount = filteredTransactions.reduce((sum, tx) => {
+  const totalSalesAmount = dashboardSummary?.today_total_sales ?? filteredTransactions.reduce((sum, tx) => {
     return sum + Number(tx.total_amount || tx.amount_paid || 0);
   }, 0);
 
@@ -127,14 +127,10 @@ export default function Reports() {
 
   const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
 
-  // 3. FAIDA KWA KIPINDI HICHO (ESTIMATED PROFIT)
-  const totalCostAmount = topProducts.reduce((sum, p) => sum + p.total_cost, 0);
-  const calculatedProfit = Math.max(0, totalSalesAmount - totalCostAmount);
-
-  // KAMA NI LEO NA KUNA PROFIT KUTOKA BACKEND, TUMIA ILE, OTHERWISE TUMIA CALCULATED
-  const displayProfit = (period === 'today' && dashboardSummary?.today_estimated_profit) 
-    ? dashboardSummary.today_estimated_profit 
-    : calculatedProfit;
+  // 3. FAIDA KWA KIPINDI HICHO (ESTIMATED PROFIT FROM BACKEND OR CALCULATED)
+  const displayProfit = canSeeProfit 
+    ? (dashboardSummary?.today_estimated_profit ?? 0)
+    : 0;
 
   // 4. LOW STOCK ALERT COUNT
   const lowStockCount = dashboardSummary?.low_stock_items_count ?? products.filter(p => {
@@ -171,7 +167,7 @@ export default function Reports() {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-2xl border border-slate-700 transition self-start sm:self-auto"
         >
           <RefreshCw className="w-4 h-4 text-emerald-400" />
-          <span>Anza Pyaz / Refresh</span>
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -258,7 +254,7 @@ export default function Reports() {
               </div>
               <div className="mt-4">
                 <h3 className="text-2xl font-extrabold text-white font-mono">
-                  {filteredTransactions.length} <span className="text-xs font-normal text-slate-400">Risiti</span>
+                  {dashboardSummary?.today_receipts ?? filteredTransactions.length} <span className="text-xs font-normal text-slate-400">Risiti</span>
                 </h3>
               </div>
               <p className="mt-2 text-xs text-slate-400">Idadi ya mauzo yaliyofanyika</p>
