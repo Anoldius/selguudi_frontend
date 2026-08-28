@@ -11,6 +11,7 @@ import Inventory from './pages/Inventory';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Debts from './pages/Debts';
+import Settings from './pages/Settings'; // <--- Import ya Ukurasa wa Settings
 import BillingSuccess from './pages/BillingSuccess';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -97,6 +98,18 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <Reports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Settings Route */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             }

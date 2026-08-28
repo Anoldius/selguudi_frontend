@@ -18,7 +18,8 @@ import {
   Lock,
   Zap,
   Loader2,
-  ChevronLeft
+  ChevronLeft,
+  Settings as SettingsIcon
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -77,15 +78,20 @@ export default function Layout({ children }) {
     }
   };
 
-  // Imeweka Matumizi (Expenses) kwenye Orodha ya Navigation
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart },
-    { name: 'Matumizi', path: '/expenses', icon: Wallet },
-    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package },
-    { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard },
-    { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3 },
+  // Orodha Kamili ya Menyu
+  const allNavItems = [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: true },
+    { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
+    { name: 'Matumizi', path: '/expenses', icon: Wallet, ownerOnly: false },
+    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package, ownerOnly: false },
+    { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard, ownerOnly: false },
+    { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3, ownerOnly: true },
+    { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
   ];
+
+  // Chuja menyu kulingana na Role ya mtumiaji (Owner anaona zote, Cashier anaona za kawaida)
+  const isOwner = user?.role === 'owner';
+  const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
   // KAMA ACCESS IMEISHA
   if (!loadingBilling && billingInfo && !billingInfo.has_active_access) {
