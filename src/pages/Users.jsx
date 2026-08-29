@@ -25,6 +25,9 @@ export default function Users() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Form Error State (Kucheza ndani ya Modal badala ya background toast)
+  const [formError, setFormError] = useState(null);
+
   // Form State ya Cashier Mpya
   const [formData, setFormData] = useState({
     username: '',
@@ -67,11 +70,26 @@ export default function Users() {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (formError) setFormError(null); // Futa error ikianza kuandikwa
+  };
+
+  const handleOpenModal = () => {
+    setFormError(null);
+    setFormData({
+      username: '',
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      password: ''
+    });
+    setShowModal(true);
   };
 
   const handleCreateCashier = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError(null);
 
     try {
       const res = await apiClient.post('auth/cashiers/', formData);
@@ -89,29 +107,36 @@ export default function Users() {
     } catch (err) {
       const errRes = err.response?.data;
       let errMsg = "Imeshindikana kusajili mfanyakazi!";
+      
       if (errRes) {
-        if (typeof errRes === 'object') {
-          const firstKey = Object.keys(errRes)[0];
-          const val = errRes[firstKey];
-          errMsg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : val;
+        if (typeof errRes === 'string') {
+          errMsg = errRes;
+        } else if (errRes.detail) {
+          errMsg = errRes.detail;
         } else if (errRes.error) {
           errMsg = errRes.error;
+        } else if (typeof errRes === 'object') {
+          const firstKey = Object.keys(errRes)[0];
+          const val = errRes[firstKey];
+          errMsg = Array.isArray(val) ? `${firstKey}: ${val[0]}` : `${firstKey}: ${val}`;
         }
       }
-      triggerNotification(errMsg);
+      
+      // Weka error ndani ya Form/Modal badala ya Toast Notification
+      setFormError(errMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // KUHANDLE KUFUTA MFANYAKAZI (UPDATED LOGIC)
+  // KUHANDLE KUFUTA MFANYAKAZI
   const handleDeleteCashier = async () => {
     setIsSubmitting(true);
     try {
       const res = await apiClient.delete(`auth/cashiers/${deleteModal.id}/`);
       triggerNotification(res.data?.message || `Mfanyakazi "${deleteModal.username}" amefutwa kikamilifu!`);
       setDeleteModal({ show: false, id: null, username: '' });
-      fetchCashiers(); // Inajisajilisha upya orodha ili kumwondoa hapo hapo
+      fetchCashiers();
     } catch (err) {
       const errMsg = err.response?.data?.error || "Imeshindikana kufuta mfanyakazi!";
       triggerNotification(errMsg);
@@ -140,7 +165,7 @@ export default function Users() {
   return (
     <div className="space-y-6 relative">
 
-      {/* TOAST NOTIFICATION */}
+      {/* TOAST NOTIFICATION (KWA MAFANIKIO NA METHALI ZOTE ZA NJIA YA KAWAIDA) */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-emerald-500 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400 animate-bounce">
           <CheckCircle2 className="w-5 h-5" />
@@ -161,7 +186,7 @@ export default function Users() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={handleOpenModal}
           className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition self-start sm:self-auto"
         >
           <UserPlus className="w-5 h-5" />
@@ -259,6 +284,14 @@ export default function Users() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* FORM ERROR INLINE NOTIFICATION (INAKAA NDANI YA CARD KAMA LOGIN PAGE) */}
+            {formError && (
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-start gap-3 text-red-400 text-sm font-medium animate-fadeIn">
+                <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                <span>{formError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleCreateCashier} className="space-y-4">
               
