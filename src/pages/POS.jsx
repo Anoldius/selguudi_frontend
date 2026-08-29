@@ -13,7 +13,8 @@ import {
   UserCheck,
   X,
   AlertCircle,
-  Filter
+  Filter,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function POS() {
@@ -28,6 +29,9 @@ export default function POS() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
   const [isCheckout, setIsCheckout] = useState(false);
+
+  // Modal State ya Confirmation ya Mauzo
+  const [showConfirmSaleModal, setShowConfirmSaleModal] = useState(false);
 
   // State za Modal ya Kukopa
   const [showDebtModal, setShowDebtModal] = useState(false);
@@ -99,7 +103,7 @@ export default function POS() {
         ...product, 
         quantity: 1, 
         availableStock: stockAvailable,
-        selling_price: product.selling_price // Hii inaweza kueditiwa kwenye cart
+        selling_price: product.selling_price
       }]);
     }
   };
@@ -140,14 +144,22 @@ export default function POS() {
   const totalAmount = cart.reduce((sum, item) => sum + ((parseFloat(item.selling_price) || 0) * item.quantity), 0);
   const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
 
+  // HATUA YA KWANZA: TENA CHECKOUT NA ONYESHA ALERT
   const handleInitiateCheckout = () => {
     if (cart.length === 0) return;
 
     if (paymentMethod === 'credit') {
       setShowDebtModal(true);
     } else {
-      executeCheckout({});
+      // Onyesha confirmation alert kwa njia za kawaida
+      setShowConfirmSaleModal(true);
     }
+  };
+
+  // EXECUTE MAUZO YA KAWAIDA BAADA YA BOSI/CASHIER KUTHIBITISHA ON ALERT MODAL
+  const handleConfirmSaleExecution = () => {
+    setShowConfirmSaleModal(false);
+    executeCheckout({});
   };
 
   const executeCheckout = async (debtDetails = {}) => {
@@ -199,7 +211,7 @@ export default function POS() {
         items: cart.map(item => ({
           product_id: String(item.id),
           quantity: Number(item.quantity),
-          unit_price: Number(item.selling_price) // Tunatuma bei iliyobadilishwa kwenda backend!
+          unit_price: Number(item.selling_price)
         }))
       };
 
@@ -252,6 +264,16 @@ export default function POS() {
     });
   };
 
+  const getPaymentLabel = (method) => {
+    switch (method) {
+      case 'cash': return 'Pesa Taslimu (Cash)';
+      case 'mobile_money': return 'Lipa Namba (M-Pesa / Tigo / Airtel)';
+      case 'bank_card': return 'Kadi ya Benki (NMB / CRDB)';
+      case 'credit': return 'Deni (Kukopa)';
+      default: return method;
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6 overflow-hidden">
       
@@ -272,7 +294,6 @@ export default function POS() {
         
         {/* CARD 1: SEARCH & CATEGORY FILTERS */}
         <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-3 flex-shrink-0">
-          {/* Search Bar */}
           <div className="relative">
             <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
             <input
@@ -284,7 +305,6 @@ export default function POS() {
             />
           </div>
 
-          {/* Category Filter Horizontal Scroll */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
               <Filter className="w-3 h-3 text-emerald-400" /> KUNDI:
@@ -373,7 +393,7 @@ export default function POS() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Cart Section (Fixed Width & Dynamic Editable Prices) */}
+      {/* RIGHT SIDE: Cart Section */}
       <div className="w-full md:w-96 flex-shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -406,7 +426,6 @@ export default function POS() {
                     </div>
 
                     <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-900">
-                      {/* DYNAMIC EDITABLE PRICE INPUT */}
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Bei:</span>
                         <input
@@ -422,7 +441,6 @@ export default function POS() {
                         <span className="text-[10px] text-slate-500 font-bold">TZS</span>
                       </div>
 
-                      {/* QUANTITY BUTTONS */}
                       <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
                         <button onClick={() => updateQuantity(item.id, -1)} className="p-1 text-slate-400 hover:text-white">
                           <Minus className="w-3.5 h-3.5" />
@@ -434,7 +452,6 @@ export default function POS() {
                       </div>
                     </div>
 
-                    {/* WARNING ALERTS IF BELOW BUYING PRICE */}
                     {isBelowCost && (
                       <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 pt-0.5">
                         ⚠️ Chini ya gharama ({Number(item.buying_price).toLocaleString()} TZS)!
@@ -511,6 +528,61 @@ export default function POS() {
           </button>
         </div>
       </div>
+
+      {/* CONFIRMATION ALERT MODAL KABLA YA KUKAMILISHA MAUZO */}
+      {showConfirmSaleModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
+                <AlertTriangle className="w-5 h-5 text-emerald-400" />
+                <span>Thibitisha Mauzo</span>
+              </div>
+              <button onClick={() => setShowConfirmSaleModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-sm text-slate-300">
+              <p className="font-semibold text-white">Unataka kukamilisha mauzo haya sasa?</p>
+              
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Idadi ya Bidhaa:</span>
+                  <span className="font-bold text-white">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Njia ya Malipo:</span>
+                  <span className="font-bold text-emerald-400">{getPaymentLabel(paymentMethod)}</span>
+                </div>
+                <div className="flex justify-between pt-1 border-t border-slate-800 text-sm">
+                  <span className="text-slate-300 font-bold">Jumla ya Malipo:</span>
+                  <span className="font-extrabold text-emerald-400">{totalAmount.toLocaleString()} TZS</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmSaleModal(false)}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition text-sm"
+              >
+                Ghairi
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSaleExecution}
+                disabled={isCheckout}
+                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-500/20"
+              >
+                {isCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                <span>Thibitisha Kuuza</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL FORM YA SAJILI DENI */}
       {showDebtModal && (
