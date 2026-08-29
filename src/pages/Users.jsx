@@ -9,11 +9,9 @@ import {
   CheckCircle2, 
   X, 
   ShieldAlert, 
-  Lock, 
   UserCheck,
   UserX,
   Phone,
-  Mail,
   AlertTriangle
 } from 'lucide-react';
 
@@ -106,15 +104,17 @@ export default function Users() {
     }
   };
 
+  // KUHANDLE KUFUTA MFANYAKAZI (UPDATED LOGIC)
   const handleDeleteCashier = async () => {
     setIsSubmitting(true);
     try {
-      await apiClient.delete(`auth/cashiers/${deleteModal.id}/`);
-      triggerNotification(`Mfanyakazi "${deleteModal.username}" amefutwa kikamilifu!`);
+      const res = await apiClient.delete(`auth/cashiers/${deleteModal.id}/`);
+      triggerNotification(res.data?.message || `Mfanyakazi "${deleteModal.username}" amefutwa kikamilifu!`);
       setDeleteModal({ show: false, id: null, username: '' });
-      fetchCashiers();
+      fetchCashiers(); // Inajisajilisha upya orodha ili kumwondoa hapo hapo
     } catch (err) {
-      triggerNotification("Imeshindikana kufuta mfanyakazi!");
+      const errMsg = err.response?.data?.error || "Imeshindikana kufuta mfanyakazi!";
+      triggerNotification(errMsg);
     } finally {
       setIsSubmitting(false);
     }
