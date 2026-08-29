@@ -18,12 +18,16 @@ import {
   Tag,
   Wallet,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function Inventory() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
+  
+  // Haki ya Cashier kuongeza/kubadilisha bidhaa
+  const canAddProducts = isOwner || Boolean(user?.permissions?.allow_cashier_add_products);
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -56,8 +60,8 @@ export default function Inventory() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  // Toast Notification
-  const [toastMessage, setToastMessage] = useState(null);
+  // Toast Notification with status type
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   // References kwa ajili ya Barcode Hardware Scanner
   const barcodeInputRef = useRef(null);
@@ -81,11 +85,11 @@ export default function Inventory() {
     fetchInventoryData();
   }, []);
 
-  const triggerNotification = (message) => {
-    setToastMessage(message);
+  const triggerNotification = (message, type = 'success') => {
+    setToast({ show: true, message, type });
     setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3500);
   };
 
   useEffect(() => {
@@ -102,7 +106,7 @@ export default function Inventory() {
       const [prodRes, catRes, sumRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
         apiClient.get('inventory/categories/'),
-        apiClient.get('inventory/products/summary/')
+        apiClient.get('inventory/products/summary/').catch(() => ({ data: null }))
       ]);
       
       const prodData = prodRes.data.results || prodRes.data || [];
@@ -112,11 +116,10 @@ export default function Inventory() {
       setProducts(productList);
       setCategories(Array.isArray(catData) ? catData : []);
 
-      // HESABU YA FALLBACK (KAMA SUMMARY API IKIRUDISHA ZEROS AMA SIO SET)
+      // HESABU YA FALLBACK KAMA SUMMARY API HAINA METRICS
       if (sumRes.data && Number(sumRes.data.total_current_cost) > 0) {
         setSummaryData(sumRes.data);
       } else {
-        // Kokotoa Thamani Halisi za Stoko moja kwa moja kutoka kwenye Orodha ya Bidhaa
         const cost = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.buying_price || 0)), 0);
         const retail = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.selling_price || 0)), 0);
         
@@ -131,6 +134,7 @@ export default function Inventory() {
       setLoading(false);
     } catch (err) {
       console.error("Error fetching inventory data:", err);
+      triggerNotification("Imeshindikana kupakua orodha ya stoko!", "error");
       setLoading(false);
     }
   };
@@ -147,6 +151,11 @@ export default function Inventory() {
   };
 
   const openAddModal = () => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kuongeza au kubadilisha stoko. Mawasiliano na Bosi.", "error");
+      return;
+    }
+
     setEditId(null);
     setFormData({
       name: '',
@@ -162,14 +171,19 @@ export default function Inventory() {
   };
 
   const openEditModal = (product) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kubadilisha stoko. Mawasiliano na Bosi.", "error");
+      return;
+    }
+
     setEditId(product.id);
     setFormData({
       name: product.name,
       barcode: product.barcode || '',
       category: product.category || '',
-      buying_price: product.buying_price,
-      selling_price: product.selling_price,
-      quantity: product.quantity,
+      buying_price: product.buying_price || '',
+      selling_price: product.selling_price || '',
+      quantity: product.quantity || '',
       unit: product.unit || 'pcs',
       min_stock_alert: product.min_stock_alert || '5.00'
     });
@@ -188,17 +202,34 @@ export default function Inventory() {
     try {
       if (editId) {
         await apiClient.put(`inventory/products/${editId}/`, payload);
-        triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`);
+        triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`, "success");
       } else {
         await apiClient.post('inventory/products/', payload);
-        triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`);
+        triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`, "success");
       }
       setIsSubmitting(false);
       setShowModal(false);
       fetchInventoryData();
     } catch (err) {
-      triggerNotification(err.response?.data?.message || err.response?.data?.detail || "Imeshindikana kuhifadhi bidhaa!");
       setIsSubmitting(false);
+      
+      if (err.response?.status === 403) {
+        triggerNotification("Huna mamlaka ya kubadilisha au kuongeza stoko! Mawasiliano na Bosi.", "error");
+        return;
+      }
+
+      const errData = err.response?.data;
+      let msg = "Imeshindikana kuhifadhi bidhaa!";
+      if (errData) {
+        if (typeof errData === 'string') msg = errData;
+        else if (errData.detail) msg = errData.detail;
+        else if (errData.message) msg = errData.message;
+        else {
+          const firstKey = Object.keys(errData)[0];
+          msg = `${firstKey}: ${errData[firstKey]}`;
+        }
+      }
+      triggerNotification(msg, "error");
     }
   };
 
@@ -209,17 +240,26 @@ export default function Inventory() {
     setIsSubmitting(true);
     try {
       await apiClient.post('inventory/categories/', { name: newCategoryName.trim() });
-      triggerNotification(`Kundi la "${newCategoryName}" limesajiliwa!`);
+      triggerNotification(`Kundi la "${newCategoryName}" limesajiliwa!`, "success");
       setNewCategoryName('');
       fetchInventoryData();
     } catch (err) {
-      triggerNotification(err.response?.data?.detail || err.response?.data?.name?.[0] || "Imeshindikana kusajili kundi!");
+      if (err.response?.status === 403) {
+        triggerNotification("Huna mamlaka ya kusajili makundi! Mawasiliano na Bosi.", "error");
+      } else {
+        triggerNotification(err.response?.data?.detail || "Imeshindikana kusajili kundi!", "error");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const promptDeleteProduct = (id, name) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kufuta bidhaa! Mawasiliano na Bosi.", "error");
+      return;
+    }
+
     setConfirmModal({
       show: true,
       type: 'product',
@@ -230,6 +270,11 @@ export default function Inventory() {
   };
 
   const promptDeleteCategory = (id, name) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kufuta makundi! Mawasiliano na Bosi.", "error");
+      return;
+    }
+
     setConfirmModal({
       show: true,
       type: 'category',
@@ -246,15 +291,19 @@ export default function Inventory() {
     try {
       if (type === 'product') {
         await apiClient.delete(`inventory/products/${id}/`);
-        triggerNotification(`Bidhaa ya "${name}" imefutwa!`);
+        triggerNotification(`Bidhaa ya "${name}" imefutwa!`, "success");
       } else if (type === 'category') {
         await apiClient.delete(`inventory/categories/${id}/`);
-        triggerNotification(`Kundi la "${name}" limefutwa!`);
+        triggerNotification(`Kundi la "${name}" limefutwa!`, "success");
       }
       setConfirmModal({ show: false, type: '', id: null, title: '', name: '' });
       fetchInventoryData();
     } catch (err) {
-      triggerNotification("Imeshindikana kufuta!");
+      if (err.response?.status === 403) {
+        triggerNotification("Huna mamlaka ya kufuta! Mawasiliano na Bosi.", "error");
+      } else {
+        triggerNotification("Imeshindikana kufuta!", "error");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -273,10 +322,14 @@ export default function Inventory() {
     <div className="space-y-6 relative">
       
       {/* POP-UP TOAST NOTIFICATION */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-emerald-500 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400 animate-bounce">
-          <CheckCircle2 className="w-5 h-5" />
-          <span>{toastMessage}</span>
+      {toast.show && (
+        <div className={`fixed top-20 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border font-bold animate-bounce ${
+          toast.type === 'error' 
+            ? 'bg-red-500 text-white border-red-400' 
+            : 'bg-emerald-500 text-slate-950 border-emerald-400'
+        }`}>
+          {toast.type === 'error' ? <ShieldAlert className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+          <span>{toast.message}</span>
         </div>
       )}
 
@@ -291,21 +344,25 @@ export default function Inventory() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <button
-            onClick={() => setShowCategoryModal(true)}
-            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
-          >
-            <Layers className="w-5 h-5 text-purple-400" />
-            <span>Manage Makundi ({categories.length})</span>
-          </button>
+          {canAddProducts && (
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
+            >
+              <Layers className="w-5 h-5 text-purple-400" />
+              <span>Manage Makundi ({categories.length})</span>
+            </button>
+          )}
 
-          <button
-            onClick={openAddModal}
-            className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Ongeza Bidhaa Mpya</span>
-          </button>
+          {canAddProducts && (
+            <button
+              onClick={openAddModal}
+              className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Ongeza Bidhaa Mpya</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -432,7 +489,7 @@ export default function Inventory() {
                   {isOwner && <th className="py-4 px-6">Bei ya Kununua</th>}
                   <th className="py-4 px-6">Bei ya Kuuzia</th>
                   <th className="py-4 px-6">Stoko Iliyopo</th>
-                  <th className="py-4 px-6 text-right">Vitendo</th>
+                  {canAddProducts && <th className="py-4 px-6 text-right">Vitendo</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-sm">
@@ -467,22 +524,24 @@ export default function Inventory() {
                         </span>
                       </td>
 
-                      <td className="py-4 px-6 text-right space-x-2">
-                        <button
-                          onClick={() => openEditModal(p)}
-                          className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition"
-                          title="Badilisha (Edit)"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => promptDeleteProduct(p.id, p.name)}
-                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
-                          title="Futa (Delete)"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+                      {canAddProducts && (
+                        <td className="py-4 px-6 text-right space-x-2">
+                          <button
+                            onClick={() => openEditModal(p)}
+                            className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition"
+                            title="Badilisha (Edit)"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => promptDeleteProduct(p.id, p.name)}
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
+                            title="Futa (Delete)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
