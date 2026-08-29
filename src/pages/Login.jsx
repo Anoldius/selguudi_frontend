@@ -32,16 +32,31 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4">
       <div className="w-full max-w-md">
         
-        {/* Brand Header na Logo Kutoka Public */}
+        {/* BRAND HEADER ILYOBORESHWA */}
         <div className="text-center mb-6 flex flex-col items-center">
-          <div className="w-20 h-20 mb-3 flex items-center justify-center rounded-2xl bg-slate-950/40 p-2 border border-slate-800/80 shadow-2xl">
+          {/* Logo Container (Kubwa kidogo na yenye muonekano safi) */}
+          <div className="w-24 h-24 mb-3 flex items-center justify-center rounded-2xl bg-slate-950/40 p-2 border border-slate-800/80 shadow-2xl">
             <img 
               src="/selguudiLogo.png" 
               alt="Selguudi POS Logo" 
               className="w-full h-full object-contain rounded-xl"
             />
           </div>
-          <p className="text-slate-400 text-sm font-medium">Mfumo wa Kisasa wa Mauzo na Stoko</p>
+
+          {/* Jina la Brand */}
+          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-1.5 mt-1">
+            <span>Selguudi</span>
+            <span className="text-emerald-400">POS</span>
+          </h1>
+
+          {/* Slogan MPYA: Uza kishua */}
+          <p className="text-emerald-400/90 text-sm font-bold tracking-wide mt-0.5">
+            Uza kishua.
+          </p>
+
+          <p className="text-slate-400 text-xs font-medium mt-1">
+            Mfumo wa Kisasa wa Mauzo na Stoko
+          </p>
         </div>
 
         {/* Card Form */}
@@ -59,7 +74,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Input */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username ya Duka</label>
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">USERNAME YA DUKA</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <User className="w-5 h-5" />
@@ -78,7 +93,7 @@ export default function Login() {
             {/* Password Input */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Nenosiri (Password)</label>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">NENOSIRI (PASSWORD)</label>
                 <Link 
                   to="/forgot-password" 
                   className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition hover:underline"
