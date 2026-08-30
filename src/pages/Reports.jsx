@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -11,12 +13,16 @@ import {
   PackageCheck,
   Filter,
   RefreshCw,
-  Lock,
-  ShieldAlert
+  ShieldAlert,
+  Download,
+  Calendar,
+  Wallet
 } from 'lucide-react';
 
 export default function Reports() {
   const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
+
   const [loading, setLoading] = useState(true);
   const [allTransactions, setAllTransactions] = useState([]);
   const [dashboardSummary, setDashboardSummary] = useState(null);
@@ -31,18 +37,106 @@ export default function Reports() {
     show_stock_summary_cards: false
   });
 
-  // Filter choice: 'today', 'yesterday', 'week', au 'month'
-  const [period, setPeriod] = useState('today');
+  // Dynamic Period Choice: 'today', 'yesterday', 'juzi', 'month_1', 'month_2', 'month_3', 'month_4', 'month_5', 'month_6', 'year_1', 'year_2', 'year_3', 'year_4', 'year_5', 'custom'
+  const [periodOption, setPeriodOption] = useState('today');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
+  // Kokotoa Tarehe kulingana na Chaguo la Period
   useEffect(() => {
-    fetchReportData();
-  }, [period]);
+    calculateDatesFromOption(periodOption);
+  }, [periodOption]);
+
+  // Pakua data pale Tarehe au Period inapobadilika
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchReportData();
+    }
+  }, [startDate, endDate]);
+
+  const calculateDatesFromOption = (option) => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    switch (option) {
+      case 'today':
+        start = new Date();
+        break;
+
+      case 'yesterday':
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+        break;
+
+      case 'juzi':
+        start.setDate(today.getDate() - 2);
+        end.setDate(today.getDate() - 2);
+        break;
+
+      case 'month_1': // Mwezi Huu
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        break;
+
+      case 'month_2':
+        start.setMonth(today.getMonth() - 2);
+        break;
+
+      case 'month_3':
+        start.setMonth(today.getMonth() - 3);
+        break;
+
+      case 'month_4':
+        start.setMonth(today.getMonth() - 4);
+        break;
+
+      case 'month_5':
+        start.setMonth(today.getMonth() - 5);
+        break;
+
+      case 'month_6':
+        start.setMonth(today.getMonth() - 6);
+        break;
+
+      case 'year_1': // Mwaka Huu
+        start = new Date(today.getFullYear(), 0, 1);
+        break;
+
+      case 'year_2':
+        start.setFullYear(today.getFullYear() - 2);
+        break;
+
+      case 'year_3':
+        start.setFullYear(today.getFullYear() - 3);
+        break;
+
+      case 'year_4':
+        start.setFullYear(today.getFullYear() - 4);
+        break;
+
+      case 'year_5':
+        start.setFullYear(today.getFullYear() - 5);
+        break;
+
+      case 'custom':
+        return; // Anatumia tarehe anazochagua yeye kwenye inputs
+
+      default:
+        start = new Date();
+        break;
+    }
+
+    setStartDate(formatDate(start));
+    setEndDate(formatDate(end));
+  };
 
   const fetchReportData = async () => {
     setLoading(true);
     try {
       const [summaryRes, transRes, prodRes, permRes] = await Promise.all([
-        apiClient.get(`reports/dashboard/?period=${period}`),
+        apiClient.get(`reports/dashboard/?start_date=${startDate}&end_date=${endDate}`),
         apiClient.get('sales/transactions/'),
         apiClient.get('inventory/products/'),
         apiClient.get('auth/business-permissions/')
@@ -63,7 +157,7 @@ export default function Reports() {
   };
 
   // SOMA TOGGLE YA BIASHARA MOJA KWA MOJA
-  const canSeeProfit = Boolean(permissions?.show_profit_to_cashier);
+  const canSeeProfit = isOwner || Boolean(permissions?.show_profit_to_cashier);
 
   // KAMA TOGGLE YA FAIDA NA TAKWIMU IPO OFF, BLOCK UKURASA MZIMA!
   if (!loading && !canSeeProfit) {
@@ -89,33 +183,11 @@ export default function Reports() {
     );
   }
 
-  // TAREHE LOGIC FOR FILTERING
-  const today = new Date();
-
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 7);
-
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(today.getDate() - 30);
-
-  // Chuja Miamala Zisizofutwa/Refunded
+  // CHUJA MIAMALA KULINGANA NA START DATE NA END DATE
   const filteredTransactions = allTransactions.filter(tx => {
     if (!tx.created_at || tx.status === 'REFUNDED') return false;
-    const txDate = new Date(tx.created_at);
-
-    if (period === 'today') {
-      return txDate.toDateString() === today.toDateString();
-    } else if (period === 'yesterday') {
-      return txDate.toDateString() === yesterday.toDateString();
-    } else if (period === 'week') {
-      return txDate >= sevenDaysAgo && txDate <= today;
-    } else if (period === 'month') {
-      return txDate >= thirtyDaysAgo && txDate <= today;
-    }
-    return true;
+    const txDateStr = tx.created_at.split('T')[0];
+    return txDateStr >= startDate && txDateStr <= endDate;
   });
 
   // 1. MAUZO YA KIPINDI HUSIKA
@@ -159,12 +231,88 @@ export default function Reports() {
     return stock <= minAlert;
   }).length;
 
-  const getPeriodLabel = () => {
-    if (period === 'today') return 'ya Leo';
-    if (period === 'yesterday') return 'ya Jana';
-    if (period === 'week') return 'za Wiki Hii (Siku 7)';
-    if (period === 'month') return 'za Mwezi Huu (Siku 30)';
-    return '';
+  // FUNCTION YA EXPORT PDF YA KISASA
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const businessName = user?.business_name || 'Selguudi POS';
+
+    // Header Background Accent
+    doc.setFillColor(15, 23, 42); // Dark slate
+    doc.rect(0, 0, 210, 40, 'F');
+
+    // Title & Business Header
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(businessName.toUpperCase(), 14, 18);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(52, 211, 153); // Emerald Green
+    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, 26);
+
+    doc.setTextColor(203, 213, 225);
+    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, 33);
+
+    // Summary Box in PDF
+    const summaryDataPDF = [
+      [
+        `Jumla ya Mauzo: ${Number(totalSalesAmount).toLocaleString()} TZS`,
+        `Kadirio la Faida: ${Number(displayProfit).toLocaleString()} TZS`
+      ],
+      [
+        `Jumla ya Miamala: ${filteredTransactions.length} Risiti`,
+        `Bidhaa zenye Alert ya Stoko: ${lowStockCount}`
+      ]
+    ];
+
+    autoTable(doc, {
+      startY: 45,
+      body: summaryDataPDF,
+      theme: 'plain',
+      styles: {
+        fontSize: 10,
+        fontStyle: 'bold',
+        cellPadding: 4,
+        textColor: [15, 23, 42],
+        fillColor: [241, 245, 249]
+      }
+    });
+
+    // Top Selling Products Table in PDF
+    const tableRows = topProducts.map((p, index) => [
+      index + 1,
+      p.product__name,
+      `${p.total_quantity_sold} pcs`,
+      `${Number(p.total_revenue || 0).toLocaleString()} TZS`
+    ]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [['#', 'Jina la Bidhaa', 'Idadi Iliyouzwa', 'Jumla ya Mapato']],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [16, 185, 129], // Emerald
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3
+      }
+    });
+
+    // Footer Page Numbering
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Imetolewa na Selguudi POS | Ukurasa ${i} wa ${pageCount}`, 14, 285);
+    }
+
+    doc.save(`Ripoti_${businessName}_${startDate}_hadi_${endDate}.pdf`);
   };
 
   return (
@@ -175,48 +323,92 @@ export default function Reports() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-emerald-400" />
-            <span>Ripoti & Takwimu za Mauzo {getPeriodLabel()}</span>
+            <span>Ripoti & Takwimu za Mauzo</span>
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             Kagua mchanganuo wa mauzo, faida, na bidhaa zinazotoka zaidi kulingana na kipindi ulichochagua.
           </p>
         </div>
 
-        <button
-          onClick={fetchReportData}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-2xl border border-slate-700 transition self-start sm:self-auto"
-        >
-          <RefreshCw className="w-4 h-4 text-emerald-400" />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportPDF}
+            disabled={loading || topProducts.length === 0}
+            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition"
+          >
+            <Download className="w-4 h-4" />
+            <span>Pakua PDF</span>
+          </button>
+
+          <button
+            onClick={fetchReportData}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-2xl border border-slate-700 transition"
+          >
+            <RefreshCw className="w-4 h-4 text-emerald-400" />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
-      {/* FILTER BUTTONS (LEO, JANA, WIKI HII, MWEZI HUU) */}
-      <div className="bg-slate-900/60 border border-slate-800 p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider px-2">
+      {/* FILTER CARD (LEO, JANA, JUZI, MIEZI 1-6, MIAKA 1-5 & CUSTOM) */}
+      <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl space-y-4">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
           <Filter className="w-4 h-4 text-emerald-400" />
           <span>Chagua Kipindi cha Takwimu:</span>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {[
-            { id: 'today', label: 'Leo' },
-            { id: 'yesterday', label: 'Jana' },
-            { id: 'week', label: 'Wiki Hii (Siku 7)' },
-            { id: 'month', label: 'Mwezi Huu (Siku 30)' },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setPeriod(item.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                period === item.id
-                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-              }`}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Dropdown Options */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Chaguo la Haraka</label>
+            <select
+              value={periodOption}
+              onChange={(e) => setPeriodOption(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500"
             >
-              {item.label}
-            </button>
-          ))}
+              <option value="today">Leo</option>
+              <option value="yesterday">Jana</option>
+              <option value="juzi">Juzi</option>
+              <option value="month_1">Mwezi Huu</option>
+              <option value="month_2">Miezi 2 Zilizopita</option>
+              <option value="month_3">Miezi 3 Zilizopita</option>
+              <option value="month_4">Miezi 4 Zilizopita</option>
+              <option value="month_5">Miezi 5 Zilizopita</option>
+              <option value="month_6">Miezi 6 Zilizopita</option>
+              <option value="year_1">Mwaka Huu</option>
+              <option value="year_2">Miaka 2 Zilizopita</option>
+              <option value="year_3">Miaka 3 Zilizopita</option>
+              <option value="year_4">Miaka 4 Zilizopita</option>
+              <option value="year_5">Miaka 5 Zilizopita</option>
+              <option value="custom">Chagua Tarehe Maalum (Custom)</option>
+            </select>
+          </div>
+
+          {/* Start Date */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kuanzia Tarehe</label>
+            <input
+              type="date"
+              value={startDate}
+              disabled={periodOption !== 'custom'}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+            />
+          </div>
+
+          {/* End Date */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Hadi Tarehe</label>
+            <input
+              type="date"
+              value={endDate}
+              disabled={periodOption !== 'custom'}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+            />
+          </div>
+
         </div>
       </div>
 
@@ -233,7 +425,7 @@ export default function Reports() {
             {/* Mauzo Card */}
             <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Mauzo {getPeriodLabel()}</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Jumla ya Mauzo</span>
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl">
                   <DollarSign className="w-6 h-6" />
                 </div>
@@ -300,7 +492,7 @@ export default function Reports() {
           <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <PackageCheck className="w-5 h-5 text-emerald-400" />
-              <span>Bidhaa Zinazotoka Sana ({getPeriodLabel()})</span>
+              <span>Bidhaa Zinazotoka Sana ({startDate} hadi {endDate})</span>
             </h2>
 
             {topProducts.length === 0 ? (
