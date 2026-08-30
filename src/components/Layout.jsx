@@ -163,22 +163,18 @@ export default function Layout({ children }) {
         }`}
       > 
         <div>
-          {/* Brand Header with Logo & Toggle Button */}
-          <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between ${isSidebarCollapsed ? 'flex-col gap-3' : ''}`}>
-            <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
-              {/* Logo Mpya - Selguudiadobe.png */}
+          {/* Brand Header with Big Logo & Toggle Button */}
+          <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3' : ''}`}>
+            <div className="flex items-center min-w-0 overflow-hidden">
               <img 
                 src="/Selguudiadobe.png" 
                 alt="Selguudi Logo" 
-                className={`object-contain h-7 w-auto ${isSidebarCollapsed ? 'max-w-[40px]' : 'max-w-[110px]'}`}
+                className={`object-contain transition-all duration-300 ${
+                  isSidebarCollapsed 
+                    ? 'h-9 w-auto max-w-[48px]' 
+                    : 'h-12 w-auto max-w-[180px]'
+                }`}
               />
-              
-              {/* Jina la Duka (Inaonyeshwa tu Sidebar ikiwa haijakunjwa) */}
-              {!isSidebarCollapsed && (
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider truncate">
-                  {user?.business_name || 'MAMA BELINA SHOP'}
-                </span>
-              )}
             </div>
 
             {/* Desktop Hamburger / Collapse Toggle Button */}
@@ -258,15 +254,12 @@ export default function Layout({ children }) {
           <div className="w-72 bg-slate-900 h-full border-r border-slate-800 p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-5 border-b border-slate-800">
-                <div className="flex items-center gap-2 overflow-hidden">
+                <div className="flex items-center min-w-0 overflow-hidden">
                   <img 
                     src="/Selguudiadobe.png" 
                     alt="Selguudi Logo" 
-                    className="h-7 w-auto max-w-[110px] object-contain"
+                    className="h-12 w-auto max-w-[180px] object-contain"
                   />
-                  <span className="text-xs font-semibold text-slate-300 uppercase truncate">
-                    {user?.business_name || 'MAMA BELINA SHOP'}
-                  </span>
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white">
                   <X className="w-6 h-6" />
