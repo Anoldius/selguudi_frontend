@@ -79,7 +79,7 @@ export default function Layout({ children }) {
     }
   };
 
-  // Orodha Kamili ya Menyu (Dashboard sasa inapatikana kwa wote)
+  // Orodha Kamili ya Menyu
   const allNavItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: false },
     { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
@@ -91,7 +91,7 @@ export default function Layout({ children }) {
     { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
   ];
 
-  // Chuja menyu kulingana na Role ya mtumiaji (Owner anaona zote, Cashier anaona zisizo za ownerOnly)
+  // Chuja menyu kulingana na Role ya mtumiaji
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
@@ -165,30 +165,26 @@ export default function Layout({ children }) {
         <div>
           {/* Brand Header with Logo & Toggle Button */}
           <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between ${isSidebarCollapsed ? 'flex-col gap-3' : ''}`}>
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-10 h-10 shrink-0 rounded-2xl bg-slate-950/60 border border-slate-800 p-1.5 shadow-md flex items-center justify-center">
-                <img 
-                  src="/selguudiLogo.png" 
-                  alt="Selguudi POS Logo" 
-                  className="w-full h-full object-contain rounded-xl"
-                />
-              </div>
+            <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+              {/* Logo Mpya - Selguudiadobe.png */}
+              <img 
+                src="/Selguudiadobe.png" 
+                alt="Selguudi Logo" 
+                className={`object-contain h-7 w-auto ${isSidebarCollapsed ? 'max-w-[40px]' : 'max-w-[110px]'}`}
+              />
+              
+              {/* Jina la Duka (Inaonyeshwa tu Sidebar ikiwa haijakunjwa) */}
               {!isSidebarCollapsed && (
-                <div className="overflow-hidden">
-                  <h1 className="font-extrabold text-base tracking-wide text-white leading-tight">
-                    Selguudi <span className="text-emerald-400">POS</span>
-                  </h1>
-                  <p className="text-xs text-slate-400 font-medium truncate max-w-[120px]">
-                    {user?.business_name || 'Supermarket'}
-                  </p>
-                </div>
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider truncate">
+                  {user?.business_name || 'MAMA BELINA SHOP'}
+                </span>
               )}
             </div>
 
             {/* Desktop Hamburger / Collapse Toggle Button */}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition"
+              className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition shrink-0"
               title={isSidebarCollapsed ? "Panua Sidebar" : "Kunja Sidebar"}
             >
               {isSidebarCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
@@ -262,15 +258,15 @@ export default function Layout({ children }) {
           <div className="w-72 bg-slate-900 h-full border-r border-slate-800 p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-5 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-slate-950/60 border border-slate-800 p-1 flex items-center justify-center">
-                    <img 
-                      src="/selguudiLogo.png" 
-                      alt="Selguudi POS Logo" 
-                      className="w-full h-full object-contain rounded-lg"
-                    />
-                  </div>
-                  <span className="font-extrabold text-white text-lg">Selguudi POS</span>
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <img 
+                    src="/Selguudiadobe.png" 
+                    alt="Selguudi Logo" 
+                    className="h-7 w-auto max-w-[110px] object-contain"
+                  />
+                  <span className="text-xs font-semibold text-slate-300 uppercase truncate">
+                    {user?.business_name || 'MAMA BELINA SHOP'}
+                  </span>
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white">
                   <X className="w-6 h-6" />
