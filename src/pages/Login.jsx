@@ -32,29 +32,16 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4">
       <div className="w-full max-w-md">
         
-        {/* BRAND HEADER ILYOBORESHWA */}
+        {/* BRAND HEADER: LOGO MPYA RASMI (BILA ICON YA ZAMANI) */}
         <div className="text-center mb-6 flex flex-col items-center">
-          {/* Logo Container (Kubwa kidogo na yenye muonekano safi) */}
-          <div className="w-24 h-24 mb-3 flex items-center justify-center rounded-2xl bg-slate-950/40 p-2 border border-slate-800/80 shadow-2xl">
+          <div className="w-64 sm:w-72 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300">
             <img 
-              src="/selguudiLogo.png" 
+              src="/SelguudimasterLogo.png" 
               alt="Selguudi POS Logo" 
-              className="w-full h-full object-contain rounded-xl"
+              className="w-full h-full object-contain drop-shadow-2xl"
             />
           </div>
-
-          {/* Jina la Brand */}
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-1.5 mt-1">
-            <span>Selguudi</span>
-            <span className="text-emerald-400">POS</span>
-          </h1>
-
-          {/* Slogan MPYA: Uza kishua */}
-          <p className="text-emerald-400/90 text-sm font-bold tracking-wide mt-0.5">
-            Uza kishua.
-          </p>
-
-          <p className="text-slate-400 text-xs font-medium mt-1">
+          <p className="text-slate-400 text-xs font-medium mt-2">
             Mfumo wa Kisasa wa Mauzo na Stoko
           </p>
         </div>
