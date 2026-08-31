@@ -163,21 +163,21 @@ export default function Layout({ children }) {
         }`}
       > 
         <div>
-          {/* Brand Header with Big Logo & Toggle Button */}
-          <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3' : ''}`}>
+          {/* BRAND HEADER: LOGO IMO-ONGEZWA UKUBWA */}
+          <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
             <div className="flex items-center min-w-0 overflow-hidden">
               <img 
                 src="/Selguudiadobe.png" 
                 alt="Selguudi Logo" 
-                className={`object-contain transition-all duration-300 ${
+                className={`object-contain transition-all duration-300 drop-shadow-md ${
                   isSidebarCollapsed 
-                    ? 'h-9 w-auto max-w-[48px]' 
-                    : 'h-12 w-auto max-w-[180px]'
+                    ? 'h-10 w-auto max-w-[52px]' 
+                    : 'h-14 sm:h-16 w-auto max-w-[210px]'
                 }`}
               />
             </div>
 
-            {/* Desktop Hamburger / Collapse Toggle Button */}
+            {/* Desktop Collapse Toggle Button */}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition shrink-0"
@@ -253,12 +253,12 @@ export default function Layout({ children }) {
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm md:hidden flex">
           <div className="w-72 bg-slate-900 h-full border-r border-slate-800 p-5 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between pb-5 border-b border-slate-800">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div className="flex items-center min-w-0 overflow-hidden">
                   <img 
                     src="/Selguudiadobe.png" 
                     alt="Selguudi Logo" 
-                    className="h-12 w-auto max-w-[180px] object-contain"
+                    className="h-14 w-auto max-w-[210px] object-contain drop-shadow-md"
                   />
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white">
