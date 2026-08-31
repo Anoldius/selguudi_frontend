@@ -235,22 +235,24 @@ export default function Reports() {
     });
   };
 
-  // EXPORT PDF YENYE LOGO YA SELGUUDIADOBE
+ // EXPORT PDF YENYE LOGO YENYE UWIANO SAHIHI (ASPECT RATIO)
   const exportPDF = async () => {
     const doc = new jsPDF();
     const businessName = user?.business_name || 'Selguudi POS';
 
     // Header Background Accent (Dark Slate)
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 52, 'F'); // Ongeza height hadi 52px ili kufanya nafasi ya logo
+    doc.rect(0, 0, 210, 52, 'F');
 
     let currentY = 12;
 
-    // Pakia na weka Logo ya Selguudiadobe
+    // Pakia na weka Logo ya Selguudiadobe bila kubana aspect ratio
     try {
       const logoBase64 = await getBase64ImageFromUrl('/Selguudiadobe.png');
-      doc.addImage(logoBase64, 'PNG', 14, 8, 38, 12); 
-      currentY = 27; // Sukuma maandishi ya chini
+      
+      // Vipimo vilivyorekebishwa: Width 45mm, Height 10mm ili isijibane
+      doc.addImage(logoBase64, 'PNG', 14, 7, 45, 10); 
+      currentY = 25; // Sukuma maandishi chini ya logo
     } catch (err) {
       console.error("Logo haijapatikana:", err);
       currentY = 16;
@@ -265,10 +267,10 @@ export default function Reports() {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(52, 211, 153); // Emerald Green
-    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, currentY + 7);
+    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, currentY + 6);
 
     doc.setTextColor(203, 213, 225);
-    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 13);
+    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 12);
 
     // Summary Box in PDF
     const summaryDataPDF = [
@@ -283,7 +285,7 @@ export default function Reports() {
     ];
 
     autoTable(doc, {
-      startY: 58,
+      startY: 56,
       body: summaryDataPDF,
       theme: 'plain',
       styles: {
