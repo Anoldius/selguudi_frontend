@@ -61,23 +61,39 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  // Logic ya Kuanzisha Malipo PesaPal
-  const handlePayWithPesaPal = async () => {
-    setIsInitiatingPayment(true);
-    try {
-      const res = await apiClient.post('auth/billing/initiate/');
-      if (res.data && res.data.redirect_url) {
-        window.location.href = res.data.redirect_url;
-      } else {
-        alert("Imeshindikana kupata Link ya Malipo. Jaribu tena.");
-      }
-    } catch (err) {
-      console.error("Payment initiation error:", err);
-      alert("Imeshindikana kuunganisha na PesaPal Gateway.");
-    } finally {
-      setIsInitiatingPayment(false);
-    }
-  };
+ // Logic ya Kuanzisha Malipo PesaPal
+
+const handlePayWithPesaPal = async () => {
+
+setIsInitiatingPayment(true);
+
+try {
+
+const res = await apiClient.post('auth/billing/initiate/');
+
+if (res.data && res.data.redirect_url) {
+
+window.location.href = res.data.redirect_url;
+
+} else {
+
+alert("Imeshindikana kupata Link ya Malipo. Jaribu tena.");
+
+}
+
+} catch (err) {
+
+console.error("Payment initiation error:", err);
+
+alert("Imeshindikana kuunganisha na PesaPal Gateway.");
+
+} finally {
+
+setIsInitiatingPayment(false);
+
+}
+
+};
 
   // Orodha Kamili ya Menyu
   const allNavItems = [
