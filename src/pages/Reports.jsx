@@ -14,9 +14,7 @@ import {
   Filter,
   RefreshCw,
   ShieldAlert,
-  Download,
-  Calendar,
-  Wallet
+  Download
 } from 'lucide-react';
 
 export default function Reports() {
@@ -25,41 +23,39 @@ export default function Reports() {
 
   const [loading, setLoading] = useState(true);
   const [allTransactions, setAllTransactions] = useState([]);
-  const [dashboardSummary, setDashboardSummary] = useState(null);
   const [products, setProducts] = useState([]);
 
   // State ya Permissions
   const [permissions, setPermissions] = useState({
     show_profit_to_cashier: false,
-    allow_cashier_debts: true,
-    allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false,
-    show_stock_summary_cards: false
   });
 
-  // Dynamic Period Choice: 'today', 'yesterday', 'juzi', 'month_1', 'month_2', 'month_3', 'month_4', 'month_5', 'month_6', 'year_1', 'year_2', 'year_3', 'year_4', 'year_5', 'custom'
-  const [periodOption, setPeriodOption] = useState('today');
+  // Dynamic Period Choice
+  const [periodOption, setPeriodOption] = useState('month_1');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Kokotoa Tarehe kulingana na Chaguo la Period
+  // Kokotoa Tarehe kulingana na Chaguo
   useEffect(() => {
     calculateDatesFromOption(periodOption);
   }, [periodOption]);
 
-  // Pakua data pale Tarehe au Period inapobadilika
+  // Pakua data zote mwanzoni
   useEffect(() => {
-    if (startDate && endDate) {
-      fetchReportData();
-    }
-  }, [startDate, endDate]);
+    fetchReportData();
+  }, []);
 
   const calculateDatesFromOption = (option) => {
     const today = new Date();
     let start = new Date();
     let end = new Date();
 
-    const formatDate = (d) => d.toISOString().split('T')[0];
+    const formatDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     switch (option) {
       case 'today':
@@ -81,23 +77,23 @@ export default function Reports() {
         break;
 
       case 'month_2':
-        start.setMonth(today.getMonth() - 2);
+        start.setMonth(today.getMonth() - 1);
         break;
 
       case 'month_3':
-        start.setMonth(today.getMonth() - 3);
+        start.setMonth(today.getMonth() - 2);
         break;
 
       case 'month_4':
-        start.setMonth(today.getMonth() - 4);
+        start.setMonth(today.getMonth() - 3);
         break;
 
       case 'month_5':
-        start.setMonth(today.getMonth() - 5);
+        start.setMonth(today.getMonth() - 4);
         break;
 
       case 'month_6':
-        start.setMonth(today.getMonth() - 6);
+        start.setMonth(today.getMonth() - 5);
         break;
 
       case 'year_1': // Mwaka Huu
@@ -105,26 +101,26 @@ export default function Reports() {
         break;
 
       case 'year_2':
-        start.setFullYear(today.getFullYear() - 2);
+        start.setFullYear(today.getFullYear() - 1);
         break;
 
       case 'year_3':
-        start.setFullYear(today.getFullYear() - 3);
+        start.setFullYear(today.getFullYear() - 2);
         break;
 
       case 'year_4':
-        start.setFullYear(today.getFullYear() - 4);
+        start.setFullYear(today.getFullYear() - 3);
         break;
 
       case 'year_5':
-        start.setFullYear(today.getFullYear() - 5);
+        start.setFullYear(today.getFullYear() - 4);
         break;
 
       case 'custom':
-        return; // Anatumia tarehe anazochagua yeye kwenye inputs
+        return;
 
       default:
-        start = new Date();
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
         break;
     }
 
@@ -135,31 +131,27 @@ export default function Reports() {
   const fetchReportData = async () => {
     setLoading(true);
     try {
-      const [summaryRes, transRes, prodRes, permRes] = await Promise.all([
-        apiClient.get(`reports/dashboard/?start_date=${startDate}&end_date=${endDate}`),
+      const [transRes, prodRes, permRes] = await Promise.all([
         apiClient.get('sales/transactions/'),
         apiClient.get('inventory/products/'),
-        apiClient.get('auth/business-permissions/')
+        apiClient.get('auth/business-permissions/').catch(() => ({ data: null }))
       ]);
 
-      if (summaryRes.data) setDashboardSummary(summaryRes.data);
-      const transData = transRes.data.results || transRes.data || [];
-      const prodData = prodRes.data.results || prodRes.data || [];
+      const transData = transRes.data?.results || transRes.data || [];
+      const prodData = prodRes.data?.results || prodRes.data || [];
 
-      setAllTransactions(transData);
-      setProducts(prodData);
-      if (permRes.data) setPermissions(permRes.data);
-      setLoading(false);
+      setAllTransactions(Array.isArray(transData) ? transData : []);
+      setProducts(Array.isArray(prodData) ? prodData : []);
+      if (permRes?.data) setPermissions(permRes.data);
     } catch (err) {
       console.error("Error fetching reports:", err);
+    } finally {
       setLoading(false);
     }
   };
 
-  // SOMA TOGGLE YA BIASHARA MOJA KWA MOJA
   const canSeeProfit = isOwner || Boolean(permissions?.show_profit_to_cashier);
 
-  // KAMA TOGGLE YA FAIDA NA TAKWIMU IPO OFF, BLOCK UKURASA MZIMA!
   if (!loading && !canSeeProfit) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-4">
@@ -167,35 +159,34 @@ export default function Reports() {
           <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
           </div>
-
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold text-white">Huwezi Kuona Ukurasa Huu</h3>
-            <p className="text-sm text-slate-400">
-              Ruhusa ya kuona Ripoti & Takwimu imezimwa kwenye Mipangilio ya Duka na Mmiliki (Boss).
-            </p>
-          </div>
-
-          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-500">
-            Tafadhali wasiliana na Bosi wako ili akuruhusu kuona takwimu za mauzo na faida.
-          </div>
+          <h3 className="text-xl font-bold text-white">Huwezi Kuona Ukurasa Huu</h3>
+          <p className="text-sm text-slate-400">
+            Ruhusa ya kuona Ripoti & Takwimu imezimwa kwenye Mipangilio ya Duka na Mmiliki (Boss).
+          </p>
         </div>
       </div>
     );
   }
 
-  // CHUJA MIAMALA KULINGANA NA START DATE NA END DATE
+  // CHUJA MIAMALA KULINGANA NA TAREHE ZILIZOCHAGULIWA
   const filteredTransactions = allTransactions.filter(tx => {
-    if (!tx.created_at || tx.status === 'REFUNDED') return false;
-    const txDateStr = tx.created_at.split('T')[0];
-    return txDateStr >= startDate && txDateStr <= endDate;
+    if (!tx.created_at || tx.status === 'REFUNDED' || tx.status === 'CANCELLED') return false;
+    
+    const txDateStr = new Date(tx.created_at).toISOString().split('T')[0];
+    
+    if (startDate && endDate) {
+      return txDateStr >= startDate && txDateStr <= endDate;
+    }
+    return true;
   });
 
-  // 1. MAUZO YA KIPINDI HUSIKA
-  const totalSalesAmount = dashboardSummary?.today_total_sales ?? filteredTransactions.reduce((sum, tx) => {
-    return sum + Number(tx.total_amount || tx.amount_paid || 0);
+  // 1. KOKOTOA JUMLA YA MAUZO YA KIPINDI HICHO
+  const totalSalesAmount = filteredTransactions.reduce((sum, tx) => {
+    return sum + Number(tx.total_amount ?? tx.amount_paid ?? 0);
   }, 0);
 
-  // 2. KOKOTOA TOP SELLING PRODUCTS
+  // 2. KOKOTOA FAIDA NA TOP SELLING PRODUCTS
+  let calculatedProfit = 0;
   const productSalesMap = {};
 
   filteredTransactions.forEach(tx => {
@@ -203,7 +194,12 @@ export default function Reports() {
       tx.items.forEach(item => {
         const pName = item.product_name || item.product?.name || item.product__name || 'Bidhaa';
         const qty = Number(item.quantity || item.total_quantity_sold || 0);
-        const price = Number(item.unit_price || item.product?.selling_price || 0);
+        const sellingPrice = Number(item.unit_price || item.product?.selling_price || 0);
+        const buyingPrice = Number(item.buying_price || item.product?.buying_price || 0);
+
+        // Faida = (Selling Price - Buying Price) * Quantity
+        const itemProfit = (sellingPrice - buyingPrice) * qty;
+        calculatedProfit += itemProfit > 0 ? itemProfit : 0;
 
         if (!productSalesMap[pName]) {
           productSalesMap[pName] = {
@@ -214,33 +210,28 @@ export default function Reports() {
         }
 
         productSalesMap[pName].total_quantity_sold += qty;
-        productSalesMap[pName].total_revenue += (price * qty);
+        productSalesMap[pName].total_revenue += (sellingPrice * qty);
       });
     }
   });
 
   const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
 
-  // 3. FAIDA KWA KIPINDI HICHO
-  const displayProfit = dashboardSummary?.today_estimated_profit ?? 0;
-
-  // 4. LOW STOCK ALERT COUNT
-  const lowStockCount = dashboardSummary?.low_stock_items_count ?? products.filter(p => {
+  // 3. LOW STOCK COUNT
+  const lowStockCount = products.filter(p => {
     const stock = Number(p.quantity ?? p.stock_quantity ?? 0);
     const minAlert = Number(p.min_stock_alert || 5);
     return stock <= minAlert;
   }).length;
 
-  // FUNCTION YA EXPORT PDF YA KISASA
+  // EXPORT PDF
   const exportPDF = () => {
     const doc = new jsPDF();
     const businessName = user?.business_name || 'Selguudi POS';
 
-    // Header Background Accent
-    doc.setFillColor(15, 23, 42); // Dark slate
+    doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, 210, 40, 'F');
 
-    // Title & Business Header
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
@@ -248,17 +239,16 @@ export default function Reports() {
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(52, 211, 153); // Emerald Green
+    doc.setTextColor(52, 211, 153);
     doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, 26);
 
     doc.setTextColor(203, 213, 225);
     doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, 33);
 
-    // Summary Box in PDF
     const summaryDataPDF = [
       [
         `Jumla ya Mauzo: ${Number(totalSalesAmount).toLocaleString()} TZS`,
-        `Kadirio la Faida: ${Number(displayProfit).toLocaleString()} TZS`
+        `Kadirio la Faida: ${Number(calculatedProfit).toLocaleString()} TZS`
       ],
       [
         `Jumla ya Miamala: ${filteredTransactions.length} Risiti`,
@@ -279,7 +269,6 @@ export default function Reports() {
       }
     });
 
-    // Top Selling Products Table in PDF
     const tableRows = topProducts.map((p, index) => [
       index + 1,
       p.product__name,
@@ -293,7 +282,7 @@ export default function Reports() {
       body: tableRows,
       theme: 'striped',
       headStyles: {
-        fillColor: [16, 185, 129], // Emerald
+        fillColor: [16, 185, 129],
         textColor: [255, 255, 255],
         fontStyle: 'bold'
       },
@@ -303,7 +292,6 @@ export default function Reports() {
       }
     });
 
-    // Footer Page Numbering
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -350,7 +338,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* FILTER CARD (LEO, JANA, JUZI, MIEZI 1-6, MIAKA 1-5 & CUSTOM) */}
+      {/* FILTER CARD */}
       <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl space-y-4">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
           <Filter className="w-4 h-4 text-emerald-400" />
@@ -358,8 +346,6 @@ export default function Reports() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          
-          {/* Dropdown Options */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Chaguo la Haraka</label>
             <select
@@ -385,7 +371,6 @@ export default function Reports() {
             </select>
           </div>
 
-          {/* Start Date */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kuanzia Tarehe</label>
             <input
@@ -397,7 +382,6 @@ export default function Reports() {
             />
           </div>
 
-          {/* End Date */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Hadi Tarehe</label>
             <input
@@ -408,7 +392,6 @@ export default function Reports() {
               className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
             />
           </div>
-
         </div>
       </div>
 
@@ -448,7 +431,7 @@ export default function Reports() {
               </div>
               <div className="mt-4">
                 <h3 className="text-2xl font-extrabold font-mono text-emerald-400">
-                  {Number(displayProfit).toLocaleString()} TZS
+                  {Number(calculatedProfit).toLocaleString()} TZS
                 </h3>
               </div>
               <p className="mt-2 text-xs text-slate-400">Mauzo minus Bei za kununulia</p>
@@ -464,7 +447,7 @@ export default function Reports() {
               </div>
               <div className="mt-4">
                 <h3 className="text-2xl font-extrabold text-white font-mono">
-                  {dashboardSummary?.today_receipts ?? filteredTransactions.length} <span className="text-xs font-normal text-slate-400">Risiti</span>
+                  {filteredTransactions.length} <span className="text-xs font-normal text-slate-400">Risiti</span>
                 </h3>
               </div>
               <p className="mt-2 text-xs text-slate-400">Idadi ya mauzo yaliyofanyika</p>
