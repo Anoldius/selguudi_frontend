@@ -235,24 +235,51 @@ export default function Reports() {
     });
   };
 
- // EXPORT PDF YENYE LOGO YENYE UWIANO SAHIHI (ASPECT RATIO)
+ // HELPER FUNCTION YA KUPATA BASE64 PAMOJA NA VIPIMO CHA ASILI CHA PICHA (ASPECT RATIO)
+  const getProportionalImage = (imageUrl, maxWidth) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.src = imageUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const base64 = canvas.toDataURL('image/png');
+        // Kokotoa height kwa kutumia ratio ya asili
+        const aspectRatio = img.naturalHeight / img.naturalWidth;
+        const calculatedHeight = maxWidth * aspectRatio;
+
+        resolve({
+          base64,
+          width: maxWidth,
+          height: calculatedHeight
+        });
+      };
+      img.onerror = reject;
+    });
+  };
+
+  // EXPORT PDF YENYE LOGO ISIYOFINYWA
   const exportPDF = async () => {
     const doc = new jsPDF();
     const businessName = user?.business_name || 'Selguudi POS';
 
     // Header Background Accent (Dark Slate)
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 52, 'F');
+    doc.rect(0, 0, 210, 55, 'F');
 
     let currentY = 12;
 
-    // Pakia na weka Logo ya Selguudiadobe bila kubana aspect ratio
     try {
-      const logoBase64 = await getBase64ImageFromUrl('/Selguudiadobe.png');
+      // Weka upana unaotaka (mfano 42mm), urefu utajikokotoa wenyewe bila kufinywa!
+      const logoData = await getProportionalImage('/Selguudiadobe.png', 42);
       
-      // Vipimo vilivyorekebishwa: Width 45mm, Height 10mm ili isijibane
-      doc.addImage(logoBase64, 'PNG', 14, 7, 45, 10); 
-      currentY = 25; // Sukuma maandishi chini ya logo
+      doc.addImage(logoData.base64, 'PNG', 14, 6, logoData.width, logoData.height); 
+      currentY = 6 + logoData.height + 6; // Sukuma maandishi ya chini kulingana na urefu wa logo
     } catch (err) {
       console.error("Logo haijapatikana:", err);
       currentY = 16;
@@ -260,7 +287,7 @@ export default function Reports() {
 
     // Title & Business Header
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
     doc.text(businessName.toUpperCase(), 14, currentY);
 
@@ -285,7 +312,7 @@ export default function Reports() {
     ];
 
     autoTable(doc, {
-      startY: 56,
+      startY: Math.max(58, currentY + 18),
       body: summaryDataPDF,
       theme: 'plain',
       styles: {
@@ -330,7 +357,6 @@ export default function Reports() {
 
     doc.save(`Ripoti_${businessName}_${startDate}_hadi_${endDate}.pdf`);
   };
-
   return (
     <div className="space-y-6">
       
