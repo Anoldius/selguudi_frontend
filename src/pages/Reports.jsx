@@ -197,7 +197,6 @@ export default function Reports() {
         const sellingPrice = Number(item.unit_price || item.product?.selling_price || 0);
         const buyingPrice = Number(item.buying_price || item.product?.buying_price || 0);
 
-        // Faida = (Selling Price - Buying Price) * Quantity
         const itemProfit = (sellingPrice - buyingPrice) * qty;
         calculatedProfit += itemProfit > 0 ? itemProfit : 0;
 
@@ -224,27 +223,54 @@ export default function Reports() {
     return stock <= minAlert;
   }).length;
 
-  // EXPORT PDF
-  const exportPDF = () => {
+  // HELPER FUNCTION YA KUBADILISHA LOGO KUTOKA PUBLIC FOLDER KUWA BASE64
+  const getBase64ImageFromUrl = async (imageUrl) => {
+    const res = await fetch(imageUrl);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // EXPORT PDF YENYE LOGO YA SELGUUDIADOBE
+  const exportPDF = async () => {
     const doc = new jsPDF();
     const businessName = user?.business_name || 'Selguudi POS';
 
+    // Header Background Accent (Dark Slate)
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 40, 'F');
+    doc.rect(0, 0, 210, 52, 'F'); // Ongeza height hadi 52px ili kufanya nafasi ya logo
 
+    let currentY = 12;
+
+    // Pakia na weka Logo ya Selguudiadobe
+    try {
+      const logoBase64 = await getBase64ImageFromUrl('/Selguudiadobe.png');
+      doc.addImage(logoBase64, 'PNG', 14, 8, 38, 12); 
+      currentY = 27; // Sukuma maandishi ya chini
+    } catch (err) {
+      console.error("Logo haijapatikana:", err);
+      currentY = 16;
+    }
+
+    // Title & Business Header
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(businessName.toUpperCase(), 14, 18);
+    doc.text(businessName.toUpperCase(), 14, currentY);
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(52, 211, 153);
-    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, 26);
+    doc.setTextColor(52, 211, 153); // Emerald Green
+    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, currentY + 7);
 
     doc.setTextColor(203, 213, 225);
-    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, 33);
+    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 13);
 
+    // Summary Box in PDF
     const summaryDataPDF = [
       [
         `Jumla ya Mauzo: ${Number(totalSalesAmount).toLocaleString()} TZS`,
@@ -257,7 +283,7 @@ export default function Reports() {
     ];
 
     autoTable(doc, {
-      startY: 45,
+      startY: 58,
       body: summaryDataPDF,
       theme: 'plain',
       styles: {
