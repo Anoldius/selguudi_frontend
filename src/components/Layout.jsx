@@ -61,39 +61,42 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
- // Logic ya Kuanzisha Malipo PesaPal
+  // Logic ya Kuanzisha Malipo PesaPal (Iliyoboreshwa kuonyesha makosa halisi ya server/network)
+  const handlePayWithPesaPal = async () => {
+    setIsInitiatingPayment(true);
 
-const handlePayWithPesaPal = async () => {
+    try {
+      const res = await apiClient.post('auth/billing/initiate/');
 
-setIsInitiatingPayment(true);
+      if (res.data && res.data.redirect_url) {
+        window.location.href = res.data.redirect_url;
+      } else {
+        alert("Imeshindikana kupata Link ya Malipo kutoka kwenye server. Jaribu tena.");
+      }
+    } catch (err) {
+      console.error("Payment initiation detailed error:", err.response?.data || err.message);
 
-try {
+      const status = err.response?.status;
+      const errorData = err.response?.data;
+      let errorMessage = "Imeshindikana kuunganisha na PesaPal Gateway.";
 
-const res = await apiClient.post('auth/billing/initiate/');
+      if (errorData) {
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      }
 
-if (res.data && res.data.redirect_url) {
-
-window.location.href = res.data.redirect_url;
-
-} else {
-
-alert("Imeshindikana kupata Link ya Malipo. Jaribu tena.");
-
-}
-
-} catch (err) {
-
-console.error("Payment initiation error:", err);
-
-alert("Imeshindikana kuunganisha na PesaPal Gateway.");
-
-} finally {
-
-setIsInitiatingPayment(false);
-
-}
-
-};
+      alert(`Hitilafu ya Malipo (${status ? `Code ${status}` : 'Network Error'}): ${errorMessage}`);
+    } finally {
+      setIsInitiatingPayment(false);
+    }
+  };
 
   // Orodha Kamili ya Menyu
   const allNavItems = [
@@ -143,7 +146,7 @@ setIsInitiatingPayment(false);
           <button
             onClick={handlePayWithPesaPal}
             disabled={isInitiatingPayment}
-            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200"
+            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
           >
             {isInitiatingPayment ? (
               <>
@@ -346,7 +349,7 @@ setIsInitiatingPayment(false);
             <button
               onClick={handlePayWithPesaPal}
               disabled={isInitiatingPayment}
-              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20"
+              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
             >
               {isInitiatingPayment ? 'Inafungua...' : 'Lipa 20,000 Sasa'}
             </button>
