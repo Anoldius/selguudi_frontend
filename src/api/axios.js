@@ -9,13 +9,13 @@ const apiClient = axios.create({
   },
 });
 
-// Interceptor: Token kwenye request ISIPOKUWA kama ni Login au Register
+// Interceptor: Tumia localStorage badala ya sessionStorage
 apiClient.interceptors.request.use((config) => {
   const isAuthEndpoint = config.url.includes('auth/login') || config.url.includes('auth/register');
   
   if (!isAuthEndpoint) {
-    // Badilisha hapa kusoma token kutoka sessionStorage
-    const token = sessionStorage.getItem('access_token');
+    // Tumia localStorage hapa badala ya sessionStorage
+    const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
