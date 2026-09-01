@@ -9,8 +9,7 @@ export const AuthProvider = ({ children }) => {
     show_profit_to_cashier: false,
     allow_cashier_debts: true,
     allow_cashier_custom_price: true,
-    show_buying_price_to_cashier: false,
-    show_stock_summary_cards: true
+    show_buying_price_to_cashier: false
   });
   const [loading, setLoading] = useState(true);
 
@@ -27,17 +26,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // SULUHISHO: Tumia localStorage badala ya sessionStorage
-    const token = localStorage.getItem('access_token');
-    const storedUser = localStorage.getItem('user_info');
+    const token = sessionStorage.getItem('access_token');
+    const storedUser = sessionStorage.getItem('user_info');
     if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        fetchPermissions();
-      } catch (e) {
-        console.error("Error parsing stored user info:", e);
-      }
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      fetchPermissions();
     }
     setLoading(false);
   }, []);
@@ -45,77 +39,39 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await apiClient.post('auth/login/', { username, password });
-      
-      // Chukua taarifa zote kutoka kwenye response ya backend
-      const { 
-        access, 
-        refresh, 
-        business_name, 
-        business_type,
-        role, 
-        username: uname,
-        days_left_in_trial,
-        has_active_access,
-        permissions: userPerms
-      } = response.data;
+      const { access, refresh, business_name, role, username: uname } = response.data;
 
-      // HIFADHI KWENYE LOCALSTORAGE
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
+      sessionStorage.setItem('access_token', access);
+      sessionStorage.setItem('refresh_token', refresh);
       
-      const userData = { 
-        username: uname, 
-        business_name, 
-        business_type,
-        role,
-        days_left_in_trial: days_left_in_trial ?? 30,
-        has_active_access: has_active_access ?? true
-      };
-      
-      localStorage.setItem('user_info', JSON.stringify(userData));
+      const userData = { username: uname, business_name, role };
+      sessionStorage.setItem('user_info', JSON.stringify(userData));
       
       setUser(userData);
-      
-      if (userPerms) {
-        setPermissions(userPerms);
-      } else {
-        await fetchPermissions();
-      }
-
+      await fetchPermissions();
       return { success: true };
     } catch (error) {
-      console.error("Login Error Details:", error.response?.data || error.message);
-      
-      let errorMsg = 'Login imeshindikana!';
-      if (error.response?.data) {
-        const data = error.response.data;
-        if (typeof data === 'string') errorMsg = data;
-        else if (data.detail) errorMsg = data.detail;
-        else if (data.message) errorMsg = data.message;
-        else if (data.non_field_errors) errorMsg = data.non_field_errors[0];
-      }
-
       return { 
         success: false, 
-        message: errorMsg 
+        message: error.response?.data?.message || error.response?.data?.detail || 'Login imeshindikana!' 
       };
     }
   };
 
-  // FUNCTION YA KUSASISHA TAARIFA ZA USER BILA KULOGOUT
+  // FUNCTION MPYA: KUSASISHA TAARIFA ZA USER (KAMA JINA LA DUKA) BILA KULOGOUT
   const updateUser = (newUserData) => {
     setUser((prevUser) => {
       const updatedUser = { ...prevUser, ...newUserData };
-      localStorage.setItem('user_info', JSON.stringify(updatedUser));
+      sessionStorage.setItem('user_info', JSON.stringify(updatedUser));
       return updatedUser;
     });
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_info');
-    localStorage.clear();
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user_info');
+    sessionStorage.clear();
     
     setUser(null);
   };
