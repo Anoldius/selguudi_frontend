@@ -114,13 +114,13 @@ export default function Layout({ children }) {
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  // FALLBACK MECHANISM ILI BANNER ISIPOTEE
-  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 30;
+  // TAKWIMU HALISI ZA BILLING (SAY NO TO HARDCODED NUMBERS)
+  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial;
   const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
   const isSubscriptionActive = Boolean(billingInfo?.subscription_end_date);
 
-  // Kagua kama atapata banner: Anapaswa kuona banner ikiwa hajalipia na bado ana siku za trial au yupo active
-  const showBanner = !isSubscriptionActive && (daysLeft >= 0);
+  // Banner itaonekana ikiwa hajalipia na siku zilizobaki zipo (daysLeft !== undefined)
+  const showTrialBanner = !isSubscriptionActive && (daysLeft !== undefined && daysLeft !== null);
 
   // KAMA ACCESS IMEISHA KABISA
   if (!loadingBilling && !hasActiveAccess) {
@@ -190,7 +190,7 @@ export default function Layout({ children }) {
         }`}
       > 
         <div>
-          {/* BRAND HEADER: LOGO IMO-ONGEZWA UKUBWA */}
+          {/* BRAND HEADER */}
           <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
             <div className="flex items-center min-w-0 overflow-hidden">
               <img 
@@ -345,8 +345,8 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
-        {/* TRIAL COUNTDOWN BANNER JUU YA MAIN CONTENT */}
-        {showBanner && (
+        {/* TRIAL COUNTDOWN BANNER (PERMANENTLY STABLE & ACCURATE) */}
+        {showTrialBanner && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-400" />
