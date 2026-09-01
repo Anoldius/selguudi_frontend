@@ -61,7 +61,7 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  // Logic ya Kuanzisha Malipo PesaPal (Iliyoboreshwa kuonyesha makosa halisi ya server/network)
+  // Logic ya Kuanzisha Malipo PesaPal
   const handlePayWithPesaPal = async () => {
     setIsInitiatingPayment(true);
 
@@ -114,8 +114,13 @@ export default function Layout({ children }) {
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  // KAMA ACCESS IMEISHA
-  if (!loadingBilling && billingInfo && !billingInfo.has_active_access) {
+  // KUPATA TAKWIMU ZA TRIAL KWA UHAKIKA (KUTOKA BILLING_INFO AU USER OBJECT)
+  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 22;
+  const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
+  const isSubscriptionActive = Boolean(billingInfo?.subscription_end_date);
+
+  // KAMA ACCESS IMEISHA KABISA
+  if (!loadingBilling && !hasActiveAccess) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
@@ -128,7 +133,7 @@ export default function Layout({ children }) {
           <div>
             <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Siku za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
+              Siku za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
             </p>
           </div>
 
@@ -337,13 +342,13 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
-        {/* TRIAL COUNTDOWN BANNER JUU YA MAIN CONTENT */}
-        {billingInfo && billingInfo.days_left_in_trial > 0 && !billingInfo.subscription_end_date && (
+        {/* TRIAL COUNTDOWN BANNER (ALWAYS VISIBLE WHEN SUBSCRIPTION IS NOT ACTIVE) */}
+        {!isSubscriptionActive && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-400" />
               <span>
-                Trial ya Bure: Zimebaki <strong className="text-white underline">{billingInfo.days_left_in_trial} siku</strong> za kutumia mfumo bure.
+                Trial ya Bure: Zimebaki <strong className="text-white underline font-bold">{daysLeft} siku</strong> za kutumia mfumo bure.
               </span>
             </div>
             <button
