@@ -138,7 +138,7 @@ export default function Login() {
               disabled={isSubmitting}
               className="w-full mt-2 py-3.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
-              {isSubmitting ? 'Inahakiki...' : 'Ingia Mfumoni'}
+              {isSubmitting ? 'Inahakiki...' : 'Login'}
               <ArrowRight className="w-5 h-5" />
             </button>
 
