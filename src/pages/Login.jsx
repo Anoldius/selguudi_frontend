@@ -18,13 +18,29 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
 
-    const result = await login(username, password);
-    setIsSubmitting(false);
+    // SULUHISHO KUU: Ondoa nafasi tupu (spaces) zinazowekwa na keyboard za simu
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
 
-    if (result.success) {
-      navigate('/dashboard');
-    } else {
-      setError(result.message);
+    if (!cleanUsername || !cleanPassword) {
+      setError('Tafadhali ingiza Username na Password sahihi.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const result = await login(cleanUsername, cleanPassword);
+
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.message);
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error("Login component error:", err);
+      setError("Imeshindikana kuunganisha na server. Angalia mtandao wako.");
+      setIsSubmitting(false);
     }
   };
 
@@ -32,7 +48,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4">
       <div className="w-full max-w-md">
         
-        {/* BRAND HEADER: LOGO MPYA RASMI (BILA ICON YA ZAMANI) */}
+        {/* BRAND HEADER */}
         <div className="text-center mb-6 flex flex-col items-center">
           <div className="w-64 sm:w-72 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300">
             <img 
@@ -71,8 +87,11 @@ export default function Login() {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   className="w-full pl-11 pr-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
-                  placeholder="Weka username ya duka unalotaka kuingia"
+                  placeholder="Weka username ya duka"
                 />
               </div>
             </div>
@@ -97,6 +116,9 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   className="w-full pl-11 pr-12 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
                   placeholder="••••••••"
                 />
