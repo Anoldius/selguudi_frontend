@@ -114,13 +114,12 @@ export default function Layout({ children }) {
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  // KUPATA SIKU ZILIZOBAKI KWA UHAKIKA (BILLING_INFO -> USER -> DEFAULT)
+  // KUPATA SIKU ZILIZOBAKI NA KUHAKIKISHA BANNER HAIPOTEE
   const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 22;
   const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
-  const isSubscriptionActive = Boolean(billingInfo?.subscription_end_date);
 
-  // BANNER IONEKANE KAMA HAJALAPIA SUBSCRIPTION BADO
-  const showTrialBanner = !isSubscriptionActive;
+  // BANNER IONEKANE WAZI SIKU ZOTE AMBAZO TRIAL BADO IPO HAI (daysLeft > 0)
+  const showTrialBanner = Number(daysLeft) > 0;
 
   // KAMA ACCESS IMEISHA KABISA
   if (!loadingBilling && !hasActiveAccess) {
@@ -345,7 +344,7 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
-        {/* TRIAL COUNTDOWN BANNER JUU YA MAIN CONTENT */}
+        {/* TRIAL COUNTDOWN BANNER (PERMANENTLY FIXED) */}
         {showTrialBanner && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
             <div className="flex items-center gap-2">
