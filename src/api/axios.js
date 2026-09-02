@@ -9,7 +9,7 @@ const apiClient = axios.create({
   },
 });
 
-// 1. REQUEST INTERCEPTOR: Tumia localStorage badala ya sessionStorage
+// 1. REQUEST INTERCEPTOR: Ongeza token kwenye kila ombi lisilokuwa la login/register
 apiClient.interceptors.request.use((config) => {
   const isAuthEndpoint = config.url.includes('auth/login') || config.url.includes('auth/register');
   
@@ -24,14 +24,19 @@ apiClient.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// 2. RESPONSE INTERCEPTOR: Safisha token chafu/zilizokufa kiotomatiki (Auto-Clear Cache)
+// 2. RESPONSE INTERCEPTOR: ZUIA AUTO-LOGOUT YA MAKOSA
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('auth/login');
+      const requestUrl = error.config?.url || '';
       
-      if (!isLoginRequest) {
+      const isLoginRequest = requestUrl.includes('auth/login');
+      const isPermissionsRequest = requestUrl.includes('business-permissions');
+
+      // Hakikisha haileti auto-logout kama kosa limetokea wakati wa login au kuomba permissions
+      if (!isLoginRequest && !isPermissionsRequest) {
+        console.warn("Session expired or invalid token. Redirecting to login...");
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user_info');
