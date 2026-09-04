@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://selguudi.co.tz/sitemap.xml
