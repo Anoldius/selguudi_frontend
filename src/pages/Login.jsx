@@ -52,7 +52,7 @@ export default function Login() {
         <div className="text-center mb-5 flex flex-col items-center">
           <div className="w-36 sm:w-44 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300">
             <img 
-              src="/favconSelguudi.png" 
+              src="/Selguudiadobe.png" 
               alt="Selguudi POS Logo" 
               className="w-full h-full object-contain drop-shadow-xl"
             />
