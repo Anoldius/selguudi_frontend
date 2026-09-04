@@ -18,7 +18,7 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
 
-    // SULUHISHO KUU: Ondoa nafasi tupu (spaces) zinazowekwa na keyboard za simu
+    // Ondoa nafasi tupu (spaces) zinazowekwa na keyboard za simu
     const cleanUsername = username.trim();
     const cleanPassword = password.trim();
 
@@ -48,16 +48,16 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4">
       <div className="w-full max-w-md">
         
-        {/* BRAND HEADER */}
-        <div className="text-center mb-6 flex flex-col items-center">
-          <div className="w-64 sm:w-72 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300">
+        {/* BRAND HEADER (Logo Imepunguzwa Ukubwa) */}
+        <div className="text-center mb-5 flex flex-col items-center">
+          <div className="w-36 sm:w-44 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300">
             <img 
               src="/Selguudiadobe.png" 
               alt="Selguudi POS Logo" 
-              className="w-full h-full object-contain drop-shadow-2xl"
+              className="w-full h-full object-contain drop-shadow-xl"
             />
           </div>
-          <p className="text-slate-400 text-xs font-medium mt-2">
+          <p className="text-slate-400 text-xs font-medium mt-1.5">
             Mfumo wa Kisasa wa Mauzo na Stoko
           </p>
         </div>
