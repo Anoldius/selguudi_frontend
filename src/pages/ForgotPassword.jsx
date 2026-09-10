@@ -21,7 +21,7 @@ export default function ForgotPassword() {
       console.error("Password reset request error:", err);
       setError(
         err.response?.data?.email?.[0] || 
-        'Imeshindikana kutuma ombi. Hakikisha Email ni sahihi!'
+        'Imeshindikana kutuma ombi. Hakikisha Email ni sahihi au imesajiliwa!'
       );
     } finally {
       setLoading(false);
@@ -39,7 +39,7 @@ export default function ForgotPassword() {
           </div>
           <h1 className="text-2xl font-extrabold text-white">Umesahau Password?</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Weka email yako hapa chini ili tukutumie code ya kubadilisha password.
+            Weka email yako hapa chini ili tukutumie link ya kubadilisha password.
           </p>
         </div>
 
@@ -49,14 +49,15 @@ export default function ForgotPassword() {
               <CheckCircle2 className="w-10 h-10" />
               <p className="text-sm font-semibold">Ombi Lilitumwa Vizuri!</p>
               <p className="text-xs text-slate-300">
-                Kama email hiyo imesajiliwa, angalia terminal ya backend (au inbox yako) kupata Code/Token ya Reset.
+                Tumetuma barua pepe kwenda <span className="font-bold text-white">{email}</span>. Tafadhali fungua inbox au spam folder yako na ubonyeze link iliyotumwa.
               </p>
             </div>
+            
             <Link 
-              to="/reset-password" 
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl flex items-center justify-center transition text-sm"
+              to="/login" 
+              className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl flex items-center justify-center transition text-sm"
             >
-              Weka Code / Reset Password
+              Rudi Kwenye Login
             </Link>
           </div>
         ) : (
@@ -89,7 +90,7 @@ export default function ForgotPassword() {
               disabled={loading}
               className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Tuma Code ya Reset</span>}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Tuma Link ya Reset</span>}
             </button>
           </form>
         )}
