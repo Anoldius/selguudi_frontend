@@ -4,6 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  CartesianGrid 
+} from 'recharts';
+import { 
   BarChart3, 
   TrendingUp, 
   DollarSign, 
@@ -188,8 +197,17 @@ export default function Reports() {
   // 2. KOKOTOA FAIDA NA TOP SELLING PRODUCTS
   let calculatedProfit = 0;
   const productSalesMap = {};
+  const dailyChartMap = {};
 
   filteredTransactions.forEach(tx => {
+    const txDateStr = new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const txSales = Number(tx.total_amount ?? tx.amount_paid ?? 0);
+    
+    if (!dailyChartMap[txDateStr]) {
+      dailyChartMap[txDateStr] = { date: txDateStr, mauzo: 0, faida: 0 };
+    }
+    dailyChartMap[txDateStr].mauzo += txSales;
+
     if (tx.items && Array.isArray(tx.items)) {
       tx.items.forEach(item => {
         const pName = item.product_name || item.product?.name || item.product__name || 'Bidhaa';
@@ -198,7 +216,10 @@ export default function Reports() {
         const buyingPrice = Number(item.buying_price || item.product?.buying_price || 0);
 
         const itemProfit = (sellingPrice - buyingPrice) * qty;
-        calculatedProfit += itemProfit > 0 ? itemProfit : 0;
+        const finalItemProfit = itemProfit > 0 ? itemProfit : 0;
+        
+        calculatedProfit += finalItemProfit;
+        dailyChartMap[txDateStr].faida += finalItemProfit;
 
         if (!productSalesMap[pName]) {
           productSalesMap[pName] = {
@@ -215,6 +236,7 @@ export default function Reports() {
   });
 
   const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
+  const chartData = Object.values(dailyChartMap);
 
   // 3. LOW STOCK COUNT
   const lowStockCount = products.filter(p => {
@@ -223,19 +245,7 @@ export default function Reports() {
     return stock <= minAlert;
   }).length;
 
-  // HELPER FUNCTION YA KUBADILISHA LOGO KUTOKA PUBLIC FOLDER KUWA BASE64
-  const getBase64ImageFromUrl = async (imageUrl) => {
-    const res = await fetch(imageUrl);
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
- // HELPER FUNCTION YA KUPATA BASE64 PAMOJA NA VIPIMO CHA ASILI CHA PICHA (ASPECT RATIO)
+  // HELPER FUNCTION YA KUPATA BASE64 PAMOJA NA VIPIMO CHA ASILI CHA PICHA
   const getProportionalImage = (imageUrl, maxWidth) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -249,7 +259,6 @@ export default function Reports() {
         ctx.drawImage(img, 0, 0);
 
         const base64 = canvas.toDataURL('image/png');
-        // Kokotoa height kwa kutumia ratio ya asili
         const aspectRatio = img.naturalHeight / img.naturalWidth;
         const calculatedHeight = maxWidth * aspectRatio;
 
@@ -268,24 +277,20 @@ export default function Reports() {
     const doc = new jsPDF();
     const businessName = user?.business_name || 'Selguudi POS';
 
-    // Header Background Accent (Dark Slate)
     doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, 210, 55, 'F');
 
     let currentY = 12;
 
     try {
-      // Weka upana unaotaka (mfano 42mm), urefu utajikokotoa wenyewe bila kufinywa!
       const logoData = await getProportionalImage('/Selguudiadobe.png', 42);
-      
       doc.addImage(logoData.base64, 'PNG', 14, 6, logoData.width, logoData.height); 
-      currentY = 6 + logoData.height + 6; // Sukuma maandishi ya chini kulingana na urefu wa logo
+      currentY = 6 + logoData.height + 6;
     } catch (err) {
       console.error("Logo haijapatikana:", err);
       currentY = 16;
     }
 
-    // Title & Business Header
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
@@ -293,13 +298,12 @@ export default function Reports() {
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(52, 211, 153); // Emerald Green
+    doc.setTextColor(52, 211, 153);
     doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, currentY + 6);
 
     doc.setTextColor(203, 213, 225);
     doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 12);
 
-    // Summary Box in PDF
     const summaryDataPDF = [
       [
         `Jumla ya Mauzo: ${Number(totalSalesAmount).toLocaleString()} TZS`,
@@ -357,6 +361,7 @@ export default function Reports() {
 
     doc.save(`Ripoti_${businessName}_${startDate}_hadi_${endDate}.pdf`);
   };
+
   return (
     <div className="space-y-6">
       
@@ -523,6 +528,55 @@ export default function Reports() {
               <p className="mt-2 text-xs text-slate-400">Bidhaa zinazokaribia kuisha</p>
             </div>
 
+          </div>
+
+          {/* BAR CHART SECTION: GRAPH YA MWENENDO WA MAUZO NA FAIDA */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <span>Mwenendo wa Mauzo na Faida (Chart)</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5"> Mchanganuo wa mauzo na faida kwa kila siku kulingana na tarehe zilizochaguliwa</p>
+              </div>
+
+              <div className="flex items-center gap-4 text-xs font-semibold">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                  <span>Mauzo</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span>
+                  <span>Faida</span>
+                </div>
+              </div>
+            </div>
+
+            {chartData.length === 0 ? (
+              <p className="text-sm text-slate-500 py-12 text-center">Hakuna data za mauzo za kuonyesha kwenye graph kwa kipindi hiki.</p>
+            ) : (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={12} tickLine={false} />
+                    <YAxis 
+                      stroke="#64748b" 
+                      fontSize={11} 
+                      tickLine={false}
+                      tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} 
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '16px', color: '#fff' }}
+                      formatter={(value) => [`${Number(value).toLocaleString()} TZS`]}
+                    />
+                    <Bar dataKey="mauzo" name="Mauzo (TZS)" fill="#10b981" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="faida" name="Faida (TZS)" fill="#22d3ee" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* TOP SELLING PRODUCTS TABLE */}
