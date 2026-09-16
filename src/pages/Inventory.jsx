@@ -170,32 +170,46 @@ export default function Inventory() {
     setShowModal(true);
   };
 
-const openEditModal = (product) => {
-  if (!canAddProducts) {
-    triggerNotification("Huna mamlaka ya kubadilisha stoko. Mawasiliano na Bosi.", "error");
-    return;
-  }
+  const openEditModal = (product) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kubadilisha stoko. Mawasiliano na Bosi.", "error");
+      return;
+    }
 
-  setEditId(product.id);
-  setFormData({
-    name: product.name || '',
-    barcode: product.barcode || '',
-    category: product.category || '',
-    buying_price: product.buying_price !== undefined && product.buying_price !== null ? String(product.buying_price) : '',
-    selling_price: product.selling_price !== undefined && product.selling_price !== null ? String(product.selling_price) : '',
-    quantity: product.quantity !== undefined && product.quantity !== null ? String(product.quantity) : '',
-    unit: product.unit || 'pcs',
-    min_stock_alert: product.min_stock_alert || '5.00'
-  });
-  setShowModal(true);
-};
+    setEditId(product.id);
+    setFormData({
+      name: product.name || '',
+      barcode: product.barcode || '',
+      category: product.category || '',
+      buying_price: product.buying_price !== undefined && product.buying_price !== null ? String(product.buying_price) : '',
+      selling_price: product.selling_price !== undefined && product.selling_price !== null ? String(product.selling_price) : '',
+      quantity: product.quantity !== undefined && product.quantity !== null ? String(product.quantity) : '',
+      unit: product.unit || 'pcs',
+      min_stock_alert: product.min_stock_alert || '5.00'
+    });
+    setShowModal(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Badilisha kwa usalama values ziwe Float Numbers
     const payload = {
       ...formData,
-      category: formData.category || null
+      category: formData.category || null,
+      buying_price: formData.buying_price !== '' && formData.buying_price !== null 
+        ? parseFloat(formData.buying_price) 
+        : 0.0,
+      selling_price: formData.selling_price !== '' && formData.selling_price !== null 
+        ? parseFloat(formData.selling_price) 
+        : 0.0,
+      quantity: formData.quantity !== '' && formData.quantity !== null 
+        ? parseFloat(formData.quantity) 
+        : 0.0,
+      min_stock_alert: formData.min_stock_alert !== '' && formData.min_stock_alert !== null 
+        ? parseFloat(formData.min_stock_alert) 
+        : 5.0
     };
 
     try {
@@ -626,7 +640,7 @@ const openEditModal = (product) => {
                       required
                       value={formData.buying_price}
                       onChange={handleInputChange}
-                      placeholder="2000"
+                      placeholder="0.00"
                       className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
