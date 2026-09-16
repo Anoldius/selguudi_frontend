@@ -14,7 +14,8 @@ import {
   X,
   AlertCircle,
   Filter,
-  AlertTriangle
+  AlertTriangle,
+  Package
 } from 'lucide-react';
 
 export default function POS() {
@@ -25,6 +26,9 @@ export default function POS() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Tab State kwa ajili ya Simu Zote ('products' au 'cart')
+  const [activeMobileTab, setActiveMobileTab] = useState('products');
+
   // Choices: 'cash', 'mobile_money', 'bank_card', 'credit'
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountPaid, setAmountPaid] = useState('');
@@ -106,6 +110,8 @@ export default function POS() {
         selling_price: product.selling_price
       }]);
     }
+
+    triggerToast(`"${product.name}" imeongezwa kwenye kikapu!`, 'success');
   };
 
   // BADILISHA BEI YA KUUZIA KWENYE KIKAPU TU
@@ -144,19 +150,16 @@ export default function POS() {
   const totalAmount = cart.reduce((sum, item) => sum + ((parseFloat(item.selling_price) || 0) * item.quantity), 0);
   const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
 
-  // HATUA YA KWANZA: TENA CHECKOUT NA ONYESHA ALERT
   const handleInitiateCheckout = () => {
     if (cart.length === 0) return;
 
     if (paymentMethod === 'credit') {
       setShowDebtModal(true);
     } else {
-      // Onyesha confirmation alert kwa njia za kawaida
       setShowConfirmSaleModal(true);
     }
   };
 
-  // EXECUTE MAUZO YA KAWAIDA BAADA YA BOSI/CASHIER KUTHIBITISHA ON ALERT MODAL
   const handleConfirmSaleExecution = () => {
     setShowConfirmSaleModal(false);
     executeCheckout({});
@@ -231,6 +234,7 @@ export default function POS() {
       setCustomerPhone('');
       setDueDate('');
       setDebtNotes('');
+      setActiveMobileTab('products');
       fetchData();
     } catch (err) {
       console.error("Full Sale Error Response:", err.response);
@@ -275,7 +279,7 @@ export default function POS() {
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-6 overflow-hidden">
+    <div className="h-full md:h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden">
       
       {/* FLOATING TOAST NOTIFICATION TOP RIGHT */}
       {toast.show && (
@@ -289,244 +293,284 @@ export default function POS() {
         </div>
       )}
 
-      {/* LEFT SIDE: Product Catalog & Search */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 space-y-4 overflow-hidden">
-        
-        {/* CARD 1: SEARCH & CATEGORY FILTERS */}
-        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-3 flex-shrink-0">
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Tafuta bidhaa kwa jina au kuanza kuscann Barcode..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-            />
-          </div>
+      {/* MOBILE SCREEN TOGGLE SWITCHER (ZINAONEKANA KWENYE SIMU PEKEE) */}
+      <div className="flex md:hidden bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-2 shrink-0">
+        <button
+          onClick={() => setActiveMobileTab('products')}
+          className={`flex-1 py-3 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 ${
+            activeMobileTab === 'products'
+              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Orodha ya Bidhaa ({products.length})</span>
+        </button>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
-              <Filter className="w-3 h-3 text-emerald-400" /> KUNDI:
+        <button
+          onClick={() => setActiveMobileTab('cart')}
+          className={`flex-1 py-3 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 relative ${
+            activeMobileTab === 'cart'
+              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <ShoppingCart className="w-4 h-4" />
+          <span>Kikapu ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
+          {cart.length > 0 && (
+            <span className="ml-1 px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold">
+              {cart.length}
             </span>
+          )}
+        </button>
+      </div>
 
-            <button
-              onClick={() => setSelectedCategory('ALL')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
-                selectedCategory === 'ALL'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              Bidhaa Zote ({products.length})
-            </button>
+      <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 min-w-0 overflow-hidden">
+        
+        {/* LEFT SIDE: Product Catalog & Search */}
+        <div className={`flex-1 flex-col min-h-0 min-w-0 space-y-4 overflow-hidden ${
+          activeMobileTab === 'products' ? 'flex' : 'hidden md:flex'
+        }`}>
+          
+          {/* CARD 1: SEARCH & CATEGORY FILTERS */}
+          <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-3 flex-shrink-0">
+            <div className="relative">
+              <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tafuta bidhaa kwa jina au kuanza kuscann Barcode..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
 
-            {categories.map((cat) => (
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
+                <Filter className="w-3 h-3 text-emerald-400" /> KUNDI:
+              </span>
+
               <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => setSelectedCategory('ALL')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
-                  selectedCategory === cat.id
-                    ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                  selectedCategory === 'ALL'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                     : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
-                {cat.name} ({cat.products_count ?? 0})
+                Bidhaa Zote ({products.length})
               </button>
-            ))}
 
-            <button
-              onClick={() => setSelectedCategory('UNCATEGORIZED')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
-                selectedCategory === 'UNCATEGORIZED'
-                  ? 'bg-amber-500 text-slate-950'
-                  : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
-              }`}
-            >
-              Bila Kundi
-            </button>
-          </div>
-        </div>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                    selectedCategory === cat.id
+                      ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {cat.name} ({cat.products_count ?? 0})
+                </button>
+              ))}
 
-        {/* CARD 2: PRODUCT CATALOG GRID */}
-        <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-3xl p-5 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-full text-slate-400 gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
-              <span>Inapakia bidhaa...</span>
+              <button
+                onClick={() => setSelectedCategory('UNCATEGORIZED')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                  selectedCategory === 'UNCATEGORIZED'
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+                }`}
+              >
+                Bila Kundi
+              </button>
             </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 text-sm">
-              Hakuna bidhaa iliyopatikana kwenye kundi hili.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProducts.map((product) => {
-                const stock = Number(product.quantity ?? product.stock_quantity ?? 0);
-                const minAlert = Number(product.min_stock_alert || 5);
-                const isLow = stock <= minAlert;
-
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    className="bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-2xl text-left transition flex flex-col justify-between group"
-                  >
-                    <div>
-                      <h3 className="font-semibold text-white group-hover:text-emerald-400 transition truncate">{product.name}</h3>
-                      <p className="text-[10px] text-purple-400 mt-0.5 truncate">{product.category_name || 'Bila Kundi'}</p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Stoko: <span className={isLow ? 'text-amber-400 font-bold' : 'text-slate-200'}>{stock} {product.unit || 'pcs'}</span>
-                      </p>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="font-extrabold text-emerald-400 text-sm">{Number(product.selling_price).toLocaleString()} TZS</span>
-                      <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition">
-                        <Plus className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT SIDE: Cart Section */}
-      <div className="w-full md:w-96 flex-shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-            <h2 className="font-bold text-lg text-white flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-emerald-400" />
-              <span>Kikapu cha Mauzo</span>
-            </h2>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold">
-              {cart.reduce((a, b) => a + b.quantity, 0)} Items
-            </span>
           </div>
 
-          <div className="mt-4 max-h-64 overflow-y-auto space-y-3 pr-1">
-            {cart.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 text-sm">
-                Kikapu kipo wazi. Bonyeza bidhaa kuongeza.
+          {/* CARD 2: PRODUCT CATALOG GRID */}
+          <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-3xl p-4 sm:p-5 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center h-full text-slate-400 gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+                <span>Inapakia bidhaa...</span>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-12 text-slate-500 text-sm">
+                Hakuna bidhaa iliyopatikana kwenye kundi hili.
               </div>
             ) : (
-              cart.map((item) => {
-                const isBelowCost = Number(item.selling_price) < Number(item.buying_price || 0);
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                {filteredProducts.map((product) => {
+                  const stock = Number(product.quantity ?? product.stock_quantity ?? 0);
+                  const minAlert = Number(product.min_stock_alert || 5);
+                  const isLow = stock <= minAlert;
 
-                return (
-                  <div key={item.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-white truncate max-w-[180px]">{item.name}</h4>
-                      
-                      <button onClick={() => removeFromCart(item.id)} className="text-slate-500 hover:text-red-400 p-1 transition">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-900">
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">Bei:</span>
-                        <input
-                          type="number"
-                          value={item.selling_price}
-                          onChange={(e) => updateCartPrice(item.id, e.target.value)}
-                          className={`w-24 px-2 py-1 bg-slate-900 border rounded-lg text-xs font-mono font-bold focus:outline-none transition ${
-                            isBelowCost 
-                              ? 'border-red-500 text-red-400 bg-red-950/20' 
-                              : 'border-slate-800 text-emerald-400 focus:border-emerald-500'
-                          }`}
-                        />
-                        <span className="text-[10px] text-slate-500 font-bold">TZS</span>
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => addToCart(product)}
+                      className="bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-emerald-500/50 p-3.5 rounded-2xl text-left transition flex flex-col justify-between group active:scale-95"
+                    >
+                      <div>
+                        <h3 className="font-semibold text-white group-hover:text-emerald-400 transition text-xs sm:text-sm line-clamp-2">{product.name}</h3>
+                        <p className="text-[10px] text-purple-400 mt-0.5 truncate">{product.category_name || 'Bila Kundi'}</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Stoko: <span className={isLow ? 'text-amber-400 font-bold' : 'text-slate-200'}>{stock} {product.unit || 'pcs'}</span>
+                        </p>
                       </div>
-
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 text-slate-400 hover:text-white">
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="px-2 text-xs font-bold text-white">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 text-slate-400 hover:text-white">
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="font-extrabold text-emerald-400 text-xs sm:text-sm font-mono">{Number(product.selling_price).toLocaleString()} TZS</span>
+                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition">
+                          <Plus className="w-4 h-4" />
+                        </div>
                       </div>
-                    </div>
-
-                    {isBelowCost && (
-                      <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 pt-0.5">
-                        ⚠️ Chini ya gharama ({Number(item.buying_price).toLocaleString()} TZS)!
-                      </p>
-                    )}
-                  </div>
-                );
-              })
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Payment Options Summary */}
-        <div className="pt-4 border-t border-slate-800 space-y-3">
+        {/* RIGHT SIDE: Cart Section */}
+        <div className={`w-full md:w-96 flex-shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex-col justify-between overflow-y-auto ${
+          activeMobileTab === 'cart' ? 'flex' : 'hidden md:flex'
+        }`}>
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {[
-                { id: 'cash', label: 'Cash' },
-                { id: 'mobile_money', label: 'Lipa' },
-                { id: 'bank_card', label: 'Card' },
-                { id: 'credit', label: 'Kukopa' }
-              ].map((method) => (
-                <button
-                  key={method.id}
-                  type="button"
-                  onClick={() => setPaymentMethod(method.id)}
-                  className={`py-2 text-xs font-bold rounded-xl border capitalize transition ${
-                    paymentMethod === method.id
-                      ? method.id === 'credit' 
-                        ? 'bg-amber-500 text-slate-950 border-amber-500' 
-                        : 'bg-emerald-500 text-slate-950 border-emerald-500'
-                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                  }`}
-                >
-                  {method.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <h2 className="font-bold text-lg text-white flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-emerald-400" />
+                <span>Kikapu cha Mauzo</span>
+              </h2>
+              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold">
+                {cart.reduce((a, b) => a + b.quantity, 0)} Items
+              </span>
+            </div>
+
+            <div className="mt-4 max-h-64 md:max-h-60 overflow-y-auto space-y-3 pr-1">
+              {cart.length === 0 ? (
+                <div className="text-center py-10 text-slate-500 text-sm">
+                  Kikapu kipo wazi. Bonyeza bidhaa kuongeza.
+                </div>
+              ) : (
+                cart.map((item) => {
+                  const isBelowCost = Number(item.selling_price) < Number(item.buying_price || 0);
+
+                  return (
+                    <div key={item.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-white truncate max-w-[180px]">{item.name}</h4>
+                        
+                        <button onClick={() => removeFromCart(item.id)} className="text-slate-500 hover:text-red-400 p-1 transition">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-900">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Bei:</span>
+                          <input
+                            type="number"
+                            value={item.selling_price}
+                            onChange={(e) => updateCartPrice(item.id, e.target.value)}
+                            className={`w-24 px-2 py-1 bg-slate-900 border rounded-lg text-xs font-mono font-bold focus:outline-none transition ${
+                              isBelowCost 
+                                ? 'border-red-500 text-red-400 bg-red-950/20' 
+                                : 'border-slate-800 text-emerald-400 focus:border-emerald-500'
+                            }`}
+                          />
+                          <span className="text-[10px] text-slate-500 font-bold">TZS</span>
+                        </div>
+
+                        <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
+                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1 text-slate-400 hover:text-white">
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="px-2 text-xs font-bold text-white">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} className="p-1 text-slate-400 hover:text-white">
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {isBelowCost && (
+                        <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 pt-0.5">
+                          ⚠️ Chini ya gharama ({Number(item.buying_price).toLocaleString()} TZS)!
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          {paymentMethod !== 'credit' && (
+          {/* Payment Options Summary */}
+          <div className="pt-4 border-t border-slate-800 space-y-3 mt-4">
             <div>
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
-                <span>Fedha Iliyotolewa:</span>
-                {change > 0 && <span className="text-emerald-400 font-bold">Chenji: {change.toLocaleString()} TZS</span>}
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { id: 'cash', label: 'Cash' },
+                  { id: 'mobile_money', label: 'Lipa' },
+                  { id: 'bank_card', label: 'Card' },
+                  { id: 'credit', label: 'Kukopa' }
+                ].map((method) => (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => setPaymentMethod(method.id)}
+                    className={`py-2 text-xs font-bold rounded-xl border capitalize transition ${
+                      paymentMethod === method.id
+                        ? method.id === 'credit' 
+                          ? 'bg-amber-500 text-slate-950 border-amber-500' 
+                          : 'bg-emerald-500 text-slate-950 border-emerald-500'
+                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                    }`}
+                  >
+                    {method.label}
+                  </button>
+                ))}
               </div>
-              <input
-                type="number"
-                placeholder="Weka kiasi kilicholipwa..."
-                value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
-              />
             </div>
-          )}
 
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-xs font-bold text-slate-400 uppercase">Jumla Kuu:</span>
-            <span className="text-2xl font-extrabold text-emerald-400">{totalAmount.toLocaleString()} TZS</span>
+            {paymentMethod !== 'credit' && (
+              <div>
+                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                  <span>Fedha Iliyotolewa:</span>
+                  {change > 0 && <span className="text-emerald-400 font-bold">Chenji: {change.toLocaleString()} TZS</span>}
+                </div>
+                <input
+                  type="number"
+                  placeholder="Weka kiasi kilicholipwa..."
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs font-bold text-slate-400 uppercase">Jumla Kuu:</span>
+              <span className="text-2xl font-extrabold text-emerald-400">{totalAmount.toLocaleString()} TZS</span>
+            </div>
+
+            <button
+              onClick={handleInitiateCheckout}
+              disabled={cart.length === 0 || isCheckout}
+              className={`w-full py-3.5 font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 ${
+                paymentMethod === 'credit'
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+              }`}
+            >
+              {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : paymentMethod === 'credit' ? <BookOpen className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+              <span>{paymentMethod === 'credit' ? 'Sajili Kama Deni' : 'Kamilisha Mauzo'}</span>
+            </button>
           </div>
-
-          <button
-            onClick={handleInitiateCheckout}
-            disabled={cart.length === 0 || isCheckout}
-            className={`w-full py-3.5 font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 ${
-              paymentMethod === 'credit'
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
-                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
-            }`}
-          >
-            {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : paymentMethod === 'credit' ? <BookOpen className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-            <span>{paymentMethod === 'credit' ? 'Sajili Kama Deni' : 'Kamilisha Mauzo'}</span>
-          </button>
         </div>
+
       </div>
 
       {/* CONFIRMATION ALERT MODAL KABLA YA KUKAMILISHA MAUZO */}
