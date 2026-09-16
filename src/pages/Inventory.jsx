@@ -170,7 +170,7 @@ export default function Inventory() {
     setShowModal(true);
   };
 
-  const openEditModal = (product) => {
+const openEditModal = (product) => {
     if (!canAddProducts) {
       triggerNotification("Huna mamlaka ya kubadilisha stoko. Mawasiliano na Bosi.", "error");
       return;
@@ -178,12 +178,15 @@ export default function Inventory() {
 
     setEditId(product.id);
     setFormData({
-      name: product.name,
+      name: product.name || '',
       barcode: product.barcode || '',
       category: product.category || '',
-      buying_price: product.buying_price || '',
-      selling_price: product.selling_price || '',
-      quantity: product.quantity || '',
+      // HAPA NDO PENYE MABADILIKO: Kagua kama buying_price ni number halisi hata kama ni 0
+      buying_price: (product.buying_price !== undefined && product.buying_price !== null) 
+        ? String(product.buying_price) 
+        : '',
+      selling_price: product.selling_price !== undefined ? String(product.selling_price) : '',
+      quantity: product.quantity !== undefined ? String(product.quantity) : '',
       unit: product.unit || 'pcs',
       min_stock_alert: product.min_stock_alert || '5.00'
     });
