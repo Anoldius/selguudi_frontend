@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/package-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -28,7 +28,7 @@ jobs:
         run: npx cap sync android
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -48,7 +48,7 @@ jobs:
             -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_STORE_PASSWORD }}
 
       - name: Upload Signed AAB Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: selguudi-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
