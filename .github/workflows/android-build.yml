@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android Release AAB & APK
 
 on:
   push:
@@ -11,17 +11,15 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/package-node@v3
         with:
-          node-version: 22
+          node-version: 18
 
       - name: Install Dependencies
-        run: |
-          npm install react-is --save
-          npm install --legacy-peer-deps
+        run: npm ci
 
       - name: Build Web Assets
         run: npm run build
@@ -30,19 +28,27 @@ jobs:
         run: npx cap sync android
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Build APK with Gradle
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/selguudi-release-key.jks
+
+      - name: Build Signed Android AAB
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=selguudi-release-key.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.RELEASE_STORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.RELEASE_KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_STORE_PASSWORD }}
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Signed AAB Artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: selguudi-pos-app
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: selguudi-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
