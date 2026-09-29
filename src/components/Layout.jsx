@@ -20,8 +20,7 @@ import {
   Loader2,
   ChevronLeft,
   Settings as SettingsIcon,
-  Users as UsersIcon,
-  Check
+  Users as UsersIcon
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -39,9 +38,6 @@ export default function Layout({ children }) {
   const [billingInfo, setBillingInfo] = useState(null);
   const [loadingBilling, setLoadingBilling] = useState(true);
   const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
-
-  // State ya Kuchagua Plan ('MONTHLY' au 'ANNUAL')
-  const [selectedPlan, setSelectedPlan] = useState('ANNUAL');
 
   const currentYear = new Date().getFullYear();
 
@@ -65,13 +61,13 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  // Logic ya Kuanzisha Malipo PesaPal kulingana na Selected Plan
-  const handlePayWithPesaPal = async (planToPay = selectedPlan) => {
+  // Logic ya Kuanzisha Malipo PesaPal (TZS 20,000)
+  const handlePayWithPesaPal = async () => {
     setIsInitiatingPayment(true);
 
     try {
       const res = await apiClient.post('auth/billing/initiate/', {
-        plan: planToPay
+        plan: 'MONTHLY'
       });
 
       if (res.data && res.data.redirect_url) {
@@ -119,7 +115,7 @@ export default function Layout({ children }) {
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  // KUPATA SIKU ZILIZOBAKI
+  // KUPATA SIKU ZILIZOBAKI (Default ni Siku 7)
   const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 7;
   const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
 
@@ -129,62 +125,33 @@ export default function Layout({ children }) {
   if (!loadingBilling && !hasActiveAccess) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
 
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
-            <Lock className="w-8 h-8" />
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
+            <Lock className="w-10 h-10" />
           </div>
 
           <div>
             <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Siku za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Chagua kifurushi hapa chini kuendelea.
+              Siku 7 za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
             </p>
           </div>
 
-          {/* CHAGUO ZA KIFURUSHI (MONTHLY & ANNUAL) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-            {/* PLAN LA MWEZI */}
-            <div 
-              onClick={() => setSelectedPlan('MONTHLY')}
-              className={`p-4 rounded-2xl border cursor-pointer transition-all relative ${
-                selectedPlan === 'MONTHLY' 
-                  ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500' 
-                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-slate-400 uppercase">Mwezi 1</span>
-                {selectedPlan === 'MONTHLY' && <Check className="w-4 h-4 text-emerald-400" />}
-              </div>
-              <p className="text-xl font-extrabold text-white font-mono">20,000 TZS</p>
-              <p className="text-[11px] text-slate-500 mt-1">Siku 30 za matumizi</p>
+          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-400">Gharama za Mwezi:</span>
+              <span className="text-emerald-400 font-extrabold font-mono text-lg">20,000 TZS</span>
             </div>
-
-            {/* PLAN LA MWAKA */}
-            <div 
-              onClick={() => setSelectedPlan('ANNUAL')}
-              className={`p-4 rounded-2xl border cursor-pointer transition-all relative ${
-                selectedPlan === 'ANNUAL' 
-                  ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500' 
-                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <span className="absolute -top-2.5 right-3 bg-emerald-500 text-slate-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase shadow">
-                Okoa TZS 40K
-              </span>
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-emerald-400 uppercase">Mwaka Mzima</span>
-                {selectedPlan === 'ANNUAL' && <Check className="w-4 h-4 text-emerald-400" />}
-              </div>
-              <p className="text-xl font-extrabold text-white font-mono">200,000 TZS</p>
-              <p className="text-[11px] text-slate-500 mt-1">Siku 365 za matumizi</p>
+            <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-800/80 pt-2">
+              <span>Njia za Malipo:</span>
+              <span className="text-slate-300 font-medium">M-Pesa, TigoPesa, Airtel, Cards</span>
             </div>
           </div>
 
           <button
-            onClick={() => handlePayWithPesaPal(selectedPlan)}
+            onClick={handlePayWithPesaPal}
             disabled={isInitiatingPayment}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
           >
@@ -196,7 +163,7 @@ export default function Layout({ children }) {
             ) : (
               <>
                 <Zap className="w-5 h-5 fill-slate-950" />
-                <span>Lipa TZS {selectedPlan === 'ANNUAL' ? '200,000' : '20,000'} Sasa</span>
+                <span>Lipa TZS 20,000 Sasa (PesaPal)</span>
               </>
             )}
           </button>
@@ -385,11 +352,11 @@ export default function Layout({ children }) {
               </span>
             </div>
             <button
-              onClick={() => handlePayWithPesaPal('ANNUAL')}
+              onClick={handlePayWithPesaPal}
               disabled={isInitiatingPayment}
               className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
             >
-              {isInitiatingPayment ? 'Inafungua...' : 'Lipia Kifurushi Sasa'}
+              {isInitiatingPayment ? 'Inafungua...' : 'Lipa 20,000 Sasa'}
             </button>
           </div>
         )}
