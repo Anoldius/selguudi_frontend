@@ -20,7 +20,8 @@ import {
   Loader2,
   ChevronLeft,
   Settings as SettingsIcon,
-  Users as UsersIcon
+  Users as UsersIcon,
+  Check
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -38,6 +39,9 @@ export default function Layout({ children }) {
   const [billingInfo, setBillingInfo] = useState(null);
   const [loadingBilling, setLoadingBilling] = useState(true);
   const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+
+  // State ya Kuchagua Plan ('MONTHLY' au 'ANNUAL')
+  const [selectedPlan, setSelectedPlan] = useState('ANNUAL');
 
   const currentYear = new Date().getFullYear();
 
@@ -61,12 +65,14 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  // Logic ya Kuanzisha Malipo PesaPal
-  const handlePayWithPesaPal = async () => {
+  // Logic ya Kuanzisha Malipo PesaPal kulingana na Selected Plan
+  const handlePayWithPesaPal = async (planToPay = selectedPlan) => {
     setIsInitiatingPayment(true);
 
     try {
-      const res = await apiClient.post('auth/billing/initiate/');
+      const res = await apiClient.post('auth/billing/initiate/', {
+        plan: planToPay
+      });
 
       if (res.data && res.data.redirect_url) {
         window.location.href = res.data.redirect_url;
@@ -110,48 +116,75 @@ export default function Layout({ children }) {
     { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
   ];
 
-  // Chuja menyu kulingana na Role ya mtumiaji
   const isOwner = user?.role === 'owner';
   const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  // KUPATA SIKU ZILIZOBAKI NA KUHAKIKISHA BANNER HAIPOTEE
-  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 22;
+  // KUPATA SIKU ZILIZOBAKI
+  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 7;
   const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
 
-  // BANNER IONEKANE WAZI SIKU ZOTE AMBAZO TRIAL BADO IPO HAI (daysLeft > 0)
   const showTrialBanner = Number(daysLeft) > 0;
 
-  // KAMA ACCESS IMEISHA KABISA
+  // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK)
   if (!loadingBilling && !hasActiveAccess) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+        <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
 
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
-            <Lock className="w-10 h-10" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
+            <Lock className="w-8 h-8" />
           </div>
 
           <div>
             <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Siku za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
+              Siku za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Chagua kifurushi hapa chini kuendelea.
             </p>
           </div>
 
-          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400">Gharama za Mwezi:</span>
-              <span className="text-emerald-400 font-extrabold font-mono text-lg">20,000 TZS</span>
+          {/* CHAGUO ZA KIFURUSHI (MONTHLY & ANNUAL) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+            {/* PLAN LA MWEZI */}
+            <div 
+              onClick={() => setSelectedPlan('MONTHLY')}
+              className={`p-4 rounded-2xl border cursor-pointer transition-all relative ${
+                selectedPlan === 'MONTHLY' 
+                  ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500' 
+                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-slate-400 uppercase">Mwezi 1</span>
+                {selectedPlan === 'MONTHLY' && <Check className="w-4 h-4 text-emerald-400" />}
+              </div>
+              <p className="text-xl font-extrabold text-white font-mono">20,000 TZS</p>
+              <p className="text-[11px] text-slate-500 mt-1">Siku 30 za matumizi</p>
             </div>
-            <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-800/80 pt-2">
-              <span>Njia za Malipo:</span>
-              <span className="text-slate-300 font-medium">M-Pesa, TigoPesa, Airtel, Cards</span>
+
+            {/* PLAN LA MWAKA */}
+            <div 
+              onClick={() => setSelectedPlan('ANNUAL')}
+              className={`p-4 rounded-2xl border cursor-pointer transition-all relative ${
+                selectedPlan === 'ANNUAL' 
+                  ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500' 
+                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <span className="absolute -top-2.5 right-3 bg-emerald-500 text-slate-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase shadow">
+                Okoa TZS 40K
+              </span>
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-emerald-400 uppercase">Mwaka Mzima</span>
+                {selectedPlan === 'ANNUAL' && <Check className="w-4 h-4 text-emerald-400" />}
+              </div>
+              <p className="text-xl font-extrabold text-white font-mono">200,000 TZS</p>
+              <p className="text-[11px] text-slate-500 mt-1">Siku 365 za matumizi</p>
             </div>
           </div>
 
           <button
-            onClick={handlePayWithPesaPal}
+            onClick={() => handlePayWithPesaPal(selectedPlan)}
             disabled={isInitiatingPayment}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
           >
@@ -163,7 +196,7 @@ export default function Layout({ children }) {
             ) : (
               <>
                 <Zap className="w-5 h-5 fill-slate-950" />
-                <span>Lipa TZS 20,000 Sasa (PesaPal)</span>
+                <span>Lipa TZS {selectedPlan === 'ANNUAL' ? '200,000' : '20,000'} Sasa</span>
               </>
             )}
           </button>
@@ -203,7 +236,6 @@ export default function Layout({ children }) {
               />
             </div>
 
-            {/* Desktop Collapse Toggle Button */}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition shrink-0"
@@ -266,7 +298,6 @@ export default function Layout({ children }) {
           </nav>
         </div>
 
-        {/* Sidebar Bottom Copyright */}
         {!isSidebarCollapsed && (
           <div className="p-4 border-t border-slate-800/40 text-[11px] text-slate-600 font-medium">
             &copy; {currentYear} Selguudi POS
@@ -344,7 +375,7 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
-        {/* TRIAL COUNTDOWN BANNER (PERMANENTLY FIXED) */}
+        {/* TRIAL COUNTDOWN BANNER */}
         {showTrialBanner && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
             <div className="flex items-center gap-2">
@@ -354,11 +385,11 @@ export default function Layout({ children }) {
               </span>
             </div>
             <button
-              onClick={handlePayWithPesaPal}
+              onClick={() => handlePayWithPesaPal('ANNUAL')}
               disabled={isInitiatingPayment}
               className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
             >
-              {isInitiatingPayment ? 'Inafungua...' : 'Lipa 20,000 Sasa'}
+              {isInitiatingPayment ? 'Inafungua...' : 'Lipia Kifurushi Sasa'}
             </button>
           </div>
         )}

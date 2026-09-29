@@ -79,7 +79,7 @@ export default function BillingSuccess() {
             <div>
               <h2 className="text-2xl font-extrabold text-white">Malipo Yamefanikiwa! 🎉</h2>
               <p className="text-slate-400 text-sm mt-2">
-                Asante kwa kulipia subscription ya Selguudi POS. Akaunti yako imeongezwa siku 30 za matumizi.
+                Asante kwa kulipia subscription ya Selguudi POS. Akaunti yako imeongezwa muda wa matumizi kulingana na kifurushi ulicholipia.
               </p>
             </div>
 
