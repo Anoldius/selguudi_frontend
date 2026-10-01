@@ -29,18 +29,34 @@ export default function Inventory() {
   // Haki ya Cashier kuongeza/kubadilisha bidhaa
   const canAddProducts = isOwner || Boolean(user?.permissions?.allow_cashier_add_products);
 
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  // State ya Thamani ya Stoko (Summary Metrics)
-  const [summaryData, setSummaryData] = useState({
-    total_current_cost: 0,
-    total_potential_retail: 0,
-    expected_stock_profit: 0,
-    total_products_count: 0
+  // 1. INSTANT CACHE LOAD: SOMA PRODUCTS, CATEGORIES NA SUMMARY KUTOKA LOCALSTORAGE
+  const [products, setProducts] = useState(() => {
+    const cached = localStorage.getItem('selguudi_inv_products');
+    return cached ? JSON.parse(cached) : [];
   });
+
+  const [categories, setCategories] = useState(() => {
+    const cached = localStorage.getItem('selguudi_inv_categories');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [summaryData, setSummaryData] = useState(() => {
+    const cached = localStorage.getItem('selguudi_inv_summary');
+    return cached ? JSON.parse(cached) : {
+      total_current_cost: 0,
+      total_potential_retail: 0,
+      expected_stock_profit: 0,
+      total_products_count: 0
+    };
+  });
+
+  // Kama tunazo products kwenye cache, ondoa loading state hapo hapo
+  const [loading, setLoading] = useState(() => {
+    const cachedProducts = localStorage.getItem('selguudi_inv_products');
+    return !cachedProducts;
+  });
+
+  const [search, setSearch] = useState('');
 
   // Modals state
   const [showModal, setShowModal] = useState(false);
@@ -100,8 +116,8 @@ export default function Inventory() {
     }
   }, [showModal]);
 
+  // 2. BACKGROUND SYNC: REFRESH DATA KUTOKA SERVER KIMYA KIMYA
   const fetchInventoryData = async () => {
-    setLoading(true);
     try {
       const [prodRes, catRes, sumRes] = await Promise.all([
         apiClient.get('inventory/products/?page_size=10000'),
@@ -111,30 +127,37 @@ export default function Inventory() {
       
       const prodData = prodRes.data.results || prodRes.data || [];
       const catData = catRes.data.results || catRes.data || [];
-      
       const productList = Array.isArray(prodData) ? prodData : [];
-      setProducts(productList);
-      setCategories(Array.isArray(catData) ? catData : []);
+      const categoryList = Array.isArray(catData) ? catData : [];
 
-      // HESABU YA FALLBACK KAMA SUMMARY API HAINA METRICS
+      setProducts(productList);
+      setCategories(categoryList);
+
+      let computedSummary = summaryData;
       if (sumRes.data && Number(sumRes.data.total_current_cost) > 0) {
-        setSummaryData(sumRes.data);
+        computedSummary = sumRes.data;
       } else {
         const cost = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.buying_price || 0)), 0);
         const retail = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.selling_price || 0)), 0);
         
-        setSummaryData({
+        computedSummary = {
           total_current_cost: cost,
           total_potential_retail: retail,
           expected_stock_profit: retail - cost,
           total_products_count: productList.length
-        });
+        };
       }
 
-      setLoading(false);
+      setSummaryData(computedSummary);
+
+      // HIFADHI KWENYE LOCALSTORAGE FOR INSTANT LOADS SIKU ZOTE
+      localStorage.setItem('selguudi_inv_products', JSON.stringify(productList));
+      localStorage.setItem('selguudi_inv_categories', JSON.stringify(categoryList));
+      localStorage.setItem('selguudi_inv_summary', JSON.stringify(computedSummary));
+
     } catch (err) {
-      console.error("Error fetching inventory data:", err);
-      triggerNotification("Imeshindikana kupakua orodha ya stoko!", "error");
+      console.error("Error background fetching inventory data:", err);
+    } finally {
       setLoading(false);
     }
   };
@@ -194,7 +217,6 @@ export default function Inventory() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Badilisha kwa usalama values ziwe Float Numbers
     const payload = {
       ...formData,
       category: formData.category || null,
@@ -332,7 +354,7 @@ export default function Inventory() {
   });
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative font-sans">
       
       {/* POP-UP TOAST NOTIFICATION */}
       {toast.show && (
@@ -360,7 +382,7 @@ export default function Inventory() {
           {canAddProducts && (
             <button
               onClick={() => setShowCategoryModal(true)}
-              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition text-sm"
             >
               <Layers className="w-5 h-5 text-purple-400" />
               <span>Manage Makundi ({categories.length})</span>
@@ -370,7 +392,7 @@ export default function Inventory() {
           {canAddProducts && (
             <button
               onClick={openAddModal}
-              className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+              className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition text-sm"
             >
               <Plus className="w-5 h-5" />
               <span>Ongeza Bidhaa Mpya</span>
@@ -432,7 +454,7 @@ export default function Inventory() {
             placeholder="Tafuta bidhaa kwa jina au Barcode..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm"
           />
         </div>
 
@@ -488,7 +510,7 @@ export default function Inventory() {
             <span>Inapakia orodha ya bidhaa...</span>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
+          <div className="text-center py-16 text-slate-500 text-sm">
             Hakuna bidhaa iliyopatikana kwenye kundi hili.
           </div>
         ) : (
@@ -520,11 +542,11 @@ export default function Inventory() {
                         </span>
                       </td>
 
-                      <td className="py-4 px-6 text-slate-400 font-mono">{p.barcode || 'N/A'}</td>
+                      <td className="py-4 px-6 text-slate-400 font-mono text-xs">{p.barcode || 'N/A'}</td>
                       {isOwner && (
-                        <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
+                        <td className="py-4 px-6 text-slate-300 font-mono">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
                       )}
-                      <td className="py-4 px-6 text-emerald-400 font-bold">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
+                      <td className="py-4 px-6 text-emerald-400 font-bold font-mono">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
                       
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
@@ -596,7 +618,7 @@ export default function Inventory() {
                   onChange={handleInputChange}
                   onKeyDown={handleBarcodeKeyDown}
                   placeholder="Elekeza Scanner au andika kodi..."
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500 text-sm"
                 />
               </div>
 
@@ -610,7 +632,7 @@ export default function Inventory() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Mfano: Azam Juice 1L"
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
                 />
               </div>
 
@@ -620,7 +642,7 @@ export default function Inventory() {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
                 >
                   <option value="">-- Bila Kundi --</option>
                   {categories.map((c) => (
@@ -641,7 +663,7 @@ export default function Inventory() {
                       value={formData.buying_price}
                       onChange={handleInputChange}
                       placeholder="0.00"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm font-mono"
                     />
                   </div>
                 )}
@@ -655,7 +677,7 @@ export default function Inventory() {
                     value={formData.selling_price}
                     onChange={handleInputChange}
                     placeholder="2500"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm font-mono"
                   />
                 </div>
               </div>
@@ -671,7 +693,7 @@ export default function Inventory() {
                     value={formData.quantity}
                     onChange={handleInputChange}
                     placeholder="50"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm font-mono"
                   />
                 </div>
                 <div>
@@ -680,7 +702,7 @@ export default function Inventory() {
                     name="unit"
                     value={formData.unit}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
                   >
                     <option value="pcs">pcs</option>
                     <option value="kg">kg</option>
@@ -697,7 +719,7 @@ export default function Inventory() {
                     value={formData.min_stock_alert}
                     onChange={handleInputChange}
                     placeholder="5"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm font-mono"
                   />
                 </div>
               </div>
@@ -705,7 +727,7 @@ export default function Inventory() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+                className="w-full mt-2 py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition text-sm"
               >
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                 <span>{editId ? 'Hifadhi Mabadiliko' : 'Ongeza Kwenye Stoko'}</span>
@@ -742,7 +764,7 @@ export default function Inventory() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition flex items-center gap-1"
+                className="px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition flex items-center gap-1 text-sm"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 <span>Sajili</span>
@@ -759,7 +781,7 @@ export default function Inventory() {
                     <div className="flex items-center gap-2">
                       <Tag className="w-4 h-4 text-purple-400" />
                       <span className="text-sm font-bold text-white">{cat.name}</span>
-                      <span className="text-[10px] bg-slate-900 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/20">
+                      <span className="text-[10px] bg-slate-900 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/20 font-mono">
                         {cat.products_count ?? 0} Bidhaa
                       </span>
                     </div>
