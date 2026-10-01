@@ -19,12 +19,26 @@ import {
 } from 'lucide-react';
 
 export default function POS() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  // 1. INSTANT CACHE LOAD: SOMA PRODUCTS NA CATEGORIES KUTOKA LOCALSTORAGE PAPO HAPO
+  const [products, setProducts] = useState(() => {
+    const cached = localStorage.getItem('selguudi_pos_products');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [categories, setCategories] = useState(() => {
+    const cached = localStorage.getItem('selguudi_pos_categories');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  // Kama bidhaa zipo kwenye cache, fungua ukurasa instantly bila kusubiri network
+  const [loading, setLoading] = useState(() => {
+    const cachedProducts = localStorage.getItem('selguudi_pos_products');
+    return !cachedProducts;
+  });
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(true);
   
   // Tab State kwa ajili ya Simu Zote ('products' au 'cart')
   const [activeMobileTab, setActiveMobileTab] = useState('products');
@@ -58,16 +72,25 @@ export default function POS() {
     fetchData();
   }, []);
 
+  // 2. BACKGROUND SYNC: LETA DATA MPYA KUTOKA SERVER BILA KUMCHELEWESHA CASHIER
   const fetchData = async () => {
     try {
       const [prodRes, catRes] = await Promise.all([
         apiClient.get('inventory/products/'),
         apiClient.get('inventory/categories/')
       ]);
-      setProducts(prodRes.data.results || prodRes.data || []);
-      setCategories(catRes.data.results || catRes.data || []);
+
+      const fetchedProducts = prodRes.data.results || prodRes.data || [];
+      const fetchedCategories = catRes.data.results || catRes.data || [];
+
+      setProducts(fetchedProducts);
+      setCategories(fetchedCategories);
+
+      // HIFADHI KWENYE CACHE KWA AJILI YA LOAD YA HARAKA SIKU ZOTE
+      localStorage.setItem('selguudi_pos_products', JSON.stringify(fetchedProducts));
+      localStorage.setItem('selguudi_pos_categories', JSON.stringify(fetchedCategories));
     } catch (err) {
-      console.error("Error fetching POS data:", err);
+      console.error("Error fetching POS background data:", err);
     } finally {
       setLoading(false);
     }
@@ -227,6 +250,20 @@ export default function POS() {
         'success'
       );
       
+      // OPTIMISTIC LOCAL STOCK UPDATE: Punguza stoko ya bidhaa kwenye memory hapo hapo
+      const updatedProducts = products.map(prod => {
+        const cartItem = cart.find(c => c.id === prod.id);
+        if (cartItem) {
+          const currentQty = Number(prod.quantity ?? prod.stock_quantity ?? 0);
+          const newQty = Math.max(0, currentQty - cartItem.quantity);
+          return { ...prod, quantity: newQty, stock_quantity: newQty };
+        }
+        return prod;
+      });
+
+      setProducts(updatedProducts);
+      localStorage.setItem('selguudi_pos_products', JSON.stringify(updatedProducts));
+
       setCart([]);
       setAmountPaid('');
       setShowDebtModal(false);
@@ -235,6 +272,8 @@ export default function POS() {
       setDueDate('');
       setDebtNotes('');
       setActiveMobileTab('products');
+
+      // Refresh data kimya kimya kutoka server
       fetchData();
     } catch (err) {
       console.error("Full Sale Error Response:", err.response);
@@ -279,7 +318,7 @@ export default function POS() {
   };
 
   return (
-    <div className="h-full md:h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden">
+    <div className="h-full md:h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden font-sans">
       
       {/* FLOATING TOAST NOTIFICATION TOP RIGHT */}
       {toast.show && (
@@ -293,7 +332,7 @@ export default function POS() {
         </div>
       )}
 
-      {/* MOBILE SCREEN TOGGLE SWITCHER (ZINAONEKANA KWENYE SIMU PEKEE) */}
+      {/* MOBILE SCREEN TOGGLE SWITCHER */}
       <div className="flex md:hidden bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-2 shrink-0">
         <button
           onClick={() => setActiveMobileTab('products')}
@@ -341,7 +380,7 @@ export default function POS() {
                 placeholder="Tafuta bidhaa kwa jina au kuanza kuscann Barcode..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition text-sm"
               />
             </div>
 

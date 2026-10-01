@@ -1,831 +1,409 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import apiClient from '../api/axios';
-import { useAuth } from '../context/AuthContext';
 import { 
-  Plus, 
-  Search, 
+  LayoutDashboard, 
+  ShoppingCart, 
   Package, 
-  AlertTriangle, 
-  Edit3, 
-  Trash2, 
-  X, 
-  Loader2, 
-  Check,
-  Scan,
-  CheckCircle2,
-  Layers,
-  Filter,
-  Tag,
+  CreditCard,
+  BarChart3, 
   Wallet,
-  TrendingUp,
-  DollarSign,
-  ShieldAlert
+  LogOut, 
+  User,
+  Heart,
+  Menu,
+  X,
+  Clock,
+  Lock,
+  Zap,
+  Loader2,
+  ChevronLeft,
+  Settings as SettingsIcon,
+  Users as UsersIcon
 } from 'lucide-react';
 
-export default function Inventory() {
-  const { user } = useAuth();
-  const isOwner = user?.role === 'owner';
-  
-  // Haki ya Cashier kuongeza/kubadilisha bidhaa
-  const canAddProducts = isOwner || Boolean(user?.permissions?.allow_cashier_add_products);
+export default function Layout({ children }) {
+  const { user, logout } = useContext(AuthContext);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  // Mobile Menu State
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // State ya Thamani ya Stoko (Summary Metrics)
-  const [summaryData, setSummaryData] = useState({
-    total_current_cost: 0,
-    total_potential_retail: 0,
-    expected_stock_profit: 0,
-    total_products_count: 0
-  });
+  // Desktop Sidebar Collapse / Expand State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Modals state
-  const [showModal, setShowModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // States za Billing & Subscription Status
+  const [billingInfo, setBillingInfo] = useState(null);
+  const [loadingBilling, setLoadingBilling] = useState(true);
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
 
-  // Custom Confirmation Modal State
-  const [confirmModal, setConfirmModal] = useState({
-    show: false,
-    type: '', 
-    id: null,
-    title: '',
-    name: ''
-  });
-  
-  // Category Filter State
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
-  const [newCategoryName, setNewCategoryName] = useState('');
-
-  // Toast Notification with status type
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-  // References kwa ajili ya Barcode Hardware Scanner
-  const barcodeInputRef = useRef(null);
-  const nameInputRef = useRef(null);
-
-  // Form State ya Bidhaa
-  const [formData, setFormData] = useState({
-    name: '',
-    barcode: '',
-    category: '',
-    buying_price: '',
-    selling_price: '',
-    quantity: '',
-    unit: 'pcs',
-    min_stock_alert: '5.00'
-  });
-
-  const [editId, setEditId] = useState(null);
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
-    fetchInventoryData();
+    fetchBillingStatus();
   }, []);
 
-  const triggerNotification = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 3500);
-  };
-
-  useEffect(() => {
-    if (showModal) {
-      setTimeout(() => {
-        barcodeInputRef.current?.focus();
-      }, 100);
-    }
-  }, [showModal]);
-
-  const fetchInventoryData = async () => {
-    setLoading(true);
+  const fetchBillingStatus = async () => {
     try {
-      const [prodRes, catRes, sumRes] = await Promise.all([
-        apiClient.get('inventory/products/?page_size=10000'),
-        apiClient.get('inventory/categories/'),
-        apiClient.get('inventory/products/summary/').catch(() => ({ data: null }))
-      ]);
-      
-      const prodData = prodRes.data.results || prodRes.data || [];
-      const catData = catRes.data.results || catRes.data || [];
-      
-      const productList = Array.isArray(prodData) ? prodData : [];
-      setProducts(productList);
-      setCategories(Array.isArray(catData) ? catData : []);
-
-      // HESABU YA FALLBACK KAMA SUMMARY API HAINA METRICS
-      if (sumRes.data && Number(sumRes.data.total_current_cost) > 0) {
-        setSummaryData(sumRes.data);
-      } else {
-        const cost = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.buying_price || 0)), 0);
-        const retail = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.selling_price || 0)), 0);
-        
-        setSummaryData({
-          total_current_cost: cost,
-          total_potential_retail: retail,
-          expected_stock_profit: retail - cost,
-          total_products_count: productList.length
-        });
-      }
-
-      setLoading(false);
+      const res = await apiClient.get('auth/billing/status/');
+      setBillingInfo(res.data);
     } catch (err) {
-      console.error("Error fetching inventory data:", err);
-      triggerNotification("Imeshindikana kupakua orodha ya stoko!", "error");
-      setLoading(false);
+      console.error("Billing status fetch error:", err);
+    } finally {
+      setLoadingBilling(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
-  const handleBarcodeKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      nameInputRef.current?.focus();
-    }
-  };
-
-  const openAddModal = () => {
-    if (!canAddProducts) {
-      triggerNotification("Huna mamlaka ya kuongeza au kubadilisha stoko. Mawasiliano na Bosi.", "error");
-      return;
-    }
-
-    setEditId(null);
-    setFormData({
-      name: '',
-      barcode: '',
-      category: '',
-      buying_price: '',
-      selling_price: '',
-      quantity: '',
-      unit: 'pcs',
-      min_stock_alert: '5.00'
-    });
-    setShowModal(true);
-  };
-
-  const openEditModal = (product) => {
-    if (!canAddProducts) {
-      triggerNotification("Huna mamlaka ya kubadilisha stoko. Mawasiliano na Bosi.", "error");
-      return;
-    }
-
-    setEditId(product.id);
-    setFormData({
-      name: product.name || '',
-      barcode: product.barcode || '',
-      category: product.category || '',
-      buying_price: product.buying_price !== undefined && product.buying_price !== null ? String(product.buying_price) : '',
-      selling_price: product.selling_price !== undefined && product.selling_price !== null ? String(product.selling_price) : '',
-      quantity: product.quantity !== undefined && product.quantity !== null ? String(product.quantity) : '',
-      unit: product.unit || 'pcs',
-      min_stock_alert: product.min_stock_alert || '5.00'
-    });
-    setShowModal(true);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    // Badilisha kwa usalama values ziwe Float Numbers
-    const payload = {
-      ...formData,
-      category: formData.category || null,
-      buying_price: formData.buying_price !== '' && formData.buying_price !== null 
-        ? parseFloat(formData.buying_price) 
-        : 0.0,
-      selling_price: formData.selling_price !== '' && formData.selling_price !== null 
-        ? parseFloat(formData.selling_price) 
-        : 0.0,
-      quantity: formData.quantity !== '' && formData.quantity !== null 
-        ? parseFloat(formData.quantity) 
-        : 0.0,
-      min_stock_alert: formData.min_stock_alert !== '' && formData.min_stock_alert !== null 
-        ? parseFloat(formData.min_stock_alert) 
-        : 5.0
-    };
+  // Logic ya Kuanzisha Malipo PesaPal (TZS 20,000)
+  const handlePayWithPesaPal = async () => {
+    setIsInitiatingPayment(true);
 
     try {
-      if (editId) {
-        await apiClient.put(`inventory/products/${editId}/`, payload);
-        triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`, "success");
-      } else {
-        await apiClient.post('inventory/products/', payload);
-        triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`, "success");
-      }
-      setIsSubmitting(false);
-      setShowModal(false);
-      fetchInventoryData();
-    } catch (err) {
-      setIsSubmitting(false);
-      
-      if (err.response?.status === 403) {
-        triggerNotification("Huna mamlaka ya kubadilisha au kuongeza stoko! Mawasiliano na Bosi.", "error");
-        return;
-      }
+      const res = await apiClient.post('auth/billing/initiate/', {
+        plan: 'MONTHLY'
+      });
 
-      const errData = err.response?.data;
-      let msg = "Imeshindikana kuhifadhi bidhaa!";
-      if (errData) {
-        if (typeof errData === 'string') msg = errData;
-        else if (errData.detail) msg = errData.detail;
-        else if (errData.message) msg = errData.message;
-        else {
-          const firstKey = Object.keys(errData)[0];
-          msg = `${firstKey}: ${errData[firstKey]}`;
+      if (res.data && res.data.redirect_url) {
+        window.location.href = res.data.redirect_url;
+      } else {
+        alert("Imeshindikana kupata Link ya Malipo kutoka kwenye server. Jaribu tena.");
+      }
+    } catch (err) {
+      console.error("Payment initiation detailed error:", err.response?.data || err.message);
+
+      const status = err.response?.status;
+      const errorData = err.response?.data;
+      let errorMessage = "Imeshindikana kuunganisha na PesaPal Gateway.";
+
+      if (errorData) {
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
         }
       }
-      triggerNotification(msg, "error");
-    }
-  };
 
-  const handleCategorySubmit = async (e) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      await apiClient.post('inventory/categories/', { name: newCategoryName.trim() });
-      triggerNotification(`Kundi la "${newCategoryName}" limesajiliwa!`, "success");
-      setNewCategoryName('');
-      fetchInventoryData();
-    } catch (err) {
-      if (err.response?.status === 403) {
-        triggerNotification("Huna mamlaka ya kusajili makundi! Mawasiliano na Bosi.", "error");
-      } else {
-        triggerNotification(err.response?.data?.detail || "Imeshindikana kusajili kundi!", "error");
-      }
+      alert(`Hitilafu ya Malipo (${status ? `Code ${status}` : 'Network Error'}): ${errorMessage}`);
     } finally {
-      setIsSubmitting(false);
+      setIsInitiatingPayment(false);
     }
   };
 
-  const promptDeleteProduct = (id, name) => {
-    if (!canAddProducts) {
-      triggerNotification("Huna mamlaka ya kufuta bidhaa! Mawasiliano na Bosi.", "error");
-      return;
-    }
+  // Orodha Kamili ya Menyu
+  const allNavItems = [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: false },
+    { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
+    { name: 'Matumizi', path: '/expenses', icon: Wallet, ownerOnly: false },
+    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package, ownerOnly: false },
+    { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard, ownerOnly: false },
+    { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3, ownerOnly: true },
+    { name: 'Wafanyakazi', path: '/users', icon: UsersIcon, ownerOnly: true },
+    { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
+  ];
 
-    setConfirmModal({
-      show: true,
-      type: 'product',
-      id,
-      title: 'Kufuta Bidhaa',
-      name
-    });
-  };
+  const isOwner = user?.role === 'owner';
+  const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  const promptDeleteCategory = (id, name) => {
-    if (!canAddProducts) {
-      triggerNotification("Huna mamlaka ya kufuta makundi! Mawasiliano na Bosi.", "error");
-      return;
-    }
+  // KUPATA SIKU ZILIZOBAKI (Default ni Siku 7)
+  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 7;
+  const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
 
-    setConfirmModal({
-      show: true,
-      type: 'category',
-      id,
-      title: 'Kufuta Kundi la Bidhaa',
-      name
-    });
-  };
+  const showTrialBanner = Number(daysLeft) > 0;
 
-  const handleExecuteDelete = async () => {
-    const { type, id, name } = confirmModal;
-    setIsSubmitting(true);
+  // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK)
+  if (!loadingBilling && !hasActiveAccess) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
 
-    try {
-      if (type === 'product') {
-        await apiClient.delete(`inventory/products/${id}/`);
-        triggerNotification(`Bidhaa ya "${name}" imefutwa!`, "success");
-      } else if (type === 'category') {
-        await apiClient.delete(`inventory/categories/${id}/`);
-        triggerNotification(`Kundi la "${name}" limefutwa!`, "success");
-      }
-      setConfirmModal({ show: false, type: '', id: null, title: '', name: '' });
-      fetchInventoryData();
-    } catch (err) {
-      if (err.response?.status === 403) {
-        triggerNotification("Huna mamlaka ya kufuta! Mawasiliano na Bosi.", "error");
-      } else {
-        triggerNotification("Imeshindikana kufuta!", "error");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-xl">
+            <Lock className="w-10 h-10" />
+          </div>
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                          (p.barcode && p.barcode.includes(search));
-    
-    if (selectedCategoryFilter === 'ALL') return matchesSearch;
-    if (selectedCategoryFilter === 'UNCATEGORIZED') return matchesSearch && !p.category;
-    return matchesSearch && p.category === selectedCategoryFilter;
-  });
+          <div>
+            <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
+            <p className="text-slate-400 text-sm mt-2">
+              Siku 7 za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
+            </p>
+          </div>
+
+          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-400">Gharama za Mwezi:</span>
+              <span className="text-emerald-400 font-extrabold font-mono text-lg">20,000 TZS</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-800/80 pt-2">
+              <span>Njia za Malipo:</span>
+              <span className="text-slate-300 font-medium">M-Pesa, TigoPesa, Airtel, Cards</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handlePayWithPesaPal}
+            disabled={isInitiatingPayment}
+            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
+          >
+            {isInitiatingPayment ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Inafungua PesaPal...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-5 h-5 fill-slate-950" />
+                <span>Lipa TZS 20,000 Sasa (PesaPal)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="text-xs text-slate-500 hover:text-slate-300 transition"
+          >
+            Toka (Logout)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 relative">
-      
-      {/* POP-UP TOAST NOTIFICATION */}
-      {toast.show && (
-        <div className={`fixed top-20 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border font-bold animate-bounce ${
-          toast.type === 'error' 
-            ? 'bg-red-500 text-white border-red-400' 
-            : 'bg-emerald-500 text-slate-950 border-emerald-400'
-        }`}>
-          {toast.type === 'error' ? <ShieldAlert className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-          <span>{toast.message}</span>
-        </div>
-      )}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans">
 
-      {/* Top Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
+      {/* DESKTOP SIDEBAR WITH COLLAPSIBLE TOGGLE */}
+      <aside 
+        className={`bg-slate-900 border-r border-slate-800/80 hidden md:flex flex-col justify-between shrink-0 transition-all duration-300 ${
+          isSidebarCollapsed ? 'w-20' : 'w-64'
+        }`}
+      > 
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Package className="w-7 h-7 text-emerald-400" />
-            <span>Usimamizi wa Stoko & Bidhaa</span>
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Sajili bidhaa mpya, husianisha na makundi, na badilisha taarifa za bei na stoko.</p>
-        </div>
+          {/* BRAND HEADER */}
+          <div className={`p-4 border-b border-slate-800/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
+            <div className="flex items-center min-w-0 overflow-hidden">
+              <img 
+                src="/Selguudiadobe.png" 
+                alt="Selguudi Logo" 
+                className={`object-contain transition-all duration-300 drop-shadow-md ${
+                  isSidebarCollapsed 
+                    ? 'h-10 w-auto max-w-[52px]' 
+                    : 'h-14 sm:h-16 w-auto max-w-[210px]'
+                }`}
+              />
+            </div>
 
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          {canAddProducts && (
             <button
-              onClick={() => setShowCategoryModal(true)}
-              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition shrink-0"
+              title={isSidebarCollapsed ? "Panua Sidebar" : "Kunja Sidebar"}
             >
-              <Layers className="w-5 h-5 text-purple-400" />
-              <span>Manage Makundi ({categories.length})</span>
+              {isSidebarCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
             </button>
-          )}
+          </div>
 
-          {canAddProducts && (
-            <button
-              onClick={openAddModal}
-              className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Ongeza Bidhaa Mpya</span>
-            </button>
-          )}
-        </div>
-      </div>
+          {/* Navigation Menu */}
+          <nav className="p-3 space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  title={isSidebarCollapsed ? item.name : ''}
+                  className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
+                    isActive
+                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  {!isSidebarCollapsed && <span>{item.name}</span>}
+                </Link>
+              );
+            })}
 
-      {/* INVENTORY VALUE SUMMARY CARDS (ZINAONEKANA KWA OWNER PEKEE) */}
-      {isOwner && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani ya Stoko (Gharama)</span>
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Wallet className="w-5 h-5" />
+            {/* USER PROFILE & LOGOUT BADGE */}
+            <div className="pt-3 mt-3 border-t border-slate-800/60">
+              <div className={`flex items-center justify-between p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 ${
+                isSidebarCollapsed ? 'justify-center' : ''
+              }`}>
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
+                    <User className="w-4 h-4" />
+                  </div>
+                  {!isSidebarCollapsed && (
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-semibold text-white truncate">{user?.username}</p>
+                      <p className="text-[10px] text-slate-400 capitalize truncate">{user?.role || 'Owner'}</p>
+                    </div>
+                  )}
+                </div>
+
+                {!isSidebarCollapsed && (
+                  <button
+                    onClick={handleLogout}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Toka (Logout)"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
-            <h3 className="text-2xl font-extrabold text-white font-mono">
-              {Number(summaryData.total_current_cost || 0).toLocaleString()} TZS
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-1">Gharama za kununulia bidhaa zilizopo dukani hivi sasa</p>
-          </div>
-
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani Tarajiwa ya Mauzo</span>
-              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-extrabold text-white font-mono">
-              {Number(summaryData.total_potential_retail || 0).toLocaleString()} TZS
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-1">Jumla ya fedha zitakazopatikana stoko yote ikiuzwa</p>
-          </div>
-
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faida Iliyopo Kwenye Stoko</span>
-              <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                <DollarSign className="w-5 h-5" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-extrabold text-purple-400 font-mono">
-              {Number(summaryData.expected_stock_profit || 0).toLocaleString()} TZS
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-1">Kadirio la faida itakayopatikana baada ya stoko kuisha</p>
-          </div>
-        </div>
-      )}
-
-      {/* Search Bar & Category Filter Buttons */}
-      <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-4">
-        <div className="relative">
-          <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Tafuta bidhaa kwa jina au Barcode..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-          />
+          </nav>
         </div>
 
-        {/* Category Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-1 scrollbar-none">
-          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-2 whitespace-nowrap">
-            <Filter className="w-3.5 h-3.5 text-emerald-400" /> Kundi:
-          </span>
-
-          <button
-            onClick={() => setSelectedCategoryFilter('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              selectedCategoryFilter === 'ALL'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            Bidhaa Zote ({products.length})
-          </button>
-
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategoryFilter(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                selectedCategoryFilter === cat.id
-                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
-                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              {cat.name} ({cat.products_count ?? 0})
-            </button>
-          ))}
-
-          <button
-            onClick={() => setSelectedCategoryFilter('UNCATEGORIZED')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              selectedCategoryFilter === 'UNCATEGORIZED'
-                ? 'bg-amber-500 text-slate-950'
-                : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
-            }`}
-          >
-            Bila Kundi
-          </button>
-        </div>
-      </div>
-
-      {/* Products Table */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
-            <span>Inapakia orodha ya bidhaa...</span>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
-            Hakuna bidhaa iliyopatikana kwenye kundi hili.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
-                  <th className="py-4 px-6">Bidhaa</th>
-                  <th className="py-4 px-6">Kundi (Category)</th>
-                  <th className="py-4 px-6">Barcode</th>
-                  {isOwner && <th className="py-4 px-6">Bei ya Kununua</th>}
-                  <th className="py-4 px-6">Bei ya Kuuzia</th>
-                  <th className="py-4 px-6">Stoko Iliyopo</th>
-                  {canAddProducts && <th className="py-4 px-6 text-right">Vitendo</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-sm">
-                {filteredProducts.map((p) => {
-                  const isLowStock = Number(p.quantity) <= Number(p.min_stock_alert || 5);
-
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-800/30 transition">
-                      <td className="py-4 px-6 font-semibold text-white">{p.name}</td>
-                      
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                          <Tag className="w-3 h-3 text-purple-400" />
-                          {p.category_name || 'Bila Kundi'}
-                        </span>
-                      </td>
-
-                      <td className="py-4 px-6 text-slate-400 font-mono">{p.barcode || 'N/A'}</td>
-                      {isOwner && (
-                        <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
-                      )}
-                      <td className="py-4 px-6 text-emerald-400 font-bold">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
-                      
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                          isLowStock 
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
-                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        }`}>
-                          {isLowStock && <AlertTriangle className="w-3.5 h-3.5" />}
-                          {p.quantity} {p.unit}
-                        </span>
-                      </td>
-
-                      {canAddProducts && (
-                        <td className="py-4 px-6 text-right space-x-2">
-                          <button
-                            onClick={() => openEditModal(p)}
-                            className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition"
-                            title="Badilisha (Edit)"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => promptDeleteProduct(p.id, p.name)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
-                            title="Futa (Delete)"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {!isSidebarCollapsed && (
+          <div className="p-4 border-t border-slate-800/40 text-[11px] text-slate-600 font-medium">
+            &copy; {currentYear} Selguudi POS
           </div>
         )}
-      </div>
+      </aside>
 
-      {/* MODAL 1: FOR ADD / EDIT PRODUCT */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5">
-            
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-white">
-                {editId ? 'Badilisha Taarifa za Bidhaa' : 'Sajili Bidhaa Mpya'}
-              </h3>
-              <button 
-                onClick={() => setShowModal(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              
-              <div>
-                <label className="flex text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 items-center gap-2">
-                  <Scan className="w-4 h-4 text-emerald-400" />
-                  <span>Barcode (Scan au Andika)</span>
-                </label>
-                <input
-                  ref={barcodeInputRef}
-                  type="text"
-                  name="barcode"
-                  value={formData.barcode}
-                  onChange={handleInputChange}
-                  onKeyDown={handleBarcodeKeyDown}
-                  placeholder="Elekeza Scanner au andika kodi..."
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Bidhaa *</label>
-                <input
-                  ref={nameInputRef}
-                  type="text"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Mfano: Azam Juice 1L"
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kundi la Bidhaa (Category)</label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="">-- Bila Kundi --</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={`grid ${isOwner ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
-                {isOwner && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kununua (TZS)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="buying_price"
-                      required
-                      value={formData.buying_price}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kuuzia (TZS)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="selling_price"
-                    required
-                    value={formData.selling_price}
-                    onChange={handleInputChange}
-                    placeholder="2500"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+      {/* MOBILE SIDEBAR DRAWER */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm md:hidden flex">
+          <div className="w-72 bg-slate-900 h-full border-r border-slate-800 p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div className="flex items-center min-w-0 overflow-hidden">
+                  <img 
+                    src="/Selguudiadobe.png" 
+                    alt="Selguudi Logo" 
+                    className="h-14 w-auto max-w-[210px] object-contain drop-shadow-md"
                   />
                 </div>
+                <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Stoko (Idadi)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="quantity"
-                    required
-                    value={formData.quantity}
-                    onChange={handleInputChange}
-                    placeholder="50"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kipimo (Unit)</label>
-                  <select
-                    name="unit"
-                    value={formData.unit}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="pcs">pcs</option>
-                    <option value="kg">kg</option>
-                    <option value="liter">liter</option>
-                    <option value="plate">plate</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Min Alert</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="min_stock_alert"
-                    value={formData.min_stock_alert}
-                    onChange={handleInputChange}
-                    placeholder="5"
-                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full mt-2 py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
-              >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                <span>{editId ? 'Hifadhi Mabadiliko' : 'Ongeza Kwenye Stoko'}</span>
-              </button>
-            </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: MANAGE CATEGORIES */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-purple-400" />
-                <span>Simamia Makundi ya Bidhaa</span>
-              </h3>
-              <button onClick={() => setShowCategoryModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCategorySubmit} className="flex gap-2">
-              <input
-                type="text"
-                required
-                placeholder="Mfano: Vinywaji, Sigara, Mikate..."
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500"
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition flex items-center gap-1"
-              >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                <span>Sajili</span>
-              </button>
-            </form>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Makundi Yaliyopo ({categories.length})</h4>
-              {categories.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">Bado hujasajili kundi lolote.</p>
-              ) : (
-                categories.map((cat) => (
-                  <div key={cat.id} className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-purple-400" />
-                      <span className="text-sm font-bold text-white">{cat.name}</span>
-                      <span className="text-[10px] bg-slate-900 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/20">
-                        {cat.products_count ?? 0} Bidhaa
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => promptDeleteCategory(cat.id, cat.name)}
-                      className="text-slate-500 hover:text-red-400 p-1 transition"
-                      title="Futa Kundi"
+              <nav className="mt-6 space-y-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
+                        isActive
+                          ? 'bg-emerald-500 text-slate-950 font-bold'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Icon className="w-5 h-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+
+                <div className="pt-3 mt-3 border-t border-slate-800">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800 mb-3">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-9 h-9 shrink-0 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-semibold text-white truncate">{user?.username}</p>
+                        <p className="text-xs text-slate-400 capitalize truncate">{user?.role || 'Owner'}</p>
+                      </div>
+                    </div>
                   </div>
-                ))
-              )}
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 font-semibold text-sm transition"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Toka (Logout)</span>
+                  </button>
+                </div>
+              </nav>
             </div>
           </div>
+          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
         </div>
       )}
 
-      {/* CUSTOM CONFIRMATION MODAL */}
-      {confirmModal.show && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-red-400 font-bold text-base">
-                <AlertTriangle className="w-5 h-5" />
-                <span>{confirmModal.title}</span>
-              </div>
-              <button 
-                onClick={() => setConfirmModal({ show: false, type: '', id: null, title: '', name: '' })} 
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
 
-            <div className="text-sm text-slate-300">
-              Je, una uhakika unataka kufuta {confirmModal.type === 'product' ? 'bidhaa ya' : 'kundi la'} <span className="font-extrabold text-white">"{confirmModal.name}"</span>?
-              {confirmModal.type === 'category' && (
-                <p className="text-xs text-amber-400 mt-2">
-                  * Bidhaa zote zilizokuwa kwenye kundi hili zitawekwa "Bila Kundi".
-                </p>
-              )}
+        {/* TRIAL COUNTDOWN BANNER */}
+        {showTrialBanner && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 flex items-center justify-between text-xs text-amber-300 font-medium">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400" />
+              <span>
+                Trial ya Bure: Zimebaki <strong className="text-white underline font-bold">{daysLeft} siku</strong> za kutumia mfumo bure.
+              </span>
             </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmModal({ show: false, type: '', id: null, title: '', name: '' })}
-                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition text-sm"
-              >
-                Ghairi
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteDelete}
-                disabled={isSubmitting}
-                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 text-sm"
-              >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                <span>Thibitisha Kufuta</span>
-              </button>
-            </div>
+            <button
+              onClick={handlePayWithPesaPal}
+              disabled={isInitiatingPayment}
+              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
+            >
+              {isInitiatingPayment ? 'Inafungua...' : 'Lipa 20,000 Sasa'}
+            </button>
           </div>
-        </div>
-      )}
+        )}
 
+        {/* Top Header */}
+        <header className="h-16 bg-slate-900/60 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg bg-slate-800/50"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-lg font-bold text-white">
+              {navItems.find(n => n.path === location.pathname)?.name || 'Dashboard'}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-pulse" />
+              System Live
+            </span>
+          </div>
+        </header>
+
+        {/* Dynamic Page Content */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          {children || <Outlet />}
+        </main>
+
+        {/* FOOTER SECTION */}
+        <footer className="py-4 px-6 border-t border-slate-800/80 bg-slate-950/60 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 mt-auto">
+          <div className="flex items-center gap-1">
+            <span>&copy; {currentYear}</span>
+            <span className="font-semibold text-slate-400">Selguudi POS</span>. 
+            <span>Haki zote zimehifadhiwa.</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <span>Engineered with</span>
+            <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500/20" />
+            <span>for Supermarkets & Retail Stores</span>
+          </div>
+        </footer>
+
+      </div>
     </div>
   );
 }

@@ -23,9 +23,23 @@ import {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [allTransactions, setAllTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // 1. CHUKUA DATA KUTOKA LOCALSTORAGE KWA HARAKA SANA (INSTANT CACHE LOAD)
+  const [data, setData] = useState(() => {
+    const cached = localStorage.getItem('selguudi_dashboard_data');
+    return cached ? JSON.parse(cached) : null;
+  });
+
+  const [allTransactions, setAllTransactions] = useState(() => {
+    const cached = localStorage.getItem('selguudi_dashboard_txs');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  // Kama tunazo data kwenye cache, weka loading kuwa false hapo hapo!
+  const [loading, setLoading] = useState(() => {
+    const cachedData = localStorage.getItem('selguudi_dashboard_data');
+    return !cachedData;
+  });
 
   // State ya Date Filter: 'today', 'yesterday', au 'week'
   const [dateFilter, setDateFilter] = useState('today');
@@ -50,20 +64,27 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  // 2. BACKGROUND SYNC: LETA DATA MPYA KUTOKA SERVER KIMYA KIMYA BILA KUMZUIA MTUMIAJI
   const fetchDashboardData = () => {
-    setLoading(true);
     const getDashboardData = apiClient.get('reports/dashboard/');
     const getTodayTransactions = apiClient.get('sales/transactions/');
 
     Promise.all([getDashboardData, getTodayTransactions])
       .then(([dashRes, transRes]) => {
-        setData(dashRes.data);
+        const dashData = dashRes.data;
         const transData = transRes.data.results || transRes.data || [];
+
+        setData(dashData);
         setAllTransactions(transData);
+
+        // HIFADHI KWENYE LOCALSTORAGE KWA AJILI YA MATUMIZI YAYO YAJAYO
+        localStorage.setItem('selguudi_dashboard_data', JSON.stringify(dashData));
+        localStorage.setItem('selguudi_dashboard_txs', JSON.stringify(transData));
+
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching dashboard data:", err);
+        console.error("Error background fetching dashboard data:", err);
         setLoading(false);
       });
   };
@@ -72,7 +93,12 @@ export default function Dashboard() {
   const businessName = user?.business?.name || user?.business_name || data?.business_name || "DUKA LAKO";
 
   if (loading) {
-    return <div className="text-slate-400 font-medium p-6">Inapakia muhtasari...</div>;
+    return (
+      <div className="flex items-center justify-center p-12 text-slate-400 font-medium gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+        <span>Inapakia muhtasari...</span>
+      </div>
+    );
   }
 
   // --- LOGIC YA CHUJO LA TAREHE ---
@@ -233,7 +259,7 @@ export default function Dashboard() {
       icon: TrendingUp,
       color: 'text-purple-400',
       bg: 'bg-purple-500/10 border-purple-500/20',
-      show: isOwner // ONESHA KWA OWNER PEKEE!
+      show: isOwner
     },
     {
       title: 'Stoko Ndogo Alert',
@@ -307,7 +333,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative font-sans">
       
       {/* CUSTOM TOAST NOTIFICATION BANNER */}
       {toast.show && (
@@ -395,7 +421,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main Analytics Cards (Dynamic Grid Layout) */}
+      {/* Main Analytics Cards */}
       <div className={`grid grid-cols-1 md:grid-cols-2 ${statCards.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-5`}>
         {statCards.map((card, idx) => {
           const Icon = card.icon;

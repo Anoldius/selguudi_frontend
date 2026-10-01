@@ -14,8 +14,18 @@ import {
 } from 'lucide-react';
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // 1. INSTANT CACHE LOAD: SOMA ORODHA YA MATUMIZI KUTOKA LOCALSTORAGE PAPO HAPO
+  const [expenses, setExpenses] = useState(() => {
+    const cached = localStorage.getItem('selguudi_expenses_data');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  // Kama tunazo data kwenye cache, weka loading kuwa false hapo hapo!
+  const [loading, setLoading] = useState(() => {
+    const cachedData = localStorage.getItem('selguudi_expenses_data');
+    return !cachedData;
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -35,13 +45,20 @@ export default function Expenses() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  // 2. BACKGROUND SYNC: LETA DATA MPYA KUTOKA SERVER KIMYA KIMYA
   const fetchExpenses = async () => {
     try {
       const res = await apiClient.get('sales/expenses/');
-      setExpenses(res.data.results || res.data);
-      setLoading(false);
+      const expenseData = res.data.results || res.data || [];
+
+      setExpenses(expenseData);
+
+      // HIFADHI KWENYE CACHE FOR INSTANT LOADS
+      localStorage.setItem('selguudi_expenses_data', JSON.stringify(expenseData));
+
     } catch (err) {
-      console.error("Error fetching expenses:", err);
+      console.error("Error fetching background expenses:", err);
+    } finally {
       setLoading(false);
     }
   };
@@ -55,10 +72,20 @@ export default function Expenses() {
     setIsSubmitting(true);
 
     try {
-      await apiClient.post('sales/expenses/', formData);
+      const res = await apiClient.post('sales/expenses/', formData);
+      const newExpense = res.data;
+
       showNotification(`Matumizi ya "${formData.title}" yamerekodiwa!`);
       setFormData({ title: '', amount: '', category: 'FOOD', description: '' });
       setIsSubmitting(false);
+
+      // Sasisha LocalCache na State mara moja
+      if (newExpense && newExpense.id) {
+        const updatedList = [newExpense, ...expenses];
+        setExpenses(updatedList);
+        localStorage.setItem('selguudi_expenses_data', JSON.stringify(updatedList));
+      }
+
       fetchExpenses();
     } catch (err) {
       alert(err.response?.data?.detail || "Imeshindikana kuhifadhi matumizi!");
@@ -71,6 +98,12 @@ export default function Expenses() {
       try {
         await apiClient.delete(`sales/expenses/${id}/`);
         showNotification("Matumizi yamefutwa!");
+
+        // Punguza kwenye state na Cache hapo hapo
+        const updatedList = expenses.filter(exp => exp.id !== id);
+        setExpenses(updatedList);
+        localStorage.setItem('selguudi_expenses_data', JSON.stringify(updatedList));
+
         fetchExpenses();
       } catch (err) {
         alert("Imeshindikana kufuta matumizi!");
@@ -130,11 +163,11 @@ export default function Expenses() {
   };
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative font-sans">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-emerald-500 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400 animate-bounce">
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-emerald-500 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400 animate-bounce text-sm">
           <Check className="w-5 h-5 bg-slate-950 text-emerald-400 rounded-full p-0.5" />
           <span>{toastMessage}</span>
         </div>
@@ -218,7 +251,7 @@ export default function Expenses() {
                 value={formData.title}
                 onChange={handleInputChange}
                 placeholder="Mfano: LUKU ya dukani, Nauli, Chakula"
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
               />
             </div>
 
@@ -232,7 +265,7 @@ export default function Expenses() {
                 value={formData.amount}
                 onChange={handleInputChange}
                 placeholder="5000"
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm font-mono"
               />
             </div>
 
@@ -242,7 +275,7 @@ export default function Expenses() {
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
               >
                 <option value="FOOD">Chakula / Vinywaji</option>
                 <option value="UTILITIES">Umeme / Maji</option>
@@ -260,14 +293,14 @@ export default function Expenses() {
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="Andika maelezo kwa ufupi..."
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 resize-none"
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 resize-none text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 font-bold text-slate-950 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+              className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 font-bold text-slate-950 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition text-sm"
             >
               {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
               <span>Hifadhi Matumizi</span>
@@ -288,7 +321,7 @@ export default function Expenses() {
               <span>Inapakia matumizi...</span>
             </div>
           ) : expenses.length === 0 ? (
-            <div className="text-center py-16 text-slate-500">
+            <div className="text-center py-16 text-slate-500 text-sm">
               Hakuna matumizi yaliyorekodiwa bado.
             </div>
           ) : (

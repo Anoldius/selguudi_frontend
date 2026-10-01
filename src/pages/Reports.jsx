@@ -30,13 +30,26 @@ export default function Reports() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
 
-  const [loading, setLoading] = useState(true);
-  const [allTransactions, setAllTransactions] = useState([]);
-  const [products, setProducts] = useState([]);
+  // 1. INSTANT CACHE LOAD KUTOKA LOCALSTORAGE
+  const [allTransactions, setAllTransactions] = useState(() => {
+    const cached = localStorage.getItem('selguudi_rep_transactions');
+    return cached ? JSON.parse(cached) : [];
+  });
 
-  // State ya Permissions
-  const [permissions, setPermissions] = useState({
-    show_profit_to_cashier: false,
+  const [products, setProducts] = useState(() => {
+    const cached = localStorage.getItem('selguudi_rep_products');
+    return cached ? JSON.parse(cached) : [];
+  });
+
+  const [permissions, setPermissions] = useState(() => {
+    const cached = localStorage.getItem('selguudi_rep_permissions');
+    return cached ? JSON.parse(cached) : { show_profit_to_cashier: false };
+  });
+
+  // Kama tuna cache ya transactions, zima loading hapo hapo
+  const [loading, setLoading] = useState(() => {
+    const cachedTx = localStorage.getItem('selguudi_rep_transactions');
+    return !cachedTx;
   });
 
   // Dynamic Period Choice
@@ -137,8 +150,8 @@ export default function Reports() {
     setEndDate(formatDate(end));
   };
 
+  // 2. BACKGROUND SYNC: VUTA DATA MPYA KIMYA KIMYA
   const fetchReportData = async () => {
-    setLoading(true);
     try {
       const [transRes, prodRes, permRes] = await Promise.all([
         apiClient.get('sales/transactions/'),
@@ -148,12 +161,22 @@ export default function Reports() {
 
       const transData = transRes.data?.results || transRes.data || [];
       const prodData = prodRes.data?.results || prodRes.data || [];
+      const permData = permRes?.data || permissions;
 
-      setAllTransactions(Array.isArray(transData) ? transData : []);
-      setProducts(Array.isArray(prodData) ? prodData : []);
-      if (permRes?.data) setPermissions(permRes.data);
+      const txList = Array.isArray(transData) ? transData : [];
+      const pList = Array.isArray(prodData) ? prodData : [];
+
+      setAllTransactions(txList);
+      setProducts(pList);
+      if (permRes?.data) setPermissions(permData);
+
+      // HIFADHI KWENYE CACHE FOR INSTANT LOADS SIKU ZOTE
+      localStorage.setItem('selguudi_rep_transactions', JSON.stringify(txList));
+      localStorage.setItem('selguudi_rep_products', JSON.stringify(pList));
+      localStorage.setItem('selguudi_rep_permissions', JSON.stringify(permData));
+
     } catch (err) {
-      console.error("Error fetching reports:", err);
+      console.error("Error background fetching reports:", err);
     } finally {
       setLoading(false);
     }
@@ -163,7 +186,7 @@ export default function Reports() {
 
   if (!loading && !canSeeProfit) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4">
+      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans">
         <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 max-w-md text-center space-y-4 shadow-2xl">
           <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
@@ -363,7 +386,7 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       
       {/* Top Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
@@ -437,7 +460,7 @@ export default function Reports() {
               value={startDate}
               disabled={periodOption !== 'custom'}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 font-mono"
             />
           </div>
 
@@ -448,7 +471,7 @@ export default function Reports() {
               value={endDate}
               disabled={periodOption !== 'custom'}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 font-mono"
             />
           </div>
         </div>
