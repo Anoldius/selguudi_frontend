@@ -92,7 +92,7 @@ export default function Inventory() {
     selling_price: '',
     quantity: '',
     unit: 'pcs',
-    min_stock_alert: '5.00'
+    min_stock_alert: '5'
   });
 
   const [editId, setEditId] = useState(null);
@@ -188,7 +188,7 @@ export default function Inventory() {
       selling_price: '',
       quantity: '',
       unit: 'pcs',
-      min_stock_alert: '5.00'
+      min_stock_alert: '5'
     });
     setShowModal(true);
   };
@@ -206,9 +206,9 @@ export default function Inventory() {
       category: product.category || '',
       buying_price: product.buying_price !== undefined && product.buying_price !== null ? String(product.buying_price) : '',
       selling_price: product.selling_price !== undefined && product.selling_price !== null ? String(product.selling_price) : '',
-      quantity: product.quantity !== undefined && product.quantity !== null ? String(product.quantity) : '',
+      quantity: product.quantity !== undefined && product.quantity !== null ? String(Number(product.quantity)) : '',
       unit: product.unit || 'pcs',
-      min_stock_alert: product.min_stock_alert || '5.00'
+      min_stock_alert: product.min_stock_alert !== undefined && product.min_stock_alert !== null ? String(Number(product.min_stock_alert)) : '5'
     });
     setShowModal(true);
   };
@@ -529,7 +529,9 @@ export default function Inventory() {
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-sm">
                 {filteredProducts.map((p) => {
-                  const isLowStock = Number(p.quantity) <= Number(p.min_stock_alert || 5);
+                  const currentStock = Number(p.quantity ?? 0);
+                  const minAlert = Number(p.min_stock_alert || 5);
+                  const isLowStock = currentStock <= minAlert;
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-800/30 transition">
@@ -555,7 +557,7 @@ export default function Inventory() {
                             : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                         }`}>
                           {isLowStock && <AlertTriangle className="w-3.5 h-3.5" />}
-                          {p.quantity} {p.unit}
+                          {currentStock} {p.unit}
                         </span>
                       </td>
 
