@@ -344,9 +344,13 @@ export default function Inventory() {
     }
   };
 
+  // Utafutaji wa Jina la Bidhaa, Barcode, na Category Name
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                          (p.barcode && p.barcode.includes(search));
+    const searchTerm = search.toLowerCase().trim();
+    const matchesSearch = 
+      p.name.toLowerCase().includes(searchTerm) ||
+      (p.barcode && p.barcode.toLowerCase().includes(searchTerm)) ||
+      (p.category_name && p.category_name.toLowerCase().includes(searchTerm));
     
     if (selectedCategoryFilter === 'ALL') return matchesSearch;
     if (selectedCategoryFilter === 'UNCATEGORIZED') return matchesSearch && !p.category;
@@ -451,7 +455,7 @@ export default function Inventory() {
           <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Tafuta bidhaa kwa jina au Barcode..."
+            placeholder="Tafuta kwa jina la bidhaa, barcode, au kundi (category)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm"
@@ -511,7 +515,7 @@ export default function Inventory() {
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-16 text-slate-500 text-sm">
-            Hakuna bidhaa iliyopatikana kwenye kundi hili.
+            Hakuna bidhaa iliyopatikana kwenye kundi hili au utafutaji wako.
           </div>
         ) : (
           <div className="overflow-x-auto">
