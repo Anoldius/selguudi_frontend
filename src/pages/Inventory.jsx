@@ -1,643 +1,829 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import apiClient from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  CartesianGrid 
-} from 'recharts';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  DollarSign, 
-  ShoppingBag, 
-  AlertTriangle,
-  Loader2,
-  PackageCheck,
+  Plus, 
+  Search, 
+  Package, 
+  AlertTriangle, 
+  Edit3, 
+  Trash2, 
+  X, 
+  Loader2, 
+  Check,
+  Scan,
+  CheckCircle2,
+  Layers,
   Filter,
-  RefreshCw,
-  ShieldAlert,
-  Download
+  Tag,
+  Wallet,
+  TrendingUp,
+  DollarSign,
+  ShieldAlert
 } from 'lucide-react';
 
-export default function Reports() {
+export default function Inventory() {
   const { user } = useAuth();
   const isOwner = user?.role === 'owner';
+  
+  // Haki ya Cashier kuongeza/kubadilisha bidhaa
+  const canAddProducts = isOwner || Boolean(user?.permissions?.allow_cashier_add_products);
 
-  // 1. INSTANT CACHE LOAD KUTOKA LOCALSTORAGE
-  const [allTransactions, setAllTransactions] = useState(() => {
-    const cached = localStorage.getItem('selguudi_rep_transactions');
-    return cached ? JSON.parse(cached) : [];
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // State ya Thamani ya Stoko (Summary Metrics)
+  const [summaryData, setSummaryData] = useState({
+    total_current_cost: 0,
+    total_potential_retail: 0,
+    expected_stock_profit: 0,
+    total_products_count: 0
   });
 
-  const [products, setProducts] = useState(() => {
-    const cached = localStorage.getItem('selguudi_rep_products');
-    return cached ? JSON.parse(cached) : [];
+  // Modals state
+  const [showModal, setShowModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    type: '', 
+    id: null,
+    title: '',
+    name: ''
+  });
+  
+  // Category Filter State
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Toast Notification with status type
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // References kwa ajili ya Barcode Hardware Scanner
+  const barcodeInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+
+  // Form State ya Bidhaa
+  const [formData, setFormData] = useState({
+    name: '',
+    barcode: '',
+    category: '',
+    buying_price: '',
+    selling_price: '',
+    quantity: '',
+    unit: 'pcs',
+    min_stock_alert: '5.00'
   });
 
-  const [permissions, setPermissions] = useState(() => {
-    const cached = localStorage.getItem('selguudi_rep_permissions');
-    return cached ? JSON.parse(cached) : { show_profit_to_cashier: false };
-  });
+  const [editId, setEditId] = useState(null);
 
-  // Kama tuna cache ya transactions, zima loading hapo hapo
-  const [loading, setLoading] = useState(() => {
-    const cachedTx = localStorage.getItem('selguudi_rep_transactions');
-    return !cachedTx;
-  });
-
-  // Dynamic Period Choice
-  const [periodOption, setPeriodOption] = useState('month_1');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
-  // Kokotoa Tarehe kulingana na Chaguo
   useEffect(() => {
-    calculateDatesFromOption(periodOption);
-  }, [periodOption]);
-
-  // Pakua data zote mwanzoni
-  useEffect(() => {
-    fetchReportData();
+    fetchInventoryData();
   }, []);
 
-  const calculateDatesFromOption = (option) => {
-    const today = new Date();
-    let start = new Date();
-    let end = new Date();
-
-    const formatDate = (d) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    switch (option) {
-      case 'today':
-        start = new Date();
-        break;
-
-      case 'yesterday':
-        start.setDate(today.getDate() - 1);
-        end.setDate(today.getDate() - 1);
-        break;
-
-      case 'juzi':
-        start.setDate(today.getDate() - 2);
-        end.setDate(today.getDate() - 2);
-        break;
-
-      case 'month_1': // Mwezi Huu
-        start = new Date(today.getFullYear(), today.getMonth(), 1);
-        break;
-
-      case 'month_2':
-        start.setMonth(today.getMonth() - 1);
-        break;
-
-      case 'month_3':
-        start.setMonth(today.getMonth() - 2);
-        break;
-
-      case 'month_4':
-        start.setMonth(today.getMonth() - 3);
-        break;
-
-      case 'month_5':
-        start.setMonth(today.getMonth() - 4);
-        break;
-
-      case 'month_6':
-        start.setMonth(today.getMonth() - 5);
-        break;
-
-      case 'year_1': // Mwaka Huu
-        start = new Date(today.getFullYear(), 0, 1);
-        break;
-
-      case 'year_2':
-        start.setFullYear(today.getFullYear() - 1);
-        break;
-
-      case 'year_3':
-        start.setFullYear(today.getFullYear() - 2);
-        break;
-
-      case 'year_4':
-        start.setFullYear(today.getFullYear() - 3);
-        break;
-
-      case 'year_5':
-        start.setFullYear(today.getFullYear() - 4);
-        break;
-
-      case 'custom':
-        return;
-
-      default:
-        start = new Date(today.getFullYear(), today.getMonth(), 1);
-        break;
-    }
-
-    setStartDate(formatDate(start));
-    setEndDate(formatDate(end));
+  const triggerNotification = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3500);
   };
 
-  // 2. BACKGROUND SYNC: VUTA DATA MPYA KIMYA KIMYA
-  const fetchReportData = async () => {
+  useEffect(() => {
+    if (showModal) {
+      setTimeout(() => {
+        barcodeInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showModal]);
+
+  const fetchInventoryData = async () => {
+    setLoading(true);
     try {
-      const [transRes, prodRes, permRes] = await Promise.all([
-        apiClient.get('sales/transactions/'),
-        apiClient.get('inventory/products/'),
-        apiClient.get('auth/business-permissions/').catch(() => ({ data: null }))
+      const [prodRes, catRes, sumRes] = await Promise.all([
+        apiClient.get('inventory/products/?page_size=10000'),
+        apiClient.get('inventory/categories/'),
+        apiClient.get('inventory/products/summary/').catch(() => ({ data: null }))
       ]);
+      
+      const prodData = prodRes.data.results || prodRes.data || [];
+      const catData = catRes.data.results || catRes.data || [];
+      
+      const productList = Array.isArray(prodData) ? prodData : [];
+      setProducts(productList);
+      setCategories(Array.isArray(catData) ? catData : []);
 
-      const transData = transRes.data?.results || transRes.data || [];
-      const prodData = prodRes.data?.results || prodRes.data || [];
-      const permData = permRes?.data || permissions;
+      // HESABU YA FALLBACK KAMA SUMMARY API HAINA METRICS
+      if (sumRes.data && Number(sumRes.data.total_current_cost) > 0) {
+        setSummaryData(sumRes.data);
+      } else {
+        const cost = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.buying_price || 0)), 0);
+        const retail = productList.reduce((acc, p) => acc + (Number(p.quantity || 0) * Number(p.selling_price || 0)), 0);
+        
+        setSummaryData({
+          total_current_cost: cost,
+          total_potential_retail: retail,
+          expected_stock_profit: retail - cost,
+          total_products_count: productList.length
+        });
+      }
 
-      const txList = Array.isArray(transData) ? transData : [];
-      const pList = Array.isArray(prodData) ? prodData : [];
-
-      setAllTransactions(txList);
-      setProducts(pList);
-      if (permRes?.data) setPermissions(permData);
-
-      // HIFADHI KWENYE CACHE FOR INSTANT LOADS SIKU ZOTE
-      localStorage.setItem('selguudi_rep_transactions', JSON.stringify(txList));
-      localStorage.setItem('selguudi_rep_products', JSON.stringify(pList));
-      localStorage.setItem('selguudi_rep_permissions', JSON.stringify(permData));
-
+      setLoading(false);
     } catch (err) {
-      console.error("Error background fetching reports:", err);
-    } finally {
+      console.error("Error fetching inventory data:", err);
+      triggerNotification("Imeshindikana kupakua orodha ya stoko!", "error");
       setLoading(false);
     }
   };
 
-  const canSeeProfit = isOwner || Boolean(permissions?.show_profit_to_cashier);
-
-  if (!loading && !canSeeProfit) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans">
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 max-w-md text-center space-y-4 shadow-2xl">
-          <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <h3 className="text-xl font-bold text-white">Huwezi Kuona Ukurasa Huu</h3>
-          <p className="text-sm text-slate-400">
-            Ruhusa ya kuona Ripoti & Takwimu imezimwa kwenye Mipangilio ya Duka na Mmiliki (Boss).
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // CHUJA MIAMALA KULINGANA NA TAREHE ZILIZOCHAGULIWA
-  const filteredTransactions = allTransactions.filter(tx => {
-    if (!tx.created_at || tx.status === 'REFUNDED' || tx.status === 'CANCELLED') return false;
-    
-    const txDateStr = new Date(tx.created_at).toISOString().split('T')[0];
-    
-    if (startDate && endDate) {
-      return txDateStr >= startDate && txDateStr <= endDate;
-    }
-    return true;
-  });
-
-  // 1. KOKOTOA JUMLA YA MAUZO YA KIPINDI HICHO
-  const totalSalesAmount = filteredTransactions.reduce((sum, tx) => {
-    return sum + Number(tx.total_amount ?? tx.amount_paid ?? 0);
-  }, 0);
-
-  // 2. KOKOTOA FAIDA NA TOP SELLING PRODUCTS
-  let calculatedProfit = 0;
-  const productSalesMap = {};
-  const dailyChartMap = {};
-
-  filteredTransactions.forEach(tx => {
-    const txDateStr = new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const txSales = Number(tx.total_amount ?? tx.amount_paid ?? 0);
-    
-    if (!dailyChartMap[txDateStr]) {
-      dailyChartMap[txDateStr] = { date: txDateStr, mauzo: 0, faida: 0 };
-    }
-    dailyChartMap[txDateStr].mauzo += txSales;
-
-    if (tx.items && Array.isArray(tx.items)) {
-      tx.items.forEach(item => {
-        const pName = item.product_name || item.product?.name || item.product__name || 'Bidhaa';
-        const qty = Number(item.quantity || item.total_quantity_sold || 0);
-        const sellingPrice = Number(item.unit_price || item.product?.selling_price || 0);
-        const buyingPrice = Number(item.buying_price || item.product?.buying_price || 0);
-
-        const itemProfit = (sellingPrice - buyingPrice) * qty;
-        const finalItemProfit = itemProfit > 0 ? itemProfit : 0;
-        
-        calculatedProfit += finalItemProfit;
-        dailyChartMap[txDateStr].faida += finalItemProfit;
-
-        if (!productSalesMap[pName]) {
-          productSalesMap[pName] = {
-            product__name: pName,
-            total_quantity_sold: 0,
-            total_revenue: 0
-          };
-        }
-
-        productSalesMap[pName].total_quantity_sold += qty;
-        productSalesMap[pName].total_revenue += (sellingPrice * qty);
-      });
-    }
-  });
-
-  const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
-  const chartData = Object.values(dailyChartMap);
-
-  // 3. LOW STOCK COUNT
-  const lowStockCount = products.filter(p => {
-    const stock = Number(p.quantity ?? p.stock_quantity ?? 0);
-    const minAlert = Number(p.min_stock_alert || 5);
-    return stock <= minAlert;
-  }).length;
-
-  // HELPER FUNCTION YA KUPATA BASE64 PAMOJA NA VIPIMO CHA ASILI CHA PICHA
-  const getProportionalImage = (imageUrl, maxWidth) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.src = imageUrl;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
-        const base64 = canvas.toDataURL('image/png');
-        const aspectRatio = img.naturalHeight / img.naturalWidth;
-        const calculatedHeight = maxWidth * aspectRatio;
-
-        resolve({
-          base64,
-          width: maxWidth,
-          height: calculatedHeight
-        });
-      };
-      img.onerror = reject;
-    });
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // EXPORT PDF YENYE LOGO ISIYOFINYWA
-  const exportPDF = async () => {
-    const doc = new jsPDF();
-    const businessName = user?.business_name || 'Selguudi POS';
+  const handleBarcodeKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nameInputRef.current?.focus();
+    }
+  };
 
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 55, 'F');
+  const openAddModal = () => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kuongeza au kubadilisha stoko. Mawasiliano na Bosi.", "error");
+      return;
+    }
 
-    let currentY = 12;
+    setEditId(null);
+    setFormData({
+      name: '',
+      barcode: '',
+      category: '',
+      buying_price: '',
+      selling_price: '',
+      quantity: '',
+      unit: 'pcs',
+      min_stock_alert: '5.00'
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (product) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kubadilisha stoko. Mawasiliano na Bosi.", "error");
+      return;
+    }
+
+    setEditId(product.id);
+    setFormData({
+      name: product.name || '',
+      barcode: product.barcode || '',
+      category: product.category || '',
+      buying_price: product.buying_price !== undefined && product.buying_price !== null ? String(product.buying_price) : '',
+      selling_price: product.selling_price !== undefined && product.selling_price !== null ? String(product.selling_price) : '',
+      quantity: product.quantity !== undefined && product.quantity !== null ? String(product.quantity) : '',
+      unit: product.unit || 'pcs',
+      min_stock_alert: product.min_stock_alert || '5.00'
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    // Badilisha kwa usalama values ziwe Float Numbers
+    const payload = {
+      ...formData,
+      category: formData.category || null,
+      buying_price: formData.buying_price !== '' && formData.buying_price !== null 
+        ? parseFloat(formData.buying_price) 
+        : 0.0,
+      selling_price: formData.selling_price !== '' && formData.selling_price !== null 
+        ? parseFloat(formData.selling_price) 
+        : 0.0,
+      quantity: formData.quantity !== '' && formData.quantity !== null 
+        ? parseFloat(formData.quantity) 
+        : 0.0,
+      min_stock_alert: formData.min_stock_alert !== '' && formData.min_stock_alert !== null 
+        ? parseFloat(formData.min_stock_alert) 
+        : 5.0
+    };
 
     try {
-      const logoData = await getProportionalImage('/Selguudiadobe.png', 42);
-      doc.addImage(logoData.base64, 'PNG', 14, 6, logoData.width, logoData.height); 
-      currentY = 6 + logoData.height + 6;
+      if (editId) {
+        await apiClient.put(`inventory/products/${editId}/`, payload);
+        triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`, "success");
+      } else {
+        await apiClient.post('inventory/products/', payload);
+        triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`, "success");
+      }
+      setIsSubmitting(false);
+      setShowModal(false);
+      fetchInventoryData();
     } catch (err) {
-      console.error("Logo haijapatikana:", err);
-      currentY = 16;
-    }
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.text(businessName.toUpperCase(), 14, currentY);
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(52, 211, 153);
-    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, currentY + 6);
-
-    doc.setTextColor(203, 213, 225);
-    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 12);
-
-    const summaryDataPDF = [
-      [
-        `Jumla ya Mauzo: ${Number(totalSalesAmount).toLocaleString()} TZS`,
-        `Kadirio la Faida: ${Number(calculatedProfit).toLocaleString()} TZS`
-      ],
-      [
-        `Jumla ya Miamala: ${filteredTransactions.length} Risiti`,
-        `Bidhaa zenye Alert ya Stoko: ${lowStockCount}`
-      ]
-    ];
-
-    autoTable(doc, {
-      startY: Math.max(58, currentY + 18),
-      body: summaryDataPDF,
-      theme: 'plain',
-      styles: {
-        fontSize: 10,
-        fontStyle: 'bold',
-        cellPadding: 4,
-        textColor: [15, 23, 42],
-        fillColor: [241, 245, 249]
+      setIsSubmitting(false);
+      
+      if (err.response?.status === 403) {
+        triggerNotification("Huna mamlaka ya kubadilisha au kuongeza stoko! Mawasiliano na Bosi.", "error");
+        return;
       }
-    });
 
-    const tableRows = topProducts.map((p, index) => [
-      index + 1,
-      p.product__name,
-      `${p.total_quantity_sold} pcs`,
-      `${Number(p.total_revenue || 0).toLocaleString()} TZS`
-    ]);
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [['#', 'Jina la Bidhaa', 'Idadi Iliyouzwa', 'Jumla ya Mapato']],
-      body: tableRows,
-      theme: 'striped',
-      headStyles: {
-        fillColor: [16, 185, 129],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-      styles: {
-        fontSize: 9,
-        cellPadding: 3
+      const errData = err.response?.data;
+      let msg = "Imeshindikana kuhifadhi bidhaa!";
+      if (errData) {
+        if (typeof errData === 'string') msg = errData;
+        else if (errData.detail) msg = errData.detail;
+        else if (errData.message) msg = errData.message;
+        else {
+          const firstKey = Object.keys(errData)[0];
+          msg = `${firstKey}: ${errData[firstKey]}`;
+        }
       }
-    });
-
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
-      doc.text(`Imetolewa na Selguudi POS | Ukurasa ${i} wa ${pageCount}`, 14, 285);
+      triggerNotification(msg, "error");
     }
-
-    doc.save(`Ripoti_${businessName}_${startDate}_hadi_${endDate}.pdf`);
   };
 
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('inventory/categories/', { name: newCategoryName.trim() });
+      triggerNotification(`Kundi la "${newCategoryName}" limesajiliwa!`, "success");
+      setNewCategoryName('');
+      fetchInventoryData();
+    } catch (err) {
+      if (err.response?.status === 403) {
+        triggerNotification("Huna mamlaka ya kusajili makundi! Mawasiliano na Bosi.", "error");
+      } else {
+        triggerNotification(err.response?.data?.detail || "Imeshindikana kusajili kundi!", "error");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const promptDeleteProduct = (id, name) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kufuta bidhaa! Mawasiliano na Bosi.", "error");
+      return;
+    }
+
+    setConfirmModal({
+      show: true,
+      type: 'product',
+      id,
+      title: 'Kufuta Bidhaa',
+      name
+    });
+  };
+
+  const promptDeleteCategory = (id, name) => {
+    if (!canAddProducts) {
+      triggerNotification("Huna mamlaka ya kufuta makundi! Mawasiliano na Bosi.", "error");
+      return;
+    }
+
+    setConfirmModal({
+      show: true,
+      type: 'category',
+      id,
+      title: 'Kufuta Kundi la Bidhaa',
+      name
+    });
+  };
+
+  const handleExecuteDelete = async () => {
+    const { type, id, name } = confirmModal;
+    setIsSubmitting(true);
+
+    try {
+      if (type === 'product') {
+        await apiClient.delete(`inventory/products/${id}/`);
+        triggerNotification(`Bidhaa ya "${name}" imefutwa!`, "success");
+      } else if (type === 'category') {
+        await apiClient.delete(`inventory/categories/${id}/`);
+        triggerNotification(`Kundi la "${name}" limefutwa!`, "success");
+      }
+      setConfirmModal({ show: false, type: '', id: null, title: '', name: '' });
+      fetchInventoryData();
+    } catch (err) {
+      if (err.response?.status === 403) {
+        triggerNotification("Huna mamlaka ya kufuta! Mawasiliano na Bosi.", "error");
+      } else {
+        triggerNotification("Imeshindikana kufuta!", "error");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+                          (p.barcode && p.barcode.includes(search));
+    
+    if (selectedCategoryFilter === 'ALL') return matchesSearch;
+    if (selectedCategoryFilter === 'UNCATEGORIZED') return matchesSearch && !p.category;
+    return matchesSearch && p.category === selectedCategoryFilter;
+  });
+
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 relative">
       
-      {/* Top Header Banner */}
+      {/* POP-UP TOAST NOTIFICATION */}
+      {toast.show && (
+        <div className={`fixed top-20 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border font-bold animate-bounce ${
+          toast.type === 'error' 
+            ? 'bg-red-500 text-white border-red-400' 
+            : 'bg-emerald-500 text-slate-950 border-emerald-400'
+        }`}>
+          {toast.type === 'error' ? <ShieldAlert className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Top Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <BarChart3 className="w-7 h-7 text-emerald-400" />
-            <span>Ripoti & Takwimu za Mauzo</span>
+            <Package className="w-7 h-7 text-emerald-400" />
+            <span>Usimamizi wa Stoko & Bidhaa</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Kagua mchanganuo wa mauzo, faida, na bidhaa zinazotoka zaidi kulingana na kipindi ulichochagua.
-          </p>
+          <p className="text-slate-400 text-sm mt-1">Sajili bidhaa mpya, husianisha na makundi, na badilisha taarifa za bei na stoko.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={exportPDF}
-            disabled={loading || topProducts.length === 0}
-            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Pakua PDF</span>
-          </button>
-
-          <button
-            onClick={fetchReportData}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-2xl border border-slate-700 transition"
-          >
-            <RefreshCw className="w-4 h-4 text-emerald-400" />
-            <span>Refresh</span>
-          </button>
-        </div>
-      </div>
-
-      {/* FILTER CARD */}
-      <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl space-y-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-          <Filter className="w-4 h-4 text-emerald-400" />
-          <span>Chagua Kipindi cha Takwimu:</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Chaguo la Haraka</label>
-            <select
-              value={periodOption}
-              onChange={(e) => setPeriodOption(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500"
+        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+          {canAddProducts && (
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-2xl border border-purple-500/30 flex items-center gap-2 transition"
             >
-              <option value="today">Leo</option>
-              <option value="yesterday">Jana</option>
-              <option value="juzi">Juzi</option>
-              <option value="month_1">Mwezi Huu</option>
-              <option value="month_2">Miezi 2 Zilizopita</option>
-              <option value="month_3">Miezi 3 Zilizopita</option>
-              <option value="month_4">Miezi 4 Zilizopita</option>
-              <option value="month_5">Miezi 5 Zilizopita</option>
-              <option value="month_6">Miezi 6 Zilizopita</option>
-              <option value="year_1">Mwaka Huu</option>
-              <option value="year_2">Miaka 2 Zilizopita</option>
-              <option value="year_3">Miaka 3 Zilizopita</option>
-              <option value="year_4">Miaka 4 Zilizopita</option>
-              <option value="year_5">Miaka 5 Zilizopita</option>
-              <option value="custom">Chagua Tarehe Maalum (Custom)</option>
-            </select>
-          </div>
+              <Layers className="w-5 h-5 text-purple-400" />
+              <span>Manage Makundi ({categories.length})</span>
+            </button>
+          )}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kuanzia Tarehe</label>
-            <input
-              type="date"
-              value={startDate}
-              disabled={periodOption !== 'custom'}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Hadi Tarehe</label>
-            <input
-              type="date"
-              value={endDate}
-              disabled={periodOption !== 'custom'}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 font-mono"
-            />
-          </div>
+          {canAddProducts && (
+            <button
+              onClick={openAddModal}
+              className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Ongeza Bidhaa Mpya</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
-          <span>Inapakia takwimu na ripoti...</span>
+      {/* INVENTORY VALUE SUMMARY CARDS (ZINAONEKANA KWA OWNER PEKEE) */}
+      {isOwner && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani ya Stoko (Gharama)</span>
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <Wallet className="w-5 h-5" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-extrabold text-white font-mono">
+              {Number(summaryData.total_current_cost || 0).toLocaleString()} TZS
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Gharama za kununulia bidhaa zilizopo dukani hivi sasa</p>
+          </div>
+
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thamani Tarajiwa ya Mauzo</span>
+              <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-extrabold text-white font-mono">
+              {Number(summaryData.total_potential_retail || 0).toLocaleString()} TZS
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Jumla ya fedha zitakazopatikana stoko yote ikiuzwa</p>
+          </div>
+
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Faida Iliyopo Kwenye Stoko</span>
+              <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                <DollarSign className="w-5 h-5" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-extrabold text-purple-400 font-mono">
+              {Number(summaryData.expected_stock_profit || 0).toLocaleString()} TZS
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-1">Kadirio la faida itakayopatikana baada ya stoko kuisha</p>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* Summary Cards Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            
-            {/* Mauzo Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Jumla ya Mauzo</span>
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl">
-                  <DollarSign className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-white font-mono">
-                  {Number(totalSalesAmount).toLocaleString()} <span className="text-xs font-normal text-slate-400">TZS</span>
-                </h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-400">Jumla ya fedha zilizoingia</p>
-            </div>
+      )}
 
-            {/* Estimated Profit Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
-                <div className="p-3 rounded-2xl border bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
-                  <TrendingUp className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-2xl font-extrabold font-mono text-emerald-400">
-                  {Number(calculatedProfit).toLocaleString()} TZS
-                </h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-400">Mauzo minus Bei za kununulia</p>
-            </div>
+      {/* Search Bar & Category Filter Buttons */}
+      <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-4">
+        <div className="relative">
+          <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Tafuta bidhaa kwa jina au Barcode..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+          />
+        </div>
 
-            {/* Total Receipts Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Miamala / Risiti</span>
-                <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl">
-                  <ShoppingBag className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-white font-mono">
-                  {filteredTransactions.length} <span className="text-xs font-normal text-slate-400">Risiti</span>
-                </h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-400">Idadi ya mauzo yaliyofanyika</p>
-            </div>
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-1 pb-1 scrollbar-none">
+          <span className="text-xs text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-2 whitespace-nowrap">
+            <Filter className="w-3.5 h-3.5 text-emerald-400" /> Kundi:
+          </span>
 
-            {/* Low Stock Items Count */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Alert ya Stoko</span>
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-amber-400 font-mono">
-                  {lowStockCount} <span className="text-xs font-normal text-slate-400">Bidhaa</span>
-                </h3>
-              </div>
-              <p className="mt-2 text-xs text-slate-400">Bidhaa zinazokaribia kuisha</p>
-            </div>
+          <button
+            onClick={() => setSelectedCategoryFilter('ALL')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              selectedCategoryFilter === 'ALL'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            Bidhaa Zote ({products.length})
+          </button>
 
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategoryFilter(cat.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                selectedCategoryFilter === cat.id
+                  ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              {cat.name} ({cat.products_count ?? 0})
+            </button>
+          ))}
+
+          <button
+            onClick={() => setSelectedCategoryFilter('UNCATEGORIZED')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              selectedCategoryFilter === 'UNCATEGORIZED'
+                ? 'bg-amber-500 text-slate-950'
+                : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+            }`}
+          >
+            Bila Kundi
+          </button>
+        </div>
+      </div>
+
+      {/* Products Table */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
+            <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+            <span>Inapakia orodha ya bidhaa...</span>
           </div>
-
-          {/* BAR CHART SECTION: GRAPH YA MWENENDO WA MAUZO NA FAIDA */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
-                  <span>Mwenendo wa Mauzo na Faida (Chart)</span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5"> Mchanganuo wa mauzo na faida kwa kila siku kulingana na tarehe zilizochaguliwa</p>
-              </div>
-
-              <div className="flex items-center gap-4 text-xs font-semibold">
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
-                  <span>Mauzo</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span>
-                  <span>Faida</span>
-                </div>
-              </div>
-            </div>
-
-            {chartData.length === 0 ? (
-              <p className="text-sm text-slate-500 py-12 text-center">Hakuna data za mauzo za kuonyesha kwenye graph kwa kipindi hiki.</p>
-            ) : (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="date" stroke="#64748b" fontSize={12} tickLine={false} />
-                    <YAxis 
-                      stroke="#64748b" 
-                      fontSize={11} 
-                      tickLine={false}
-                      tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} 
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '16px', color: '#fff' }}
-                      formatter={(value) => [`${Number(value).toLocaleString()} TZS`]}
-                    />
-                    <Bar dataKey="mauzo" name="Mauzo (TZS)" fill="#10b981" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="faida" name="Faida (TZS)" fill="#22d3ee" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-16 text-slate-500">
+            Hakuna bidhaa iliyopatikana kwenye kundi hili.
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                  <th className="py-4 px-6">Bidhaa</th>
+                  <th className="py-4 px-6">Kundi (Category)</th>
+                  <th className="py-4 px-6">Barcode</th>
+                  {isOwner && <th className="py-4 px-6">Bei ya Kununua</th>}
+                  <th className="py-4 px-6">Bei ya Kuuzia</th>
+                  <th className="py-4 px-6">Stoko Iliyopo</th>
+                  {canAddProducts && <th className="py-4 px-6 text-right">Vitendo</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-sm">
+                {filteredProducts.map((p) => {
+                  const isLowStock = Number(p.quantity) <= Number(p.min_stock_alert || 5);
 
-          {/* TOP SELLING PRODUCTS TABLE */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <PackageCheck className="w-5 h-5 text-emerald-400" />
-              <span>Bidhaa Zinazotoka Sana ({startDate} hadi {endDate})</span>
-            </h2>
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-800/30 transition">
+                      <td className="py-4 px-6 font-semibold text-white">{p.name}</td>
+                      
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                          <Tag className="w-3 h-3 text-purple-400" />
+                          {p.category_name || 'Bila Kundi'}
+                        </span>
+                      </td>
 
-            {topProducts.length === 0 ? (
-              <p className="text-sm text-slate-500 py-6 text-center">Hakuna data za bidhaa zilizouzwa kwa kipindi hiki.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
-                      <th className="py-3.5 px-4">Jina la Bidhaa</th>
-                      <th className="py-3.5 px-4 text-center">Idadi Iliyouzwa</th>
-                      <th className="py-3.5 px-4 text-right">Jumla ya Mapato</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-sm text-slate-300">
-                    {topProducts.map((p, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/30 transition">
-                        <td className="py-3.5 px-4 font-semibold text-white">{p.product__name}</td>
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-200">{p.total_quantity_sold} pcs</td>
-                        <td className="py-3.5 px-4 text-right text-emerald-400 font-mono font-bold">
-                          {Number(p.total_revenue || 0).toLocaleString()} TZS
+                      <td className="py-4 px-6 text-slate-400 font-mono">{p.barcode || 'N/A'}</td>
+                      {isOwner && (
+                        <td className="py-4 px-6 text-slate-300">{Number(p.buying_price || 0).toLocaleString()} TZS</td>
+                      )}
+                      <td className="py-4 px-6 text-emerald-400 font-bold">{Number(p.selling_price || 0).toLocaleString()} TZS</td>
+                      
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                          isLowStock 
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}>
+                          {isLowStock && <AlertTriangle className="w-3.5 h-3.5" />}
+                          {p.quantity} {p.unit}
+                        </span>
+                      </td>
+
+                      {canAddProducts && (
+                        <td className="py-4 px-6 text-right space-x-2">
+                          <button
+                            onClick={() => openEditModal(p)}
+                            className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition"
+                            title="Badilisha (Edit)"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => promptDeleteProduct(p.id, p.name)}
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
+                            title="Futa (Delete)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        )}
+      </div>
 
-        </>
+      {/* MODAL 1: FOR ADD / EDIT PRODUCT */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5">
+            
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <h3 className="text-lg font-bold text-white">
+                {editId ? 'Badilisha Taarifa za Bidhaa' : 'Sajili Bidhaa Mpya'}
+              </h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              <div>
+                <label className="flex text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 items-center gap-2">
+                  <Scan className="w-4 h-4 text-emerald-400" />
+                  <span>Barcode (Scan au Andika)</span>
+                </label>
+                <input
+                  ref={barcodeInputRef}
+                  type="text"
+                  name="barcode"
+                  value={formData.barcode}
+                  onChange={handleInputChange}
+                  onKeyDown={handleBarcodeKeyDown}
+                  placeholder="Elekeza Scanner au andika kodi..."
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Bidhaa *</label>
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Mfano: Azam Juice 1L"
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kundi la Bidhaa (Category)</label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="">-- Bila Kundi --</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={`grid ${isOwner ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+                {isOwner && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kununua (TZS)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="buying_price"
+                      required
+                      value={formData.buying_price}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Bei ya Kuuzia (TZS)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="selling_price"
+                    required
+                    value={formData.selling_price}
+                    onChange={handleInputChange}
+                    placeholder="2500"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Stoko (Idadi)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="quantity"
+                    required
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                    placeholder="50"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kipimo (Unit)</label>
+                  <select
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="pcs">pcs</option>
+                    <option value="kg">kg</option>
+                    <option value="liter">liter</option>
+                    <option value="plate">plate</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Min Alert</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="min_stock_alert"
+                    value={formData.min_stock_alert}
+                    onChange={handleInputChange}
+                    placeholder="5"
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full mt-2 py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition"
+              >
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                <span>{editId ? 'Hifadhi Mabadiliko' : 'Ongeza Kwenye Stoko'}</span>
+              </button>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: MANAGE CATEGORIES */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-purple-400" />
+                <span>Simamia Makundi ya Bidhaa</span>
+              </h3>
+              <button onClick={() => setShowCategoryModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCategorySubmit} className="flex gap-2">
+              <input
+                type="text"
+                required
+                placeholder="Mfano: Vinywaji, Sigara, Mikate..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500"
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition flex items-center gap-1"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                <span>Sajili</span>
+              </button>
+            </form>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Makundi Yaliyopo ({categories.length})</h4>
+              {categories.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">Bado hujasajili kundi lolote.</p>
+              ) : (
+                categories.map((cat) => (
+                  <div key={cat.id} className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm font-bold text-white">{cat.name}</span>
+                      <span className="text-[10px] bg-slate-900 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/20">
+                        {cat.products_count ?? 0} Bidhaa
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => promptDeleteCategory(cat.id, cat.name)}
+                      className="text-slate-500 hover:text-red-400 p-1 transition"
+                      title="Futa Kundi"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-base">
+                <AlertTriangle className="w-5 h-5" />
+                <span>{confirmModal.title}</span>
+              </div>
+              <button 
+                onClick={() => setConfirmModal({ show: false, type: '', id: null, title: '', name: '' })} 
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-sm text-slate-300">
+              Je, una uhakika unataka kufuta {confirmModal.type === 'product' ? 'bidhaa ya' : 'kundi la'} <span className="font-extrabold text-white">"{confirmModal.name}"</span>?
+              {confirmModal.type === 'category' && (
+                <p className="text-xs text-amber-400 mt-2">
+                  * Bidhaa zote zilizokuwa kwenye kundi hili zitawekwa "Bila Kundi".
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal({ show: false, type: '', id: null, title: '', name: '' })}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition text-sm"
+              >
+                Ghairi
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={isSubmitting}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 text-sm"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span>Thibitisha Kufuta</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
