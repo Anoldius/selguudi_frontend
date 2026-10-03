@@ -238,12 +238,31 @@ export default function Inventory() {
       if (editId) {
         await apiClient.put(`inventory/products/${editId}/`, payload);
         triggerNotification(`Taarifa za "${formData.name}" zimebadilishwa kikamilifu!`, "success");
+        setIsSubmitting(false);
+        setShowModal(false);
       } else {
         await apiClient.post('inventory/products/', payload);
         triggerNotification(`Bidhaa ya "${formData.name}" imeongezwa kwenye stoko!`, "success");
+        setIsSubmitting(false);
+
+        // LOGIC MPYA: Baki kwenye Modal, weka tayari fomu kwa ajili ya bidhaa inayofuata
+        setFormData(prev => ({
+          ...prev,
+          barcode: '',
+          quantity: '',
+          buying_price: '',
+          selling_price: '',
+          // Jina na Category ZINABAKI ili kurahisisha utagaji wa bulk items
+          name: prev.name,
+          category: prev.category,
+        }));
+
+        // Focus moja kwa moja kwenye Barcode scanner input
+        setTimeout(() => {
+          barcodeInputRef.current?.focus();
+        }, 100);
       }
-      setIsSubmitting(false);
-      setShowModal(false);
+
       fetchInventoryData();
     } catch (err) {
       setIsSubmitting(false);
