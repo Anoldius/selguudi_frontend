@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://selguudi-backend.onrender.com/api/';
+// TUMIA SUBDOMAIN MPYA YA CLOUDFLARE ILI KUEPUKA ROUTING BLOCK ZA MTANDAO WA HALOTEL
+const API_BASE_URL = 'https://api.selguudi.co.tz/api/';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
