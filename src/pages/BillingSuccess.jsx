@@ -10,7 +10,6 @@ export default function BillingSuccess() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const orderTrackingId = searchParams.get('OrderTrackingId') || searchParams.get('orderTrackingId');
   const merchantRef = searchParams.get('OrderMerchantReference') || searchParams.get('merchant_ref');
 
   const confirmPayment = async () => {
@@ -25,26 +24,24 @@ export default function BillingSuccess() {
     }
 
     try {
-      // Ita IPN callback View ili kuhakiki malipo halisi PesaPal
-      const res = await apiClient.get(
-        `auth/billing/pesapal-ipn/?OrderTrackingId=${orderTrackingId || ''}&OrderMerchantReference=${merchantRef}`
-      );
+      // Ita endpoint ya Manual Verification kupitia POST
+      const res = await apiClient.post('auth/billing/verify-payment/', {
+        merchant_ref: merchantRef
+      });
 
-      // Backend ikirudisha status == 'SUCCESS' na HTTP 200
-      if (res.data && res.data.status === 'SUCCESS') {
+      if (res.status === 200) {
         setIsSuccess(true);
       } else {
         setIsSuccess(false);
-        setErrorMessage(res.data?.message || "Malipo hayajakamilishwa na PesaPal.");
+        setErrorMessage(res.data?.error || "Malipo hayajakamilishwa na PesaPal.");
       }
     } catch (err) {
       console.error("IPN verification error:", err);
       setIsSuccess(false);
       
-      // Chukua maelezo ya error kutoka backend
-      const backendDetail = err.response?.data?.message || err.response?.data?.detail;
+      const backendError = err.response?.data?.error || err.response?.data?.detail;
       setErrorMessage(
-        backendDetail || "Muamala haujathibitishwa na PesaPal (ilighairiwa au haukuingiza PIN sahihi)."
+        backendError || "Muamala haujathibitishwa na PesaPal (ilighairiwa au haukuingiza PIN sahihi)."
       );
     } finally {
       setLoading(false);
