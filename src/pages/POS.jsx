@@ -321,46 +321,46 @@ export default function POS() {
   };
 
   return (
-    <div className="h-full md:h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden font-sans">
+    <div className="h-full md:h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden font-sans text-slate-800">
       
       {/* FLOATING TOAST NOTIFICATION TOP RIGHT */}
       {toast.show && (
-        <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+        <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
           toast.type === 'success' 
-            ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-300 shadow-emerald-950/50' 
-            : 'bg-red-950/95 border-red-500/50 text-red-300 shadow-red-950/50'
+            ? 'bg-emerald-900 text-white border-emerald-700 shadow-emerald-900/20' 
+            : 'bg-red-900 text-white border-red-700 shadow-red-900/20'
         }`}>
-          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
+          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-300" /> : <AlertCircle className="w-5 h-5 text-red-300" />}
           <span className="text-xs font-bold tracking-wide">{toast.message}</span>
         </div>
       )}
 
       {/* MOBILE SCREEN TOGGLE SWITCHER */}
-      <div className="flex md:hidden bg-slate-900 p-1.5 rounded-2xl border border-slate-800 gap-2 shrink-0">
+      <div className="flex md:hidden bg-white p-1.5 rounded-2xl border-2 border-emerald-500/40 gap-2 shrink-0 shadow-xs">
         <button
           onClick={() => setActiveMobileTab('products')}
-          className={`flex-1 py-3 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 ${
+          className={`flex-1 py-3 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 ${
             activeMobileTab === 'products'
-              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-blue-900 text-white shadow-md'
+              : 'text-slate-600 hover:text-blue-950 bg-slate-50'
           }`}
         >
-          <Package className="w-4 h-4" />
+          <Package className="w-4 h-4 text-emerald-600" />
           <span>Orodha ya Bidhaa ({products.length})</span>
         </button>
 
         <button
           onClick={() => setActiveMobileTab('cart')}
-          className={`flex-1 py-3 rounded-xl font-extrabold text-xs transition flex items-center justify-center gap-2 relative ${
+          className={`flex-1 py-3 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 relative ${
             activeMobileTab === 'cart'
-              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-blue-900 text-white shadow-md'
+              : 'text-slate-600 hover:text-blue-950 bg-slate-50'
           }`}
         >
-          <ShoppingCart className="w-4 h-4" />
+          <ShoppingCart className="w-4 h-4 text-emerald-600" />
           <span>Kikapu ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
           {cart.length > 0 && (
-            <span className="ml-1 px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold">
+            <span className="ml-1 px-2 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-extrabold">
               {cart.length}
             </span>
           )}
@@ -375,7 +375,7 @@ export default function POS() {
         }`}>
           
           {/* CARD 1: SEARCH & CATEGORY FILTERS */}
-          <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-3xl space-y-3 flex-shrink-0">
+          <div className="bg-white border-2 border-emerald-500/40 p-4 rounded-3xl space-y-3 flex-shrink-0 shadow-xs">
             <div className="relative">
               <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
               <input
@@ -383,21 +383,21 @@ export default function POS() {
                 placeholder="Tafuta kwa jina la bidhaa, barcode, au kundi (category)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition text-sm"
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition text-sm font-semibold"
               />
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
-                <Filter className="w-3 h-3 text-emerald-400" /> KUNDI:
+              <span className="text-[10px] text-blue-950 font-black uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
+                <Filter className="w-3 h-3 text-emerald-600" /> KUNDI:
               </span>
 
               <button
                 onClick={() => setSelectedCategory('ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 whitespace-nowrap ${
                   selectedCategory === 'ALL'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    ? 'bg-blue-900 text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:text-blue-950 border border-slate-200'
                 }`}
               >
                 Bidhaa Zote ({products.length})
@@ -407,10 +407,10 @@ export default function POS() {
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 whitespace-nowrap ${
                     selectedCategory === cat.id
-                      ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                      ? 'bg-blue-900 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:text-blue-950 border border-slate-200'
                   }`}
                 >
                   {cat.name} ({cat.products_count ?? 0})
@@ -419,10 +419,10 @@ export default function POS() {
 
               <button
                 onClick={() => setSelectedCategory('UNCATEGORIZED')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 whitespace-nowrap ${
                   selectedCategory === 'UNCATEGORIZED'
                     ? 'bg-amber-500 text-slate-950'
-                    : 'bg-slate-950 text-slate-500 hover:text-slate-300 border border-slate-800'
+                    : 'bg-slate-100 text-slate-600 hover:text-blue-950 border border-slate-200'
                 }`}
               >
                 Bila Kundi
@@ -431,14 +431,14 @@ export default function POS() {
           </div>
 
           {/* CARD 2: PRODUCT CATALOG GRID */}
-          <div className="flex-1 bg-slate-900/60 border border-slate-800 rounded-3xl p-4 sm:p-5 overflow-y-auto">
+          <div className="flex-1 bg-white border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-5 overflow-y-auto shadow-xs">
             {loading ? (
-              <div className="flex items-center justify-center h-full text-slate-400 gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+              <div className="flex items-center justify-center h-full text-slate-500 gap-2 font-medium">
+                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
                 <span>Inapakia bidhaa...</span>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12 text-slate-500 text-sm">
+              <div className="text-center py-12 text-slate-400 text-sm font-semibold">
                 Hakuna bidhaa iliyopatikana kwenye kundi hili au utafutaji wako.
               </div>
             ) : (
@@ -452,18 +452,18 @@ export default function POS() {
                     <button
                       key={product.id}
                       onClick={() => addToCart(product)}
-                      className="bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-emerald-500/50 p-3.5 rounded-2xl text-left transition flex flex-col justify-between group active:scale-95"
+                      className="bg-slate-50 hover:bg-emerald-50/50 border-2 border-slate-200 hover:border-emerald-500 p-3.5 rounded-2xl text-left transition flex flex-col justify-between group active:scale-95 shadow-2xs"
                     >
                       <div>
-                        <h3 className="font-semibold text-white group-hover:text-emerald-400 transition text-xs sm:text-sm line-clamp-2">{product.name}</h3>
-                        <p className="text-[10px] text-purple-400 mt-0.5 truncate">{product.category_name || 'Bila Kundi'}</p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Stoko: <span className={isLow ? 'text-amber-400 font-bold' : 'text-slate-200'}>{stock} {product.unit || 'pcs'}</span>
+                        <h3 className="font-extrabold text-blue-950 group-hover:text-emerald-700 transition text-xs sm:text-sm line-clamp-2">{product.name}</h3>
+                        <p className="text-[10px] text-blue-800 font-bold mt-0.5 truncate uppercase">{product.category_name || 'Bila Kundi'}</p>
+                        <p className="text-xs text-slate-500 font-semibold mt-1">
+                          Stoko: <span className={isLow ? 'text-amber-600 font-black' : 'text-slate-700 font-bold'}>{stock} {product.unit || 'pcs'}</span>
                         </p>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="font-extrabold text-emerald-400 text-xs sm:text-sm font-mono">{Number(product.selling_price).toLocaleString()} TZS</span>
-                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition">
+                        <span className="font-black text-blue-950 text-xs sm:text-sm font-mono">{Number(product.selling_price).toLocaleString()} TZS</span>
+                        <div className="p-1.5 rounded-xl bg-emerald-100 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition">
                           <Plus className="w-4 h-4" />
                         </div>
                       </div>
@@ -476,23 +476,23 @@ export default function POS() {
         </div>
 
         {/* RIGHT SIDE: Cart Section */}
-        <div className={`w-full md:w-96 flex-shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 flex-col justify-between overflow-y-auto ${
+        <div className={`w-full md:w-96 flex-shrink-0 bg-white border-2 border-emerald-500/40 rounded-3xl p-5 flex-col justify-between overflow-y-auto shadow-xs ${
           activeMobileTab === 'cart' ? 'flex' : 'hidden md:flex'
         }`}>
           <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h2 className="font-bold text-lg text-white flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-emerald-400" />
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+              <h2 className="font-black text-lg text-blue-950 flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-emerald-600" />
                 <span>Kikapu cha Mauzo</span>
               </h2>
-              <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-bold">
+              <span className="text-xs px-3 py-1 rounded-xl bg-blue-50 text-blue-900 border border-blue-200 font-black">
                 {cart.reduce((a, b) => a + b.quantity, 0)} Items
               </span>
             </div>
 
             <div className="mt-4 max-h-64 md:max-h-60 overflow-y-auto space-y-3 pr-1">
               {cart.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 text-sm">
+                <div className="text-center py-10 text-slate-400 text-sm font-semibold">
                   Kikapu kipo wazi. Bonyeza bidhaa kuongeza.
                 </div>
               ) : (
@@ -500,44 +500,44 @@ export default function POS() {
                   const isBelowCost = Number(item.selling_price) < Number(item.buying_price || 0);
 
                   return (
-                    <div key={item.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                    <div key={item.id} className="p-3.5 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-2 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-white truncate max-w-[180px]">{item.name}</h4>
+                        <h4 className="text-sm font-extrabold text-blue-950 truncate max-w-[180px]">{item.name}</h4>
                         
-                        <button onClick={() => removeFromCart(item.id)} className="text-slate-500 hover:text-red-400 p-1 transition">
+                        <button onClick={() => removeFromCart(item.id)} className="text-slate-400 hover:text-red-600 p-1 transition">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-900">
+                      <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200">
                         <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">Bei:</span>
+                          <span className="text-[10px] font-black text-slate-500 uppercase">Bei:</span>
                           <input
                             type="number"
                             value={item.selling_price}
                             onChange={(e) => updateCartPrice(item.id, e.target.value)}
-                            className={`w-24 px-2 py-1 bg-slate-900 border rounded-lg text-xs font-mono font-bold focus:outline-none transition ${
+                            className={`w-24 px-2.5 py-1 bg-white border-2 rounded-xl text-xs font-mono font-black focus:outline-none transition ${
                               isBelowCost 
-                                ? 'border-red-500 text-red-400 bg-red-950/20' 
-                                : 'border-slate-800 text-emerald-400 focus:border-emerald-500'
+                                ? 'border-red-500 text-red-600 bg-red-50' 
+                                : 'border-slate-300 text-blue-950 focus:border-emerald-600'
                             }`}
                           />
                           <span className="text-[10px] text-slate-500 font-bold">TZS</span>
                         </div>
 
-                        <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1 text-slate-400 hover:text-white">
+                        <div className="flex items-center bg-white border-2 border-slate-300 rounded-xl overflow-hidden shadow-2xs">
+                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 text-slate-600 hover:bg-slate-100 transition">
                             <Minus className="w-3.5 h-3.5" />
                           </button>
-                          <span className="px-2 text-xs font-bold text-white">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="p-1 text-slate-400 hover:text-white">
+                          <span className="px-2.5 text-xs font-black text-blue-950">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 text-slate-600 hover:bg-slate-100 transition">
                             <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
 
                       {isBelowCost && (
-                        <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 pt-0.5">
+                        <p className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 pt-0.5">
                           ⚠️ Chini ya gharama ({Number(item.buying_price).toLocaleString()} TZS)!
                         </p>
                       )}
@@ -549,9 +549,9 @@ export default function POS() {
           </div>
 
           {/* Payment Options Summary */}
-          <div className="pt-4 border-t border-slate-800 space-y-3 mt-4">
+          <div className="pt-4 border-t border-slate-200 space-y-3 mt-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
+              <label className="block text-xs font-extrabold text-blue-950 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
                   { id: 'cash', label: 'Cash' },
@@ -563,12 +563,12 @@ export default function POS() {
                     key={method.id}
                     type="button"
                     onClick={() => setPaymentMethod(method.id)}
-                    className={`py-2 text-xs font-bold rounded-xl border capitalize transition ${
+                    className={`py-2.5 text-xs font-black rounded-xl border-2 capitalize transition shadow-2xs ${
                       paymentMethod === method.id
                         ? method.id === 'credit' 
-                          ? 'bg-amber-500 text-slate-950 border-amber-500' 
-                          : 'bg-emerald-500 text-slate-950 border-emerald-500'
-                        : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                          ? 'bg-amber-500 text-slate-950 border-amber-600' 
+                          : 'bg-blue-900 text-white border-blue-950 shadow-md'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-blue-950 hover:border-slate-300'
                     }`}
                   >
                     {method.label}
@@ -579,32 +579,32 @@ export default function POS() {
 
             {paymentMethod !== 'credit' && (
               <div>
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                <div className="flex justify-between text-xs text-slate-600 font-bold mb-1">
                   <span>Fedha Iliyotolewa:</span>
-                  {change > 0 && <span className="text-emerald-400 font-bold">Chenji: {change.toLocaleString()} TZS</span>}
+                  {change > 0 && <span className="text-emerald-700 font-black">Chenji: {change.toLocaleString()} TZS</span>}
                 </div>
                 <input
                   type="number"
                   placeholder="Weka kiasi kilicholipwa..."
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-emerald-600"
                 />
               </div>
             )}
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-xs font-bold text-slate-400 uppercase">Jumla Kuu:</span>
-              <span className="text-2xl font-extrabold text-emerald-400">{totalAmount.toLocaleString()} TZS</span>
+              <span className="text-xs font-black text-blue-950 uppercase">Jumla Kuu:</span>
+              <span className="text-2xl font-black text-blue-950 font-mono">{totalAmount.toLocaleString()} TZS</span>
             </div>
 
             <button
               onClick={handleInitiateCheckout}
               disabled={cart.length === 0 || isCheckout}
-              className={`w-full py-3.5 font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 ${
+              className={`w-full py-3.5 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 ${
                 paymentMethod === 'credit'
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
               }`}
             >
               {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : paymentMethod === 'credit' ? <BookOpen className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
@@ -617,33 +617,33 @@ export default function POS() {
 
       {/* CONFIRMATION ALERT MODAL KABLA YA KUKAMILISHA MAUZO */}
       {showConfirmSaleModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
-                <AlertTriangle className="w-5 h-5 text-emerald-400" />
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-emerald-700 font-black text-base">
+                <AlertTriangle className="w-5 h-5 text-emerald-600" />
                 <span>Thibitisha Mauzo</span>
               </div>
-              <button onClick={() => setShowConfirmSaleModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowConfirmSaleModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-xl bg-slate-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-sm text-slate-300">
-              <p className="font-semibold text-white">Unataka kukamilisha mauzo haya sasa?</p>
+            <div className="space-y-3 text-sm text-slate-700 font-medium">
+              <p className="font-extrabold text-blue-950">Unataka kukamilisha mauzo haya sasa?</p>
               
-              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-2 text-xs">
+              <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Idadi ya Bidhaa:</span>
-                  <span className="font-bold text-white">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>
+                  <span className="text-slate-500 font-bold">Idadi ya Bidhaa:</span>
+                  <span className="font-black text-blue-950">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Njia ya Malipo:</span>
-                  <span className="font-bold text-emerald-400">{getPaymentLabel(paymentMethod)}</span>
+                  <span className="text-slate-500 font-bold">Njia ya Malipo:</span>
+                  <span className="font-black text-emerald-700">{getPaymentLabel(paymentMethod)}</span>
                 </div>
-                <div className="flex justify-between pt-1 border-t border-slate-800 text-sm">
-                  <span className="text-slate-300 font-bold">Jumla ya Malipo:</span>
-                  <span className="font-extrabold text-emerald-400">{totalAmount.toLocaleString()} TZS</span>
+                <div className="flex justify-between pt-1.5 border-t border-slate-200 text-sm">
+                  <span className="text-blue-950 font-extrabold">Jumla ya Malipo:</span>
+                  <span className="font-black text-blue-950 font-mono">{totalAmount.toLocaleString()} TZS</span>
                 </div>
               </div>
             </div>
@@ -652,7 +652,7 @@ export default function POS() {
               <button
                 type="button"
                 onClick={() => setShowConfirmSaleModal(false)}
-                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition text-sm"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition text-sm"
               >
                 Ghairi
               </button>
@@ -660,7 +660,7 @@ export default function POS() {
                 type="button"
                 onClick={handleConfirmSaleExecution}
                 disabled={isCheckout}
-                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-500/20"
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md shadow-emerald-600/20"
               >
                 {isCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 <span>Thibitisha Kuuza</span>
@@ -672,76 +672,85 @@ export default function POS() {
 
       {/* MODAL FORM YA SAJILI DENI */}
       {showDebtModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-                <BookOpen className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border-2 border-amber-500/40 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-amber-700 font-black text-base">
+                <BookOpen className="w-5 h-5 text-amber-600" />
                 <span>Taarifa za Mteja Anayekopa</span>
               </div>
-              <button onClick={() => setShowDebtModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowDebtModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-xl bg-slate-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleDebtSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Jina la Mteja *</label>
+                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Jina la Mteja *</label>
                 <input
                   type="text"
                   required
                   placeholder="Mfano: John Doe"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Namba ya Simu</label>
+                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Namba ya Simu</label>
                 <input
                   type="text"
                   placeholder="Mfano: 0712345678"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Tarehe ya Ahadi ya Kulipa</label>
+                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Tarehe ya Ahadi ya Kulipa</label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1">Maelezo Ziada (Notes)</label>
+                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Maelezo Ziada (Notes)</label>
                 <textarea
                   rows="2"
                   placeholder="Maelezo mengine ya ziada..."
                   value={debtNotes}
                   onChange={(e) => setDebtNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-between">
-                <span className="text-xs text-slate-400 font-semibold">Jumla ya Deni:</span>
-                <span className="text-lg font-extrabold text-amber-400">{totalAmount.toLocaleString()} TZS</span>
+              <div className="pt-2 flex items-center justify-between border-t border-slate-200">
+                <span className="text-xs text-slate-600 font-extrabold uppercase">Jumla ya Deni:</span>
+                <span className="text-lg font-black text-amber-600 font-mono">{totalAmount.toLocaleString()} TZS</span>
               </div>
 
-              <button
-                type="submit"
-                disabled={isCheckout}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2"
-              >
-                {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : <UserCheck className="w-5 h-5" />}
-                <span>Hifadhi & Kamilisha Deni</span>
-              </button>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDebtModal(false)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition text-sm"
+                >
+                  Ghairi
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCheckout}
+                  className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md shadow-amber-500/20"
+                >
+                  {isCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+                  <span>Weka Deni</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
