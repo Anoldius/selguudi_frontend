@@ -21,7 +21,8 @@ import {
   Settings as SettingsIcon,
   Users as UsersIcon,
   Smartphone,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -107,7 +108,7 @@ export default function Layout({ children }) {
   // Namba iliyosajiliwa na Mteja
   const registeredPhone = billingInfo?.phone || user?.phone || user?.phone_number || user?.business?.phone || user?.username || "07XXXXXXXX";
 
-  const showTrialBanner = Number(daysLeft) > 0;
+  const showTrialPill = Number(daysLeft) > 0;
 
   // COMPONENT YA MAELEKEZO YA MALIPO (Clean Light Style)
   const PaymentInstructionsCard = () => (
@@ -374,34 +375,38 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-slate-100">
 
-        {/* MOBILE MENU TOGGLE BUTTON */}
-        <div className="md:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between">
-          <button 
-            onClick={() => setMobileMenuOpen(true)}
-            className="p-2 text-slate-700 hover:text-blue-950 rounded-xl bg-slate-100"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <span className="font-black text-blue-950 text-sm">SELGUUDI POS</span>
-        </div>
+        {/* TOP HEADER BAR NA TOP-UP TRIAL NOTIFICATION PILL */}
+        <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-xs z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 text-slate-700 hover:text-blue-950 rounded-xl bg-slate-100"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="font-black text-blue-950 text-sm hidden sm:inline">SELGUUDI POS DASHBOARD</span>
+          </div>
 
-        {/* TRIAL COUNTDOWN BANNER (KAMA IPO) */}
-        {showTrialBanner && (
-          <div className="bg-amber-500/10 border-b border-amber-300/60 px-6 py-2 flex items-center justify-between text-xs text-amber-900 font-extrabold">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-700" />
-              <span>
-                Trial ya Bure: Zimebaki <strong className="text-blue-950 underline font-black">{daysLeft} siku</strong> za kutumia mfumo bure.
-              </span>
-            </div>
+          {/* TRIAL / SUBSCRIPTION BADGE (TOP UP PILL - GREEN & BLUE GLOW) */}
+          {showTrialPill && (
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-[11px] transition shadow-md shadow-emerald-600/20"
+              className="group flex items-center gap-2.5 bg-gradient-to-r from-blue-950 to-blue-900 hover:from-emerald-600 hover:to-emerald-500 text-white px-4 py-2 rounded-full shadow-md border-2 border-emerald-400/60 transition-all duration-300 transform hover:scale-105 animate-pulse"
+              title="Bonyeza kulipia kifurushi chako"
             >
-              Lipa TZS 20,000
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-inner">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left leading-tight">
+                <p className="text-[10px] text-emerald-300 font-extrabold uppercase tracking-wider">Trial ya Bure</p>
+                <p className="text-xs font-black text-white">{daysLeft} Siku Zimebaki</p>
+              </div>
+              <span className="bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full ml-1 shadow-sm group-hover:bg-white transition-colors">
+                Lipa 20k
+              </span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* DYNAMIC PAGE CONTENT */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
