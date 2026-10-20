@@ -19,8 +19,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  ArrowUpRight,
-  TrendingDown
+  ArrowUpRight
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -351,40 +350,42 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TOP WELCOME BANNER (DEEP BLUE & VIBRANT GREEN LOGO ACCENTS) */}
+      {/* TOP WELCOME BANNER (DEEP BLUE & VIBRANT GREEN ACCENTS) */}
       <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-blue-900">
         <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider mb-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Uza Kisasa
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2">
-            <span>Karibu Kwenye Selguudi Dashboard</span>
-            <span className="text-2xl">👋</span>
-          </h1>
-          
-          <div className="flex items-center gap-2 text-blue-200 text-sm mt-2 font-medium">
-            <Calendar className="w-4 h-4 text-emerald-400" />
-            <span className="capitalize">{getFilterLabel()}</span>
-          </div>
-        </div>
-
-        {/* SHOP BADGE */}
-        <div className="z-10 flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg">
-          <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white p-1.5 shadow-md">
+        {/* KUSHOTO: LOGO YA SELGUUDI INAYOJITEGEMEA (uzakisasa) + HEADINGS */}
+        <div className="z-10 flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-white rounded-2xl p-2 shadow-xl border border-blue-200 flex items-center justify-center">
             <img 
-              src="/selguudiLogo.png" 
+              src="/uzakisasa.png" 
               alt="Selguudi Logo" 
               className="w-full h-full object-contain"
             />
           </div>
+
           <div>
-            <p className="text-[10px] uppercase tracking-wider font-extrabold text-blue-200">Biashara / Duka</p>
-            <p className="text-lg font-black text-emerald-300 font-mono tracking-wide uppercase">
-              {businessName}
-            </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-extrabold uppercase tracking-wider mb-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Uza Kisasa
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
+              <span>Karibu Kwenye Selguudi Dashboard</span>
+              <span className="text-2xl">👋</span>
+            </h1>
+            
+            <div className="flex items-center gap-2 text-blue-200 text-sm mt-1.5 font-medium">
+              <Calendar className="w-4 h-4 text-emerald-400" />
+              <span className="capitalize">{getFilterLabel()}</span>
+            </div>
           </div>
+        </div>
+
+        {/* KULIA JUU: BUSINESS NAME CARD BILA ICON (JINA TU LILILOONGEZWA UKUBWA) */}
+        <div className="z-10 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-4 rounded-2xl self-start md:self-auto shadow-2xl min-w-[220px]">
+          <p className="text-[11px] uppercase tracking-widest font-extrabold text-blue-200">BIASHARA / DUKA</p>
+          <p className="text-2xl md:text-3xl font-black text-emerald-300 font-mono tracking-wider uppercase drop-shadow-sm mt-1">
+            {businessName}
+          </p>
         </div>
       </div>
 
