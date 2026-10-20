@@ -16,13 +16,13 @@ import {
   X,
   Clock,
   Lock,
-  Zap,
   Loader2,
   ChevronLeft,
   Settings as SettingsIcon,
   Users as UsersIcon,
   Smartphone,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -101,6 +101,9 @@ export default function Layout({ children }) {
   const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 7;
   const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
 
+  // Namba iliyosajiliwa na Mteja
+  const registeredPhone = billingInfo?.phone || user?.phone || user?.business?.phone || "Namba Yako ya Usajili";
+
   const showTrialBanner = Number(daysLeft) > 0;
 
   // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK YA AUTO-ACTIVATION)
@@ -121,7 +124,18 @@ export default function Layout({ children }) {
             </p>
           </div>
 
-          {/* UAELEKEZO YA MALIPO YA SIMU DIRECT */}
+          {/* NAMBA YA USAJILI YA MTEJA (WARNING BOX) */}
+          <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 text-emerald-300 font-medium">
+              <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Namba yako ya usajili:</span>
+            </div>
+            <span className="font-mono font-extrabold text-white bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-sm">
+              {registeredPhone}
+            </span>
+          </div>
+
+          {/* MAELEKEZO YA MALIPO YA SIMU DIRECT */}
           <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 text-left">
             <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
               <span className="text-xs text-slate-400">Kifurushi cha Mwezi:</span>
@@ -130,22 +144,22 @@ export default function Layout({ children }) {
 
             <div className="space-y-2 pt-1 text-xs">
               <div className="flex justify-between text-slate-300">
-                <span>Vodacom / M-Pesa:</span>
-                <span className="font-mono font-bold text-emerald-400">0713XXXXXX</span>
+                <span>AirtelMoney:</span>
+                <span className="font-mono font-bold text-emerald-400">0686915966</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span>Tigo Pesa:</span>
-                <span className="font-mono font-bold text-emerald-400">0713XXXXXX</span>
+                <span>Halopesa:</span>
+                <span className="font-mono font-bold text-emerald-400">0613012686</span>
               </div>
               <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/60">
-                <span>Jina:</span>
-                <span className="font-semibold text-slate-200">SELGUUDI POS</span>
+                <span>Jina la Akaunti:</span>
+                <span className="font-semibold text-slate-200">ANOLDIUS PAUL</span>
               </div>
             </div>
           </div>
 
-          <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
-            📌 Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara baada ya kutuma fedha!
+          <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-left leading-relaxed">
+            📌 <strong className="text-amber-300">Angalizo:</strong> Hakikisha unatuma fedha kutoka kwenye namba yako ya usajili (<strong className="text-white underline">{registeredPhone}</strong>). Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara tu baada ya kutuma!
           </p>
 
           <button
