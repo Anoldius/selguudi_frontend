@@ -22,7 +22,7 @@ import {
   Users as UsersIcon,
   Smartphone,
   RefreshCw,
-  AlertCircle
+  CheckCircle2
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -40,6 +40,9 @@ export default function Layout({ children }) {
   const [billingInfo, setBillingInfo] = useState(null);
   const [loadingBilling, setLoadingBilling] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // State ya Modal ya Malipo (Payment Modal)
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const currentYear = new Date().getFullYear();
 
@@ -71,6 +74,7 @@ export default function Layout({ children }) {
       const res = await apiClient.get('auth/billing/status/');
       if (res.data && res.data.has_active_access) {
         alert("🎉 Hongera! Duka lako limewashwa kikamilifu!");
+        setShowPaymentModal(false);
       } else {
         alert("Malipo yako bado hayajasomwa na mfumo. Kama umeshatuma fedha, subiri sekunde chache kisha ubonyeze tena 'Hakiki Malipo'.");
       }
@@ -102,9 +106,70 @@ export default function Layout({ children }) {
   const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
 
   // Namba iliyosajiliwa na Mteja
-  const registeredPhone = billingInfo?.phone || user?.phone || user?.business?.phone || "Namba Yako ya Usajili";
+  const registeredPhone = billingInfo?.phone || user?.phone || user?.phone_number || user?.business?.phone || user?.username || "07XXXXXXXX";
 
   const showTrialBanner = Number(daysLeft) > 0;
+
+  // COMPONENT YA MAELEKEZO YA MALIPO (Kadi inayotumika kote)
+  const PaymentInstructionsCard = () => (
+    <div className="space-y-4 text-left">
+      {/* NAMBA YA USAJILI YA MTEJA */}
+      <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2 text-emerald-300 font-medium">
+          <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>Namba yako ya usajili:</span>
+        </div>
+        <span className="font-mono font-extrabold text-white bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-sm">
+          {registeredPhone}
+        </span>
+      </div>
+
+      {/* MAELEKEZO YA MALIPO YA SIMU DIRECT */}
+      <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+        <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
+          <span className="text-xs text-slate-400">Kifurushi cha Mwezi:</span>
+          <span className="text-emerald-400 font-extrabold font-mono text-base">20,000 TZS</span>
+        </div>
+
+        <div className="space-y-2 pt-1 text-xs">
+          <div className="flex justify-between text-slate-300">
+            <span>AirtelMoney:</span>
+            <span className="font-mono font-bold text-emerald-400">0686915966</span>
+          </div>
+          <div className="flex justify-between text-slate-300">
+            <span>Halopesa:</span>
+            <span className="font-mono font-bold text-emerald-400">0613012686</span>
+          </div>
+          <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/60">
+            <span>Jina la Akaunti:</span>
+            <span className="font-semibold text-slate-200">ANOLDIUS PAUL</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 leading-relaxed">
+        📌 <strong className="text-amber-300">Angalizo:</strong> Hakikisha unatuma fedha kutoka kwenye namba yako ya usajili (<strong className="text-white underline">{registeredPhone}</strong>). Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara tu baada ya kutuma!
+      </p>
+
+      <button
+        onClick={handleVerifyPaymentStatus}
+        disabled={isVerifying}
+        className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
+      >
+        {isVerifying ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Inahakiki Malipo...</span>
+          </>
+        ) : (
+          <>
+            <RefreshCw className="w-5 h-5" />
+            <span>Nishatuma / Hakiki Malipo</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
 
   // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK YA AUTO-ACTIVATION)
   if (!loadingBilling && !hasActiveAccess) {
@@ -124,61 +189,7 @@ export default function Layout({ children }) {
             </p>
           </div>
 
-          {/* NAMBA YA USAJILI YA MTEJA (WARNING BOX) */}
-          <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 text-emerald-300 font-medium">
-              <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Namba yako ya usajili:</span>
-            </div>
-            <span className="font-mono font-extrabold text-white bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-sm">
-              {registeredPhone}
-            </span>
-          </div>
-
-          {/* MAELEKEZO YA MALIPO YA SIMU DIRECT */}
-          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 text-left">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
-              <span className="text-xs text-slate-400">Kifurushi cha Mwezi:</span>
-              <span className="text-emerald-400 font-extrabold font-mono text-base">20,000 TZS</span>
-            </div>
-
-            <div className="space-y-2 pt-1 text-xs">
-              <div className="flex justify-between text-slate-300">
-                <span>AirtelMoney:</span>
-                <span className="font-mono font-bold text-emerald-400">0686915966</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Halopesa:</span>
-                <span className="font-mono font-bold text-emerald-400">0613012686</span>
-              </div>
-              <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/60">
-                <span>Jina la Akaunti:</span>
-                <span className="font-semibold text-slate-200">ANOLDIUS PAUL</span>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20 text-left leading-relaxed">
-            📌 <strong className="text-amber-300">Angalizo:</strong> Hakikisha unatuma fedha kutoka kwenye namba yako ya usajili (<strong className="text-white underline">{registeredPhone}</strong>). Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara tu baada ya kutuma!
-          </p>
-
-          <button
-            onClick={handleVerifyPaymentStatus}
-            disabled={isVerifying}
-            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
-          >
-            {isVerifying ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Inahakiki Malipo...</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-5 h-5" />
-                <span>Nishatuma / Hakiki Malipo</span>
-              </>
-            )}
-          </button>
+          <PaymentInstructionsCard />
 
           <button
             onClick={handleLogout}
@@ -364,11 +375,10 @@ export default function Layout({ children }) {
               </span>
             </div>
             <button
-              onClick={handleVerifyPaymentStatus}
-              disabled={isVerifying}
-              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
+              onClick={() => setShowPaymentModal(true)}
+              className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20"
             >
-              {isVerifying ? 'Inahakiki...' : 'Lipa TZS 20,000'}
+              Lipa TZS 20,000
             </button>
           </div>
         )}
@@ -399,6 +409,28 @@ export default function Layout({ children }) {
         <main className="flex-1 p-6 overflow-y-auto">
           {children || <Outlet />}
         </main>
+
+        {/* MODAL YA MAELEKEZO YA MALIPO (PALE ANAPOBONYEZA 'LIPA TZS 20,000') */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl relative">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
+                  <CreditCard className="w-5 h-5" />
+                  <span>Lipia Kifurushi cha Mwezi</span>
+                </div>
+                <button 
+                  onClick={() => setShowPaymentModal(false)} 
+                  className="text-slate-400 hover:text-white p-1 bg-slate-800/60 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <PaymentInstructionsCard />
+            </div>
+          </div>
+        )}
 
         {/* FOOTER SECTION */}
         <footer className="py-4 px-6 border-t border-slate-800/80 bg-slate-950/60 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 mt-auto">
