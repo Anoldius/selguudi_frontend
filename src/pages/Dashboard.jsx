@@ -18,7 +18,9 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ArrowUpRight,
+  TrendingDown
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -94,9 +96,9 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12 text-slate-400 font-medium gap-3">
-        <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
-        <span>Inapakia muhtasari...</span>
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500 font-medium gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        <span className="text-sm font-semibold">Inapakia muhtasari wa duka...</span>
       </div>
     );
   }
@@ -243,32 +245,32 @@ export default function Dashboard() {
       title: dateFilter === 'today' ? 'Mauzo ya Leo' : dateFilter === 'yesterday' ? 'Mauzo ya Jana' : 'Mauzo ya Wiki Hii',
       value: `${totalSales.toLocaleString()} TZS`,
       icon: DollarSign,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10 border-emerald-500/20',
+      iconBg: 'bg-blue-50 text-blue-900 border-blue-100',
+      valueColor: 'text-blue-950',
       show: true
     },
     {
       title: 'Risiti Zilizotoka',
       value: validTransactions.length,
       icon: Receipt,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10 border-blue-500/20',
+      iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      valueColor: 'text-emerald-900',
       show: true
     },
     {
       title: 'Kadirio la Faida',
       value: `${dynamicEstimatedProfit.toLocaleString()} TZS`,
       icon: TrendingUp,
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10 border-purple-500/20',
+      iconBg: 'bg-blue-50 text-blue-700 border-blue-100',
+      valueColor: 'text-blue-900',
       show: isOwner
     },
     {
       title: 'Stoko Ndogo Alert',
       value: `${data?.low_stock_items_count || 0} Bidhaa`,
       icon: AlertTriangle,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10 border-amber-500/20',
+      iconBg: 'bg-amber-50 text-amber-600 border-amber-100',
+      valueColor: 'text-amber-600',
       show: true
     },
   ].filter(card => card.show);
@@ -278,29 +280,29 @@ export default function Dashboard() {
       title: 'Mauzo ya Cash',
       value: `${cashTotal.toLocaleString()} TZS`,
       icon: Banknote,
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10 border-emerald-500/20',
+      iconBg: 'bg-emerald-50 text-emerald-600',
+      textColor: 'text-emerald-700'
     },
     {
       title: 'Mauzo ya Lipa (Simu)',
       value: `${lipaTotal.toLocaleString()} TZS`,
       icon: Smartphone,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10 border-blue-500/20',
+      iconBg: 'bg-blue-50 text-blue-900',
+      textColor: 'text-blue-900'
     },
     {
       title: 'Mauzo ya Card',
       value: `${cardTotal.toLocaleString()} TZS`,
       icon: CreditCard,
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10 border-purple-500/20',
+      iconBg: 'bg-blue-50 text-blue-700',
+      textColor: 'text-blue-700'
     },
     {
       title: 'Mauzo ya Kukopa (Deni)',
       value: `${creditTotal.toLocaleString()} TZS`,
       icon: BookOpen,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10 border-amber-500/20',
+      iconBg: 'bg-amber-50 text-amber-600',
+      textColor: 'text-amber-600'
     },
   ];
 
@@ -308,72 +310,78 @@ export default function Dashboard() {
     const m = (method || '').toLowerCase();
     if (m === 'cash') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-700">
           <Banknote className="w-3.5 h-3.5" /> Cash
         </span>
       );
     } else if (m === 'mobile_money' || m === 'lipa' || m === 'mpesa') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 border border-blue-500/20 text-blue-400">
-          <Smartphone className="w-3.5 h-3.5" /> Lipa Namba
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 border border-blue-200 text-blue-900">
+          <Smartphone className="w-3.5 h-3.5 text-emerald-600" /> Lipa Namba
         </span>
       );
     } else if (m === 'bank_card' || m === 'card') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 border border-purple-500/20 text-purple-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 border border-blue-200 text-blue-800">
           <CreditCard className="w-3.5 h-3.5" /> Card
         </span>
       );
     } else if (m === 'credit' || m === 'deni' || m === 'kukopa') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 border border-amber-200 text-amber-700">
           <BookOpen className="w-3.5 h-3.5" /> Kukopa / Deni
         </span>
       );
     }
-    return <span className="text-xs text-slate-400 uppercase font-semibold">{method}</span>;
+    return <span className="text-xs text-slate-500 uppercase font-semibold">{method}</span>;
   };
 
   return (
-    <div className="space-y-6 relative font-sans">
+    <div className="space-y-6 relative font-sans text-slate-800 pb-12">
       
       {/* CUSTOM TOAST NOTIFICATION BANNER */}
       {toast.show && (
-        <div className={`fixed top-6 right-6 z-[60] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+        <div className={`fixed top-6 right-6 z-[60] px-5 py-4 rounded-2xl border shadow-xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
           toast.type === 'success' 
-            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' 
-            : 'bg-red-950/90 border-red-500/50 text-red-300'
+            ? 'bg-emerald-900 text-white border-emerald-700' 
+            : 'bg-red-900 text-white border-red-700'
         }`}>
-          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-red-400" />}
+          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-300" /> : <AlertCircle className="w-5 h-5 text-red-300" />}
           <span className="text-xs font-bold tracking-wide">{toast.message}</span>
         </div>
       )}
 
-      {/* Top Welcome Banner */}
-      <div className="bg-gradient-to-r from-emerald-950/50 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+      {/* TOP WELCOME BANNER (DEEP BLUE & VIBRANT GREEN LOGO ACCENTS) */}
+      <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 border border-blue-900">
+        <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="z-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold uppercase tracking-wider mb-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Uza Kisasa
+          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2">
             <span>Karibu Kwenye Selguudi Dashboard</span>
-            <span className="text-xl">👋</span>
+            <span className="text-2xl">👋</span>
           </h1>
           
-          <div className="flex items-center gap-2 text-slate-400 text-sm mt-2">
+          <div className="flex items-center gap-2 text-blue-200 text-sm mt-2 font-medium">
             <Calendar className="w-4 h-4 text-emerald-400" />
-            <span className="capitalize font-medium text-slate-300">{getFilterLabel()}</span>
+            <span className="capitalize">{getFilterLabel()}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-950/80 border border-emerald-500/30 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg shadow-emerald-950/50">
-          <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-900 border border-emerald-500/20 p-1">
+        {/* SHOP BADGE */}
+        <div className="z-10 flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-5 py-3 rounded-2xl self-start md:self-auto shadow-lg">
+          <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white p-1.5 shadow-md">
             <img 
               src="/selguudiLogo.png" 
               alt="Selguudi Logo" 
-              className="w-full h-full object-contain rounded-lg"
+              className="w-full h-full object-contain"
             />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Biashara / Duka</p>
-            <p className="text-lg font-extrabold text-emerald-400 font-mono tracking-wide uppercase">
+            <p className="text-[10px] uppercase tracking-wider font-extrabold text-blue-200">Biashara / Duka</p>
+            <p className="text-lg font-black text-emerald-300 font-mono tracking-wide uppercase">
               {businessName}
             </p>
           </div>
@@ -381,19 +389,19 @@ export default function Dashboard() {
       </div>
 
       {/* DATE FILTER BUTTONS SECTION */}
-      <div className="flex items-center justify-between bg-slate-900/60 border border-slate-800 p-3 rounded-2xl">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider px-2">
-          <Filter className="w-4 h-4 text-emerald-400" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm gap-3">
+        <div className="flex items-center gap-2 text-xs font-extrabold text-blue-950 uppercase tracking-wider px-2">
+          <Filter className="w-4 h-4 text-emerald-600" />
           <span>Chagua Kipindi:</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setDateFilter('today')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 ${
               dateFilter === 'today'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-blue-950'
             }`}
           >
             Leo
@@ -401,10 +409,10 @@ export default function Dashboard() {
 
           <button
             onClick={() => setDateFilter('yesterday')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 ${
               dateFilter === 'yesterday'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-blue-950'
             }`}
           >
             Jana
@@ -412,10 +420,10 @@ export default function Dashboard() {
 
           <button
             onClick={() => setDateFilter('week')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 ${
               dateFilter === 'week'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-blue-950'
             }`}
           >
             Wiki Hii (Siku 7)
@@ -423,41 +431,54 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main Analytics Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${statCards.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-5`}>
+      {/* MAIN ANALYTICS CARDS (LARGE CARDS & BOLD NUMBERS) */}
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${statCards.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
-            <div key={idx} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all">
+            <div 
+              key={idx} 
+              className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between"
+            >
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{card.title}</span>
-                <div className={`p-2.5 rounded-xl border ${card.bg} ${card.color}`}>
-                  <Icon className="w-5 h-5" />
+                <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">{card.title}</span>
+                <div className={`p-3 rounded-2xl border ${card.iconBg}`}>
+                  <Icon className="w-6 h-6" />
                 </div>
               </div>
-              <h3 className="text-2xl font-extrabold font-mono text-white">
-                {card.value}
-              </h3>
+
+              <div>
+                <h3 className={`text-3xl md:text-3xl font-black font-mono tracking-tight ${card.valueColor}`}>
+                  {card.value}
+                </h3>
+                <p className="text-[11px] text-slate-400 font-semibold mt-2 flex items-center gap-1">
+                  <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600" /> Ilioboreshwa kwa kipindi hiki
+                </p>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Mchanganuo wa Njia 4 za Malipo */}
-      <div>
-        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+      {/* MCHANANGUO WA NJIA 4 ZA MALIPO */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+        <h2 className="text-xs font-extrabold text-blue-950 uppercase tracking-wider">
           Mchanganuo wa Mauzo kwa Njia ya Malipo ({dateFilter === 'today' ? 'Leo' : dateFilter === 'yesterday' ? 'Jana' : 'Wiki Hii'})
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {paymentCards.map((card, idx) => {
             const Icon = card.icon;
             return (
-              <div key={idx} className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-all flex items-center justify-between">
+              <div 
+                key={idx} 
+                className="bg-slate-50 border border-slate-200/60 rounded-2xl p-5 flex items-center justify-between hover:bg-white hover:shadow-sm transition-all duration-200"
+              >
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{card.title}</p>
-                  <h3 className="text-xl font-extrabold text-white font-mono">{card.value}</h3>
+                  <p className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-1">{card.title}</p>
+                  <h3 className={`text-xl font-black font-mono tracking-tight ${card.textColor}`}>{card.value}</h3>
                 </div>
-                <div className={`p-3 rounded-xl border ${card.bg} ${card.color}`}>
+                <div className={`p-3 rounded-2xl ${card.iconBg}`}>
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
@@ -467,36 +488,39 @@ export default function Dashboard() {
       </div>
 
       {/* ORODHA YA MAUZO KULINGANA NA FILTER */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <PackageCheck className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+              <PackageCheck className="w-5 h-5" />
+            </div>
+            <h2 className="text-base font-extrabold text-blue-950">
               Orodha ya Mauzo ({dateFilter === 'today' ? 'Leo' : dateFilter === 'yesterday' ? 'Jana' : 'Wiki Hii'})
             </h2>
           </div>
-          <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
+          
+          <span className="text-xs font-bold text-blue-900 bg-blue-50 px-3.5 py-1.5 rounded-xl border border-blue-100 font-mono self-start sm:self-auto">
             Jumla: {filteredTransactions.length} Miamala
           </span>
         </div>
 
         {filteredTransactions.length === 0 ? (
-          <div className="text-center py-10 text-slate-500 text-sm">
+          <div className="text-center py-12 text-slate-400 text-sm font-medium">
             Hakuna mauzo yaliyopatikana kwa kipindi hiki.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-300">
-              <thead className="text-xs text-slate-400 uppercase bg-slate-950/60 border-b border-slate-800">
+            <table className="w-full text-left text-sm text-slate-700">
+              <thead className="text-xs text-slate-400 uppercase bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">Saa / Tarehe</th>
-                  <th className="py-3 px-4">Bidhaa Zilizouzwa / Mteja</th>
-                  <th className="py-3 px-4">Njia ya Malipo</th>
-                  <th className="py-3 px-4 text-right">Kiasi Kilicholipwa</th>
-                  <th className="py-3 px-4 text-center">Vitendo</th>
+                  <th className="py-3.5 px-4 font-bold">Saa / Tarehe</th>
+                  <th className="py-3.5 px-4 font-bold">Bidhaa Zilizouzwa / Mteja</th>
+                  <th className="py-3.5 px-4 font-bold">Njia ya Malipo</th>
+                  <th className="py-3.5 px-4 font-bold text-right">Kiasi Kilicholipwa</th>
+                  <th className="py-3.5 px-4 font-bold text-center">Vitendo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {filteredTransactions.map((tx) => {
                   const isRefunded = tx.status === 'REFUNDED';
                   const txDateObj = new Date(tx.created_at);
@@ -507,55 +531,57 @@ export default function Dashboard() {
                   const customerInfo = tx.customer_name ? ` - Mteja: ${tx.customer_name}` : '';
 
                   return (
-                    <tr key={tx.id} className={`hover:bg-slate-800/30 transition ${isRefunded ? 'opacity-40 bg-red-950/10' : ''}`}>
-                      <td className="py-3.5 px-4 font-mono text-xs text-slate-400 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        {txDisplayTime}
+                    <tr key={tx.id} className={`hover:bg-slate-50/80 transition-colors ${isRefunded ? 'opacity-40 bg-red-50/30' : ''}`}>
+                      <td className="py-4 px-4 font-mono text-xs font-semibold text-slate-500">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{txDisplayTime}</span>
+                        </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-medium text-white max-w-md">
+                      <td className="py-4 px-4 font-medium text-slate-800 max-w-md">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {tx.items && tx.items.length > 0 ? (
                             tx.items.map((item, i) => {
                               const cat = item.category_name || item.product?.category_name || item.product?.category?.name || 'Bila Kundi';
                               return (
-                                <span key={i} className="inline-flex items-center gap-1 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
-                                  <span>{item.product_name || item.product?.name || 'Bidhaa'}</span>
-                                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-lg border border-purple-500/30 font-bold uppercase tracking-wider">
+                                <span key={i} className="inline-flex items-center gap-1 bg-white border border-slate-200 shadow-2xs px-2.5 py-1 rounded-xl text-xs">
+                                  <span className="font-semibold text-slate-800">{item.product_name || item.product?.name || 'Bidhaa'}</span>
+                                  <span className="text-[10px] bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded-lg border border-blue-200 font-extrabold uppercase tracking-wider">
                                     {cat}
                                   </span>
-                                  <span className="text-emerald-400 font-bold font-mono">({item.quantity}x)</span>
+                                  <span className="text-emerald-600 font-extrabold font-mono">({item.quantity}x)</span>
                                 </span>
                               );
                             })
                           ) : (
-                            <span>Muamala wa Mauzo</span>
+                            <span className="font-semibold text-slate-700">Muamala wa Mauzo</span>
                           )}
-                          {customerInfo && <span className="text-xs text-amber-400 font-semibold">{customerInfo}</span>}
+                          {customerInfo && <span className="text-xs text-amber-600 font-bold">{customerInfo}</span>}
                         </div>
-                        {isRefunded && <span className="block text-[10px] text-red-400 font-bold uppercase mt-1">(Muamala Umerejeshwa/Refunded)</span>}
+                        {isRefunded && <span className="block text-[10px] text-red-600 font-bold uppercase mt-1">(Muamala Umerejeshwa/Refunded)</span>}
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4">
                         {renderPaymentBadge(tx.payment_method)}
                       </td>
 
-                      <td className={`py-3.5 px-4 text-right font-extrabold font-mono ${isRefunded ? 'line-through text-slate-500' : 'text-emerald-400'}`}>
-                        {Number(tx.total_amount || tx.amount_paid || 0).toLocaleString()} TZS
+                      <td className={`py-4 px-4 text-right font-black font-mono text-base ${isRefunded ? 'line-through text-slate-400' : 'text-blue-950'}`}>
+                        {Number(tx.total_amount || tx.amount_paid || 0).toLocaleString()} <span className="text-xs font-bold text-slate-400">TZS</span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-4 px-4 text-center">
                         {!isRefunded ? (
                           <button
                             onClick={() => { setSelectedTx(tx); setShowRefundModal(true); }}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition shadow-2xs"
                             title="Rejesha Muamala Huu"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                             <span>Refund</span>
                           </button>
                         ) : (
-                          <span className="text-[11px] font-bold text-red-400/80">Refunded</span>
+                          <span className="text-[11px] font-bold text-red-500">Refunded</span>
                         )}
                       </td>
                     </tr>
@@ -569,34 +595,37 @@ export default function Dashboard() {
 
       {/* MODAL YA REFUND */}
       {showRefundModal && selectedTx && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-red-400 font-bold text-base">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-red-600 font-extrabold text-base">
                 <RotateCcw className="w-5 h-5" />
                 <span>Thibitisha Kurejesha Muamala</span>
               </div>
-              <button onClick={() => setShowRefundModal(false)} className="text-slate-400 hover:text-white">
+              <button 
+                onClick={() => setShowRefundModal(false)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-slate-400">Kiasi cha Kurejesha:</span>
-                <span className="text-emerald-400 font-extrabold font-mono text-sm">
+                <span className="text-slate-500 font-semibold">Kiasi cha Kurejesha:</span>
+                <span className="text-blue-950 font-black font-mono text-sm">
                   {Number(selectedTx.total_amount || selectedTx.amount_paid || 0).toLocaleString()} TZS
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Njia ya Malipo:</span>
-                <span className="text-white font-semibold uppercase">{selectedTx.payment_method}</span>
+                <span className="text-slate-500 font-semibold">Njia ya Malipo:</span>
+                <span className="text-slate-800 font-bold uppercase">{selectedTx.payment_method}</span>
               </div>
             </div>
 
             <form onSubmit={handleExecuteRefund} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
                   Sababu ya Kurejesha (Refund Reason) *
                 </label>
                 <textarea
@@ -605,7 +634,7 @@ export default function Dashboard() {
                   placeholder="Mfano: Mteja kaleta bidhaa yenye kasoro / Cashier amekosea kiasi..."
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-red-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
@@ -613,14 +642,14 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setShowRefundModal(false)}
-                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition"
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition"
                 >
                   Ghairi
                 </button>
                 <button
                   type="submit"
                   disabled={isRefunding}
-                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-slate-950 font-extrabold rounded-xl transition flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl transition shadow-md shadow-red-600/20 flex items-center justify-center gap-2"
                 >
                   {isRefunding ? <Loader2 className="w-5 h-5 animate-spin" /> : <RotateCcw className="w-5 h-5" />}
                   <span>Thibitisha Refund</span>
