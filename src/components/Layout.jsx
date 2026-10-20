@@ -22,7 +22,7 @@ import {
   Users as UsersIcon,
   Smartphone,
   RefreshCw,
-  CheckCircle2
+  Sparkles
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -113,7 +113,6 @@ export default function Layout({ children }) {
   // COMPONENT YA MAELEKEZO YA MALIPO (Clean Light Style)
   const PaymentInstructionsCard = () => (
     <div className="space-y-4 text-left">
-      {/* NAMBA YA USAJILI YA MTEJA */}
       <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center justify-between text-xs">
         <div className="flex items-center gap-2 text-emerald-800 font-medium">
           <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -124,7 +123,6 @@ export default function Layout({ children }) {
         </span>
       </div>
 
-      {/* MAELEKEZO YA MALIPO YA SIMU DIRECT */}
       <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
         <div className="flex justify-between items-center pb-2 border-b border-slate-200">
           <span className="text-xs font-bold text-slate-500">Kifurushi cha Mwezi:</span>
@@ -171,7 +169,7 @@ export default function Layout({ children }) {
     </div>
   );
 
-  // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK YA AUTO-ACTIVATION)
+  // KAMA ACCESS IMEISHA KABISA
   if (!loadingBilling && !hasActiveAccess) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
@@ -205,16 +203,16 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans">
 
-      {/* DESKTOP SIDEBAR WITH DEEP BLUE / CLEAN THEME */}
+      {/* DESKTOP SIDEBAR WITH MODERN ANIMATED GLOW & NAV INDICATOR */}
       <aside 
-        className={`bg-blue-950 text-white border-r border-blue-900 hidden md:flex flex-col justify-between shrink-0 transition-all duration-300 shadow-xl ${
+        className={`bg-gradient-to-b from-blue-950 via-slate-900 to-blue-950 text-white border-r border-blue-900/60 hidden md:flex flex-col justify-between shrink-0 transition-all duration-300 shadow-2xl z-20 ${
           isSidebarCollapsed ? 'w-20' : 'w-64'
         }`}
       > 
         <div>
           {/* BRAND HEADER */}
-          <div className={`p-4 border-b border-blue-900 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
-            <div className="flex items-center min-w-0 overflow-hidden bg-white/10 p-1.5 rounded-2xl border border-white/10">
+          <div className={`p-4 border-b border-blue-900/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
+            <div className="flex items-center min-w-0 overflow-hidden bg-white/10 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
               <img 
                 src="/uzakisasa.png" 
                 alt="Selguudi Logo" 
@@ -228,15 +226,15 @@ export default function Layout({ children }) {
 
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 rounded-xl bg-blue-900/80 hover:bg-emerald-500 hover:text-slate-950 text-blue-200 transition shrink-0"
+              className="p-2 rounded-xl bg-blue-900/50 hover:bg-emerald-500 hover:text-slate-950 text-blue-200 transition-all duration-200 shrink-0 hover:scale-105"
               title={isSidebarCollapsed ? "Panua Sidebar" : "Kunja Sidebar"}
             >
               {isSidebarCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
             </button>
           </div>
 
-          {/* Navigation Menu */}
-          <nav className="p-3 space-y-2">
+          {/* Navigation Menu with Modern Hover & Active Animations */}
+          <nav className="p-3 space-y-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -245,25 +243,33 @@ export default function Layout({ children }) {
                   key={item.path}
                   to={item.path}
                   title={isSidebarCollapsed ? item.name : ''}
-                  className={`flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all duration-200 ${
+                  className={`group relative flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all duration-300 transform active:scale-98 ${
                     isActive
-                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
-                      : 'text-blue-200 hover:text-white hover:bg-blue-900/60'
-                  } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-500/25 translate-x-1'
+                      : 'text-slate-300 hover:text-white hover:bg-white/10 hover:translate-x-1'
+                  } ${isSidebarCollapsed ? 'justify-center px-0 transform-none' : ''}`}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {!isSidebarCollapsed && <span>{item.name}</span>}
+                  {/* Glowing Indicator Line for Active Item */}
+                  {isActive && !isSidebarCollapsed && (
+                    <span className="absolute left-0 top-2 bottom-2 w-1.5 bg-white rounded-r-full shadow-md" />
+                  )}
+
+                  <Icon className={`w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                    isActive ? 'text-slate-950' : 'text-emerald-400 group-hover:text-emerald-300'
+                  }`} />
+
+                  {!isSidebarCollapsed && <span className="tracking-wide">{item.name}</span>}
                 </Link>
               );
             })}
 
             {/* USER PROFILE & LOGOUT BADGE */}
-            <div className="pt-3 mt-3 border-t border-blue-900">
-              <div className={`flex items-center justify-between p-2.5 rounded-2xl bg-blue-900/50 border border-blue-800/80 ${
+            <div className="pt-3 mt-3 border-t border-blue-900/60">
+              <div className={`flex items-center justify-between p-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md ${
                 isSidebarCollapsed ? 'justify-center' : ''
               }`}>
                 <div className="flex items-center gap-2.5 overflow-hidden">
-                  <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black">
+                  <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black shadow-md">
                     <User className="w-4 h-4" />
                   </div>
                   {!isSidebarCollapsed && (
@@ -277,7 +283,7 @@ export default function Layout({ children }) {
                 {!isSidebarCollapsed && (
                   <button
                     onClick={handleLogout}
-                    className="p-1.5 rounded-xl text-blue-300 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                    className="p-1.5 rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
                     title="Toka (Logout)"
                   >
                     <LogOut className="w-4 h-4" />
@@ -289,7 +295,7 @@ export default function Layout({ children }) {
         </div>
 
         {!isSidebarCollapsed && (
-          <div className="p-4 border-t border-blue-900 text-[11px] text-blue-300 font-bold">
+          <div className="p-4 border-t border-blue-900/60 text-[11px] text-slate-400 font-bold">
             &copy; {currentYear} Selguudi POS
           </div>
         )}
@@ -297,8 +303,8 @@ export default function Layout({ children }) {
 
       {/* MOBILE SIDEBAR DRAWER */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm md:hidden flex">
-          <div className="w-72 bg-blue-950 text-white h-full border-r border-blue-900 p-5 flex flex-col justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm md:hidden flex">
+          <div className="w-72 bg-gradient-to-b from-blue-950 to-slate-900 text-white h-full border-r border-blue-900 p-5 flex flex-col justify-between shadow-2xl">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-blue-900">
                 <div className="flex items-center min-w-0 overflow-hidden bg-white/10 p-1.5 rounded-2xl">
@@ -324,20 +330,20 @@ export default function Layout({ children }) {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-extrabold text-sm transition-all ${
                         isActive
-                          ? 'bg-emerald-500 text-slate-950'
-                          : 'text-blue-200 hover:text-white hover:bg-blue-900/60'
+                          ? 'bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20'
+                          : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }`}
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-5 h-5 text-emerald-400" />
                       <span>{item.name}</span>
                     </Link>
                   );
                 })}
 
                 <div className="pt-3 mt-3 border-t border-blue-900">
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-900/50 border border-blue-800 mb-3">
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 mb-3">
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-9 h-9 shrink-0 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black">
+                      <div className="w-9 h-9 shrink-0 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black">
                         <User className="w-5 h-5" />
                       </div>
                       <div className="overflow-hidden">
@@ -365,9 +371,20 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-slate-100">
 
-        {/* TRIAL COUNTDOWN BANNER (CLEAN AMBER ACCENT) */}
+        {/* MOBILE MENU TOGGLE BUTTON (MTAA WA JUU KWENYE SIMU TU) */}
+        <div className="md:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between">
+          <button 
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 text-slate-700 hover:text-blue-950 rounded-xl bg-slate-100"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <span className="font-black text-blue-950 text-sm">SELGUUDI POS</span>
+        </div>
+
+        {/* TRIAL COUNTDOWN BANNER (KAMA IPO) */}
         {showTrialBanner && (
-          <div className="bg-amber-500/10 border-b border-amber-300/60 px-6 py-2.5 flex items-center justify-between text-xs text-amber-900 font-extrabold">
+          <div className="bg-amber-500/10 border-b border-amber-300/60 px-6 py-2 flex items-center justify-between text-xs text-amber-900 font-extrabold">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-700" />
               <span>
@@ -376,36 +393,14 @@ export default function Layout({ children }) {
             </div>
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-[11px] transition shadow-md shadow-emerald-600/20"
+              className="px-4 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-[11px] transition shadow-md shadow-emerald-600/20"
             >
               Lipa TZS 20,000
             </button>
           </div>
         )}
 
-        {/* TOP HEADER (CLEAN LIGHT BLUE BACKDROP) */}
-        <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 sticky top-0 z-10 shadow-xs">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 text-slate-600 hover:text-blue-950 rounded-xl bg-slate-100"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <h2 className="text-lg font-black text-blue-950 tracking-tight">
-              {navItems.find(n => n.path === location.pathname)?.name || 'Dashboard'}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
-              System Live
-            </span>
-          </div>
-        </header>
-
-        {/* DYNAMIC PAGE CONTENT */}
+        {/* DYNAMIC PAGE CONTENT (SASAHIVI BANNER INAPANDA JUU KABISA) */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
           {children || <Outlet />}
         </main>
