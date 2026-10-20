@@ -20,7 +20,9 @@ import {
   Loader2,
   ChevronLeft,
   Settings as SettingsIcon,
-  Users as UsersIcon
+  Users as UsersIcon,
+  Smartphone,
+  RefreshCw
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -37,7 +39,7 @@ export default function Layout({ children }) {
   // States za Billing & Subscription Status
   const [billingInfo, setBillingInfo] = useState(null);
   const [loadingBilling, setLoadingBilling] = useState(true);
-  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const currentYear = new Date().getFullYear();
 
@@ -61,42 +63,22 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  // Logic ya Kuanzisha Malipo PesaPal (TZS 20,000)
-  const handlePayWithPesaPal = async () => {
-    setIsInitiatingPayment(true);
-
+  // Kagua Kama Malipo Yameshaingia
+  const handleVerifyPaymentStatus = async () => {
+    setIsVerifying(true);
     try {
-      const res = await apiClient.post('auth/billing/initiate/', {
-        plan: 'MONTHLY'
-      });
-
-      if (res.data && res.data.redirect_url) {
-        window.location.href = res.data.redirect_url;
+      await fetchBillingStatus();
+      const res = await apiClient.get('auth/billing/status/');
+      if (res.data && res.data.has_active_access) {
+        alert("🎉 Hongera! Duka lako limewashwa kikamilifu!");
       } else {
-        alert("Imeshindikana kupata Link ya Malipo kutoka kwenye server. Jaribu tena.");
+        alert("Malipo yako bado hayajasomwa na mfumo. Kama umeshatuma fedha, subiri sekunde chache kisha ubonyeze tena 'Hakiki Malipo'.");
       }
     } catch (err) {
-      console.error("Payment initiation detailed error:", err.response?.data || err.message);
-
-      const status = err.response?.status;
-      const errorData = err.response?.data;
-      let errorMessage = "Imeshindikana kuunganisha na PesaPal Gateway.";
-
-      if (errorData) {
-        if (typeof errorData === 'string') {
-          errorMessage = errorData;
-        } else if (errorData.detail) {
-          errorMessage = errorData.detail;
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      }
-
-      alert(`Hitilafu ya Malipo (${status ? `Code ${status}` : 'Network Error'}): ${errorMessage}`);
+      console.error(err);
+      alert("Imeshindikana kuhakiki taarifa za malipo kwa sasa.");
     } finally {
-      setIsInitiatingPayment(false);
+      setIsVerifying(false);
     }
   };
 
@@ -121,10 +103,10 @@ export default function Layout({ children }) {
 
   const showTrialBanner = Number(daysLeft) > 0;
 
-  // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK)
+  // KAMA ACCESS IMEISHA KABISA (SKRINI YA LOCK YA AUTO-ACTIVATION)
   if (!loadingBilling && !hasActiveAccess) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
 
@@ -133,37 +115,53 @@ export default function Layout({ children }) {
           </div>
 
           <div>
-            <h2 className="text-2xl font-extrabold text-white">Trial ya Bure Imeisha!</h2>
+            <h2 className="text-2xl font-extrabold text-white">Muda wa Trial Umeisha!</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Siku 7 za kujaribu mfumo wa <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> zimekamilika. Lipia ili kuendelea kutumia mfumo.
+              Kifurushi cha <span className="text-emerald-400 font-bold uppercase">{billingInfo?.business_name || user?.business_name}</span> kimeisha. Lipia ili mfumo uwake kiotomatiki.
             </p>
           </div>
 
-          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400">Gharama za Mwezi:</span>
-              <span className="text-emerald-400 font-extrabold font-mono text-lg">20,000 TZS</span>
+          {/* UAELEKEZO YA MALIPO YA SIMU DIRECT */}
+          <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3 text-left">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-800/80">
+              <span className="text-xs text-slate-400">Kifurushi cha Mwezi:</span>
+              <span className="text-emerald-400 font-extrabold font-mono text-base">20,000 TZS</span>
             </div>
-            <div className="flex justify-between items-center text-xs text-slate-500 border-t border-slate-800/80 pt-2">
-              <span>Njia za Malipo:</span>
-              <span className="text-slate-300 font-medium">M-Pesa, TigoPesa, Airtel, Cards</span>
+
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="flex justify-between text-slate-300">
+                <span>Vodacom / M-Pesa:</span>
+                <span className="font-mono font-bold text-emerald-400">0713XXXXXX</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Tigo Pesa:</span>
+                <span className="font-mono font-bold text-emerald-400">0713XXXXXX</span>
+              </div>
+              <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/60">
+                <span>Jina:</span>
+                <span className="font-semibold text-slate-200">SELGUUDI POS</span>
+              </div>
             </div>
           </div>
 
+          <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+            📌 Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara baada ya kutuma fedha!
+          </p>
+
           <button
-            onClick={handlePayWithPesaPal}
-            disabled={isInitiatingPayment}
+            onClick={handleVerifyPaymentStatus}
+            disabled={isVerifying}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
           >
-            {isInitiatingPayment ? (
+            {isVerifying ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Inafungua PesaPal...</span>
+                <span>Inahakiki Malipo...</span>
               </>
             ) : (
               <>
-                <Zap className="w-5 h-5 fill-slate-950" />
-                <span>Lipa TZS 20,000 Sasa (PesaPal)</span>
+                <RefreshCw className="w-5 h-5" />
+                <span>Nishatuma / Hakiki Malipo</span>
               </>
             )}
           </button>
@@ -352,11 +350,11 @@ export default function Layout({ children }) {
               </span>
             </div>
             <button
-              onClick={handlePayWithPesaPal}
-              disabled={isInitiatingPayment}
+              onClick={handleVerifyPaymentStatus}
+              disabled={isVerifying}
               className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold rounded-lg text-[11px] transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
             >
-              {isInitiatingPayment ? 'Inafungua...' : 'Lipa 20,000 Sasa'}
+              {isVerifying ? 'Inahakiki...' : 'Lipa TZS 20,000'}
             </button>
           </div>
         )}

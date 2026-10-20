@@ -177,7 +177,9 @@ export default function Dashboard() {
     } else if (dateFilter === 'yesterday') {
       return `Jana (${yesterday.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'long', year: 'numeric' })})`;
     } else if (dateFilter === 'week') {
-      return `Siku 7 Zilizopita (${sevenDaysAgo.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })} - ${today.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' })})`;
+      const startLbl = sevenDaysAgo.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' });
+      const endLbl = today.toLocaleDateString('sw-TZ', { day: 'numeric', month: 'short' });
+      return `Siku 7 Zilizopita (${startLbl} - ${endLbl})`;
     }
   };
 
