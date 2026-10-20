@@ -369,8 +369,8 @@ export default function Dashboard() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Uza Kisasa
             </div>
             <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
-              <span>Karibu Kwenye Selguudi Dashboard</span>
-              <span className="text-2xl">👋</span>
+              <span>KARIBU SELGUUDI! </span>
+              <span className="text-2xl"></span>
             </h1>
             
             <div className="flex items-center gap-2 text-blue-200 text-sm mt-1.5 font-medium">
