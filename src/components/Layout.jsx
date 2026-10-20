@@ -21,8 +21,7 @@ import {
   Settings as SettingsIcon,
   Users as UsersIcon,
   Smartphone,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 
 export default function Layout({ children }) {
@@ -210,16 +209,20 @@ export default function Layout({ children }) {
         }`}
       > 
         <div>
-          {/* BRAND HEADER */}
+          {/* BRAND HEADER WITH CLEAN WHITE LOGO CONTAINER */}
           <div className={`p-4 border-b border-blue-900/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
-            <div className="flex items-center min-w-0 overflow-hidden bg-white/10 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
+            
+            {/* CONTAINER NYEUPE SAFIFU INAYOFANANA NA DASHBOARD CARD */}
+            <div className={`bg-white p-2.5 rounded-2xl border-2 border-emerald-500/40 shadow-md transition-all duration-300 flex items-center justify-center overflow-hidden ${
+              isSidebarCollapsed ? 'w-12 h-12 p-1.5' : 'w-full'
+            }`}>
               <img 
                 src="/uzakisasa.png" 
                 alt="Selguudi Logo" 
-                className={`object-contain transition-all duration-300 drop-shadow-md ${
+                className={`object-contain transition-all duration-300 drop-shadow-xs ${
                   isSidebarCollapsed 
-                    ? 'h-10 w-auto max-w-[52px]' 
-                    : 'h-12 sm:h-14 w-auto max-w-[200px]'
+                    ? 'h-9 w-auto' 
+                    : 'h-10 sm:h-12 w-auto max-w-[190px]'
                 }`}
               />
             </div>
@@ -307,11 +310,11 @@ export default function Layout({ children }) {
           <div className="w-72 bg-gradient-to-b from-blue-950 to-slate-900 text-white h-full border-r border-blue-900 p-5 flex flex-col justify-between shadow-2xl">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-blue-900">
-                <div className="flex items-center min-w-0 overflow-hidden bg-white/10 p-1.5 rounded-2xl">
+                <div className="bg-white p-2 rounded-2xl border-2 border-emerald-500/40 shadow-md">
                   <img 
                     src="/uzakisasa.png" 
                     alt="Selguudi Logo" 
-                    className="h-12 w-auto max-w-[190px] object-contain drop-shadow-md"
+                    className="h-10 w-auto max-w-[170px] object-contain"
                   />
                 </div>
                 <button onClick={() => setMobileMenuOpen(false)} className="text-blue-200 hover:text-white p-1">
@@ -371,7 +374,7 @@ export default function Layout({ children }) {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-slate-100">
 
-        {/* MOBILE MENU TOGGLE BUTTON (MTAA WA JUU KWENYE SIMU TU) */}
+        {/* MOBILE MENU TOGGLE BUTTON */}
         <div className="md:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between">
           <button 
             onClick={() => setMobileMenuOpen(true)}
@@ -400,7 +403,7 @@ export default function Layout({ children }) {
           </div>
         )}
 
-        {/* DYNAMIC PAGE CONTENT (SASAHIVI BANNER INAPANDA JUU KABISA) */}
+        {/* DYNAMIC PAGE CONTENT */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
           {children || <Outlet />}
         </main>
