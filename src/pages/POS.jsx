@@ -696,7 +696,7 @@ export default function POS() {
                   className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
               </div>
-
+a
               <div>
                 <label className="block text-xs font-black text-blue-950 uppercase mb-1">Namba ya Simu</label>
                 <input
