@@ -69,27 +69,31 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4 my-8">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 py-8 font-sans text-slate-800">
+      <div className="w-full max-w-lg space-y-6">
         
-        {/* Brand Header na Logo Kutoka Public */}
-        <div className="text-center mb-6 flex flex-col items-center">
-          <div className="w-20 h-20 mb-3 flex items-center justify-center rounded-2xl bg-slate-950/40 p-2 border border-slate-800/80 shadow-2xl">
+        {/* BRAND HEADER */}
+        <div className="text-center flex flex-col items-center">
+          <div className="w-48 sm:w-56 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300 bg-white p-3 rounded-3xl border-2 border-emerald-500/30 shadow-md">
             <img 
-              src="/selguudiLogo.png" 
+              src="/uzakisasa.png" 
               alt="Selguudi POS Logo" 
-              className="w-full h-full object-contain rounded-xl"
+              className="w-full h-full object-contain drop-shadow-sm"
             />
           </div>
-          <p className="text-slate-400 text-sm font-medium">Sajili Duka Lako Jipya na Anza Mauzo</p>
+          <p className="text-slate-500 text-xs font-bold mt-3">
+            Sajili Duka Lako Jipya na Anza Mauzo
+          </p>
         </div>
 
         {/* Card Form */}
-        <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
-          <h2 className="text-xl font-bold text-white mb-6">Fomu ya Usajili wa Duka</h2>
+        <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-900 via-emerald-500 to-blue-900" />
+
+          <h2 className="text-xl font-black text-blue-950 mb-6">Fomu ya Usajili wa Duka</h2>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
+            <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-black">
               {error}
             </div>
           )}
@@ -97,10 +101,10 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Business Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Duka / Biashara</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Jina la Duka / Biashara</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Building2 className="w-5 h-5" />
+                  <Building2 className="w-5 h-5 text-emerald-600" />
                 </div>
                 <input
                   type="text"
@@ -108,7 +112,7 @@ export default function Register() {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                   placeholder="Mfano: Pasua Supermarket"
                 />
               </div>
@@ -116,12 +120,12 @@ export default function Register() {
 
             {/* Business Type */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Aina ya Biashara</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Aina ya Biashara</label>
               <select
                 name="business_type"
                 value={formData.business_type}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600 transition"
               >
                 <option value="supermarket">Supermarket / Duka la Rejareja</option>
                 <option value="pharmacy">Duka la Dawa (Pharmacy)</option>
@@ -134,10 +138,10 @@ export default function Register() {
             {/* Owner Full Name & Phone */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina Kamili la Mmiliki</label>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Jina Kamili la Mmiliki</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <User className="w-5 h-5" />
+                    <User className="w-5 h-5 text-emerald-600" />
                   </div>
                   <input
                     type="text"
@@ -145,17 +149,17 @@ export default function Register() {
                     required
                     value={formData.owner_full_name}
                     onChange={handleChange}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                     placeholder="Mfano: Anoldius Ishemwa"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Namba ya Simu</label>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Namba ya Simu</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Phone className="w-5 h-5" />
+                    <Phone className="w-5 h-5 text-emerald-600" />
                   </div>
                   <input
                     type="text"
@@ -163,7 +167,7 @@ export default function Register() {
                     required
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                     placeholder="0712345678"
                   />
                 </div>
@@ -172,10 +176,10 @@ export default function Register() {
 
             {/* Owner Email Input */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Barua Pepe (Email) ya Mmiliki</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Barua Pepe (Email) ya Mmiliki</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-5 h-5" />
+                  <Mail className="w-5 h-5 text-emerald-600" />
                 </div>
                 <input
                   type="email"
@@ -183,7 +187,7 @@ export default function Register() {
                   required
                   value={formData.owner_email}
                   onChange={handleChange}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                   placeholder="anoldpaul86@gmail.com"
                 />
               </div>
@@ -191,14 +195,14 @@ export default function Register() {
 
             {/* Owner Username */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username ya Mmiliki</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Username ya Mmiliki</label>
               <input
                 type="text"
                 name="owner_username"
                 required
                 value={formData.owner_username}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                 placeholder="anoldius_owner"
               />
             </div>
@@ -206,10 +210,10 @@ export default function Register() {
             {/* Owner Password & Confirm Password */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Nenosiri (Password)</label>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Nenosiri (Password)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-5 h-5" />
+                    <Lock className="w-5 h-5 text-emerald-600" />
                   </div>
                   <input
                     type={showPassword ? "text" : "password"}
@@ -217,13 +221,13 @@ export default function Register() {
                     required
                     value={formData.owner_password}
                     onChange={handleChange}
-                    className="w-full pl-11 pr-11 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full pl-11 pr-11 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -231,10 +235,10 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Thibitisha Nenosiri</label>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">Thibitisha Nenosiri</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="w-5 h-5" />
+                    <Lock className="w-5 h-5 text-emerald-600" />
                   </div>
                   <input
                     type={showConfirmPassword ? "text" : "password"}
@@ -242,13 +246,13 @@ export default function Register() {
                     required
                     value={formData.owner_confirm_password}
                     onChange={handleChange}
-                    className="w-full pl-11 pr-11 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full pl-11 pr-11 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -259,7 +263,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-4 py-3.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
+              className="w-full mt-4 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
             >
               {isSubmitting ? 'Inasajili Duka...' : 'Kamilisha Usajili'}
               <ArrowRight className="w-5 h-5" />
@@ -267,17 +271,17 @@ export default function Register() {
           </form>
 
           {/* Link to Login */}
-          <div className="mt-6 text-center text-sm text-slate-400">
+          <div className="mt-6 text-center text-sm font-semibold text-slate-600">
             Tayari una duka?{' '}
-            <Link to="/login" className="text-emerald-400 hover:underline font-semibold">
+            <Link to="/login" className="text-emerald-700 hover:underline font-black">
               Ingia Hapa
             </Link>
           </div>
         </div>
 
         {/* Security Badge */}
-        <div className="mt-6 text-center flex items-center justify-center gap-2 text-xs text-slate-500">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" />
+        <div className="text-center flex items-center justify-center gap-2 text-xs font-bold text-slate-500">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
           <span>Multi-Tenant Enterprise Security Protected</span>
         </div>
       </div>

@@ -153,78 +153,81 @@ export default function Expenses() {
 
   const getCategoryBadge = (cat) => {
     const categories = {
-      UTILITIES: { label: 'Umeme / Maji', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-      FOOD: { label: 'Chakula / Vinywaji', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-      TRANSPORT: { label: 'Usafiri / Nauli', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-      SUPPLIES: { label: 'Vifaa vya Ofisi', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
-      OTHER: { label: 'Mengineyo', color: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
+      UTILITIES: { label: 'Umeme / Maji', color: 'bg-amber-50 text-amber-800 border-amber-300' },
+      FOOD: { label: 'Chakula / Vinywaji', color: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+      TRANSPORT: { label: 'Usafiri / Nauli', color: 'bg-blue-50 text-blue-800 border-blue-300' },
+      SUPPLIES: { label: 'Vifaa vya Ofisi', color: 'bg-blue-50 text-blue-900 border-blue-200' },
+      OTHER: { label: 'Mengineyo', color: 'bg-slate-100 text-slate-700 border-slate-300' },
     };
     return categories[cat] || categories.OTHER;
   };
 
   return (
-    <div className="space-y-6 relative font-sans">
+    <div className="space-y-6 relative font-sans text-slate-800 pb-12">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-emerald-500 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400 animate-bounce text-sm">
-          <Check className="w-5 h-5 bg-slate-950 text-emerald-400 rounded-full p-0.5" />
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-3 bg-emerald-600 text-white font-black px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-500 animate-bounce text-sm">
+          <Check className="w-5 h-5 bg-white text-emerald-700 rounded-full p-0.5" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Wallet className="w-7 h-7 text-emerald-400" />
-          <span>Matumizi ya Duka (Expenses)</span>
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">Sajili matumizi ya kila siku ili kupata hesabu halisi za faida.</p>
+      <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="z-10 relative">
+          <h1 className="text-2xl font-black text-white flex items-center gap-2">
+            <Wallet className="w-7 h-7 text-emerald-400" />
+            <span>Matumizi ya Duka (Expenses)</span>
+          </h1>
+          <p className="text-blue-200 text-sm mt-1">Sajili matumizi ya kila siku ili kupata hesabu halisi za faida.</p>
+        </div>
       </div>
 
       {/* SUMMARY CARDS: LEO, JANA, WIKI HII, JUMLA YOTE */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Card 1: Leo */}
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+        <div className="bg-white border-2 border-emerald-500/40 p-5 rounded-3xl shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Leo</span>
-            <Clock className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Leo</span>
+            <Clock className="w-4 h-4 text-emerald-600" />
           </div>
-          <p className="text-xl font-extrabold text-emerald-400 font-mono">
+          <p className="text-xl font-black text-emerald-700 font-mono">
             {todayExpenses.toLocaleString()} TZS
           </p>
         </div>
 
         {/* Card 2: Jana */}
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+        <div className="bg-white border-2 border-emerald-500/40 p-5 rounded-3xl shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Jana</span>
-            <Calendar className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Jana</span>
+            <Calendar className="w-4 h-4 text-blue-900" />
           </div>
-          <p className="text-xl font-extrabold text-blue-400 font-mono">
+          <p className="text-xl font-black text-blue-950 font-mono">
             {yesterdayExpenses.toLocaleString()} TZS
           </p>
         </div>
 
         {/* Card 3: Wiki Hii */}
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+        <div className="bg-white border-2 border-emerald-500/40 p-5 rounded-3xl shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Wiki Hii</span>
-            <TrendingDown className="w-4 h-4 text-purple-400" />
+            <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Wiki Hii</span>
+            <TrendingDown className="w-4 h-4 text-blue-700" />
           </div>
-          <p className="text-xl font-extrabold text-purple-400 font-mono">
+          <p className="text-xl font-black text-blue-900 font-mono">
             {thisWeekExpenses.toLocaleString()} TZS
           </p>
         </div>
 
         {/* Card 4: Jumla Kuu */}
-        <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-2xl">
+        <div className="bg-white border-2 border-emerald-500/40 p-5 rounded-3xl shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Jumla Yote</span>
-            <Receipt className="w-4 h-4 text-amber-400" />
+            <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">Jumla Yote</span>
+            <Receipt className="w-4 h-4 text-amber-600" />
           </div>
-          <p className="text-xl font-extrabold text-amber-400 font-mono">
+          <p className="text-xl font-black text-amber-600 font-mono">
             {totalExpense.toLocaleString()} TZS
           </p>
         </div>
@@ -235,15 +238,15 @@ export default function Expenses() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Form ya Kuingiza Matumizi */}
-        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl space-y-5 h-fit">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Plus className="w-5 h-5 text-emerald-400" />
+        <div className="bg-white border-2 border-emerald-500/40 p-6 rounded-3xl space-y-5 h-fit shadow-sm">
+          <h3 className="text-lg font-black text-blue-950 flex items-center gap-2">
+            <Plus className="w-5 h-5 text-emerald-600" />
             <span>Sajili Matumizi Mpya</span>
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Jina la Matumizi</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Jina la Matumizi</label>
               <input
                 type="text"
                 name="title"
@@ -251,12 +254,12 @@ export default function Expenses() {
                 value={formData.title}
                 onChange={handleInputChange}
                 placeholder="Mfano: LUKU ya dukani, Nauli, Chakula"
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Kiasi (TZS)</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Kiasi (TZS)</label>
               <input
                 type="number"
                 name="amount"
@@ -265,17 +268,17 @@ export default function Expenses() {
                 value={formData.amount}
                 onChange={handleInputChange}
                 placeholder="5000"
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm font-mono"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-mono font-bold focus:outline-none focus:border-emerald-600 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Aina ya Matumizi</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Aina ya Matumizi</label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 text-sm"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600 text-sm"
               >
                 <option value="FOOD">Chakula / Vinywaji</option>
                 <option value="UTILITIES">Umeme / Maji</option>
@@ -286,21 +289,21 @@ export default function Expenses() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Maelezo ya Ziada (Hiari)</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Maelezo ya Ziada (Hiari)</label>
               <textarea
                 name="description"
                 rows="3"
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="Andika maelezo kwa ufupi..."
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 resize-none text-sm"
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600 resize-none text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 font-bold text-slate-950 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition text-sm"
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 font-black text-white rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition text-sm"
             >
               {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
               <span>Hifadhi Matumizi</span>
@@ -309,19 +312,19 @@ export default function Expenses() {
         </div>
 
         {/* Orodha ya Matumizi (Expenses List) */}
-        <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-emerald-400" />
+        <div className="lg:col-span-2 bg-white border-2 border-emerald-500/40 rounded-3xl p-6 shadow-sm">
+          <h3 className="text-lg font-black text-blue-950 mb-4 flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-emerald-600" />
             <span>Orodha ya Matumizi yaliyorekodiwa</span>
           </h3>
 
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+            <div className="flex items-center justify-center py-16 text-slate-400 gap-2 font-medium">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
               <span>Inapakia matumizi...</span>
             </div>
           ) : expenses.length === 0 ? (
-            <div className="text-center py-16 text-slate-500 text-sm">
+            <div className="text-center py-16 text-slate-400 text-sm font-semibold">
               Hakuna matumizi yaliyorekodiwa bado.
             </div>
           ) : (
@@ -331,35 +334,35 @@ export default function Expenses() {
                 return (
                   <div 
                     key={exp.id} 
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-950/80 rounded-2xl border border-slate-800/80 gap-3 hover:border-slate-700 transition"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 gap-3 hover:border-emerald-500/50 transition shadow-2xs"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-base">{exp.title}</span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge.color}`}>
+                        <span className="font-extrabold text-blue-950 text-base">{exp.title}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border ${badge.color}`}>
                           {badge.label}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400">{exp.description || 'Bila maelezo'}</p>
-                      <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
+                      <p className="text-xs text-slate-600 font-medium">{exp.description || 'Bila maelezo'}</p>
+                      <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1 font-semibold">
                         <span className="flex items-center gap-1">
-                          <User className="w-3 h-3 text-slate-400" />
+                          <User className="w-3 h-3 text-blue-900" />
                           {exp.recorded_by_name || 'Admin'}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-slate-400" />
+                          <Calendar className="w-3 h-3 text-emerald-600" />
                           {new Date(exp.created_at).toLocaleString()}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 border-slate-800/60 pt-2 sm:pt-0">
-                      <span className="font-extrabold font-mono text-amber-400 text-base">
+                    <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 border-slate-200 pt-2 sm:pt-0">
+                      <span className="font-black font-mono text-red-600 text-base">
                         -{Number(exp.amount).toLocaleString()} TZS
                       </span>
                       <button
                         onClick={() => handleDelete(exp.id)}
-                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
                         title="Futa Matumizi"
                       >
                         <Trash2 className="w-4 h-4" />

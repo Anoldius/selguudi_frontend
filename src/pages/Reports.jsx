@@ -10,7 +10,8 @@ import {
   YAxis, 
   Tooltip, 
   ResponsiveContainer, 
-  CartesianGrid 
+  CartesianGrid,
+  Legend
 } from 'recharts';
 import { 
   BarChart3, 
@@ -186,13 +187,13 @@ export default function Reports() {
 
   if (!loading && !canSeeProfit) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans">
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 max-w-md text-center space-y-4 shadow-2xl">
-          <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto">
+      <div className="min-h-[70vh] flex items-center justify-center p-4 font-sans text-slate-800">
+        <div className="bg-white border-2 border-red-500/40 rounded-3xl p-8 max-w-md text-center space-y-4 shadow-xl">
+          <div className="w-16 h-16 bg-red-50 border border-red-200 text-red-600 rounded-2xl flex items-center justify-center mx-auto">
             <ShieldAlert className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-white">Huwezi Kuona Ukurasa Huu</h3>
-          <p className="text-sm text-slate-400">
+          <h3 className="text-xl font-black text-blue-950">Huwezi Kuona Ukurasa Huu</h3>
+          <p className="text-sm font-semibold text-slate-500">
             Ruhusa ya kuona Ripoti & Takwimu imezimwa kwenye Mipangilio ya Duka na Mmiliki (Boss).
           </p>
         </div>
@@ -306,7 +307,7 @@ export default function Reports() {
     let currentY = 12;
 
     try {
-      const logoData = await getProportionalImage('/Selguudiadobe.png', 42);
+      const logoData = await getProportionalImage('/uzakisasa.png', 42);
       doc.addImage(logoData.base64, 'PNG', 14, 6, logoData.width, logoData.height); 
       currentY = 6 + logoData.height + 6;
     } catch (err) {
@@ -385,26 +386,51 @@ export default function Reports() {
     doc.save(`Ripoti_${businessName}_${startDate}_hadi_${endDate}.pdf`);
   };
 
+  // Custom Recharts Tooltip for Modern Light Look
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white border-2 border-emerald-500/50 p-3 rounded-2xl shadow-xl font-sans text-xs space-y-1.5">
+          <p className="font-black text-blue-950 border-b border-slate-100 pb-1">{label}</p>
+          {payload.map((entry, index) => (
+            <div key={`item-${index}`} className="flex items-center justify-between gap-4">
+              <span className="font-extrabold flex items-center gap-1.5" style={{ color: entry.color }}>
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                {entry.name}:
+              </span>
+              <span className="font-black font-mono text-blue-950">
+                {Number(entry.value).toLocaleString()} TZS
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans text-slate-800 pb-12">
       
       {/* Top Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-6 rounded-3xl">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="z-10 relative">
+          <h1 className="text-2xl font-black text-white flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-emerald-400" />
             <span>Ripoti & Takwimu za Mauzo</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-blue-200 text-sm mt-1">
             Kagua mchanganuo wa mauzo, faida, na bidhaa zinazotoka zaidi kulingana na kipindi ulichochagua.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 z-10">
           <button
             onClick={exportPDF}
             disabled={loading || topProducts.length === 0}
-            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition"
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition"
           >
             <Download className="w-4 h-4" />
             <span>Pakua PDF</span>
@@ -412,7 +438,7 @@ export default function Reports() {
 
           <button
             onClick={fetchReportData}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-2xl border border-slate-700 transition"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-emerald-300 text-xs font-extrabold rounded-2xl border border-white/20 transition shadow-md"
           >
             <RefreshCw className="w-4 h-4 text-emerald-400" />
             <span>Refresh</span>
@@ -421,19 +447,19 @@ export default function Reports() {
       </div>
 
       {/* FILTER CARD */}
-      <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-3xl space-y-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-          <Filter className="w-4 h-4 text-emerald-400" />
+      <div className="bg-white border-2 border-emerald-500/40 p-5 rounded-3xl space-y-4 shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-black text-blue-950 uppercase tracking-wider">
+          <Filter className="w-4 h-4 text-emerald-600" />
           <span>Chagua Kipindi cha Takwimu:</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Chaguo la Haraka</label>
+            <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Chaguo la Haraka</label>
             <select
               value={periodOption}
               onChange={(e) => setPeriodOption(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl text-blue-950 font-bold text-sm focus:outline-none focus:border-emerald-600"
             >
               <option value="today">Leo</option>
               <option value="yesterday">Jana</option>
@@ -454,32 +480,32 @@ export default function Reports() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Kuanzia Tarehe</label>
+            <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Kuanzia Tarehe</label>
             <input
               type="date"
               value={startDate}
               disabled={periodOption !== 'custom'}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 font-mono"
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl text-blue-950 text-sm focus:outline-none focus:border-emerald-600 disabled:opacity-50 font-mono font-bold"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Hadi Tarehe</label>
+            <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Hadi Tarehe</label>
             <input
               type="date"
               value={endDate}
               disabled={periodOption !== 'custom'}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50 font-mono"
+              className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl text-blue-950 text-sm focus:outline-none focus:border-emerald-600 disabled:opacity-50 font-mono font-bold"
             />
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+        <div className="flex items-center justify-center py-20 text-slate-500 gap-2 font-medium">
+          <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
           <span>Inapakia takwimu na ripoti...</span>
         </div>
       ) : (
@@ -488,114 +514,146 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             
             {/* Mauzo Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Jumla ya Mauzo</span>
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Jumla ya Mauzo</span>
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl">
                   <DollarSign className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-white font-mono">
-                  {Number(totalSalesAmount).toLocaleString()} <span className="text-xs font-normal text-slate-400">TZS</span>
+                <h3 className="text-2xl font-black text-blue-950 font-mono">
+                  {Number(totalSalesAmount).toLocaleString()} <span className="text-xs font-bold text-slate-500">TZS</span>
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-400">Jumla ya fedha zilizoingia</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Jumla ya fedha zilizoingia</p>
             </div>
 
             {/* Estimated Profit Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
-                <div className="p-3 rounded-2xl border bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
+                <div className="p-3 rounded-2xl border bg-emerald-50 border-emerald-200 text-emerald-700">
                   <TrendingUp className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="text-2xl font-extrabold font-mono text-emerald-400">
+                <h3 className="text-2xl font-black font-mono text-emerald-700">
                   {Number(calculatedProfit).toLocaleString()} TZS
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-400">Mauzo minus Bei za kununulia</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Mauzo minus Bei za kununulia</p>
             </div>
 
             {/* Total Receipts Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Miamala / Risiti</span>
-                <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Miamala / Risiti</span>
+                <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-2xl">
                   <ShoppingBag className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-white font-mono">
-                  {filteredTransactions.length} <span className="text-xs font-normal text-slate-400">Risiti</span>
+                <h3 className="text-2xl font-black text-blue-950 font-mono">
+                  {filteredTransactions.length} <span className="text-xs font-bold text-slate-500">Risiti</span>
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-400">Idadi ya mauzo yaliyofanyika</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Idadi ya mauzo yaliyofanyika</p>
             </div>
 
             {/* Low Stock Items Count */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Alert ya Stoko</span>
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Alert ya Stoko</span>
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-600 rounded-2xl">
                   <AlertTriangle className="w-6 h-6" />
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="text-2xl font-extrabold text-amber-400 font-mono">
-                  {lowStockCount} <span className="text-xs font-normal text-slate-400">Bidhaa</span>
+                <h3 className="text-2xl font-black text-amber-600 font-mono">
+                  {lowStockCount} <span className="text-xs font-bold text-slate-500">Bidhaa</span>
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-400">Bidhaa zinazokaribia kuisha</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Bidhaa zinazokaribia kuisha</p>
             </div>
 
           </div>
 
-          {/* BAR CHART SECTION: GRAPH YA MWENENDO WA MAUZO NA FAIDA */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
+          {/* BAR CHART SECTION: GRAPH YA KISASA YA MWENENDO WA MAUZO NA FAIDA */}
+          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
-                  <span>Mwenendo wa Mauzo na Faida (Chart)</span>
+                <h2 className="text-lg font-black text-blue-950 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-600" />
+                  <span>Mwenendo wa Mauzo na Faida (Graph)</span>
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5"> Mchanganuo wa mauzo na faida kwa kila siku kulingana na tarehe zilizochaguliwa</p>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Mchanganuo wa mauzo na faida kwa kila siku kulingana na tarehe zilizochaguliwa</p>
               </div>
 
-              <div className="flex items-center gap-4 text-xs font-semibold">
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+              <div className="flex items-center gap-4 text-xs font-extrabold">
+                <div className="flex items-center gap-1.5 text-blue-950">
+                  <span className="w-3.5 h-3.5 rounded-md bg-emerald-500 inline-block shadow-2xs" />
                   <span>Mauzo</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span>
+                <div className="flex items-center gap-1.5 text-blue-950">
+                  <span className="w-3.5 h-3.5 rounded-md bg-blue-900 inline-block shadow-2xs" />
                   <span>Faida</span>
                 </div>
               </div>
             </div>
 
             {chartData.length === 0 ? (
-              <p className="text-sm text-slate-500 py-12 text-center">Hakuna data za mauzo za kuonyesha kwenye graph kwa kipindi hiki.</p>
+              <p className="text-sm text-slate-400 font-semibold py-12 text-center">Hakuna data za mauzo za kuonyesha kwenye graph kwa kipindi hiki.</p>
             ) : (
-              <div className="h-72 w-full">
+              <div className="h-80 w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="date" stroke="#64748b" fontSize={12} tickLine={false} />
+                    
+                    {/* GRADIENT DEFINITIONS FOR VIBRANT MODERN BARS */}
+                    <defs>
+                      <linearGradient id="mauzoGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="faidaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#1e3a8a" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#1e1b4b" stopOpacity={0.85} />
+                      </linearGradient>
+                    </defs>
+
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#64748b" 
+                      fontSize={11} 
+                      fontWeight={700}
+                      tickLine={false} 
+                      axisLine={{ stroke: '#cbd5e1' }}
+                    />
                     <YAxis 
                       stroke="#64748b" 
                       fontSize={11} 
+                      fontWeight={700}
                       tickLine={false}
+                      axisLine={false}
                       tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} 
                     />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '16px', color: '#fff' }}
-                      formatter={(value) => [`${Number(value).toLocaleString()} TZS`]}
+                    <Tooltip content={<CustomTooltip />} />
+                    
+                    <Bar 
+                      dataKey="mauzo" 
+                      name="Mauzo" 
+                      fill="url(#mauzoGradient)" 
+                      radius={[8, 8, 0, 0]} 
+                      maxBarSize={40}
                     />
-                    <Bar dataKey="mauzo" name="Mauzo (TZS)" fill="#10b981" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="faida" name="Faida (TZS)" fill="#22d3ee" radius={[6, 6, 0, 0]} />
+                    <Bar 
+                      dataKey="faida" 
+                      name="Faida" 
+                      fill="url(#faidaGradient)" 
+                      radius={[8, 8, 0, 0]} 
+                      maxBarSize={40}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -603,30 +661,30 @@ export default function Reports() {
           </div>
 
           {/* TOP SELLING PRODUCTS TABLE */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <PackageCheck className="w-5 h-5 text-emerald-400" />
+          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 shadow-sm">
+            <h2 className="text-lg font-black text-blue-950 mb-4 flex items-center gap-2">
+              <PackageCheck className="w-5 h-5 text-emerald-600" />
               <span>Bidhaa Zinazotoka Sana ({startDate} hadi {endDate})</span>
             </h2>
 
             {topProducts.length === 0 ? (
-              <p className="text-sm text-slate-500 py-6 text-center">Hakuna data za bidhaa zilizouzwa kwa kipindi hiki.</p>
+              <p className="text-sm text-slate-400 font-semibold py-6 text-center">Hakuna data za bidhaa zilizouzwa kwa kipindi hiki.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/50 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-black">
                       <th className="py-3.5 px-4">Jina la Bidhaa</th>
                       <th className="py-3.5 px-4 text-center">Idadi Iliyouzwa</th>
                       <th className="py-3.5 px-4 text-right">Jumla ya Mapato</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-sm text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-sm text-slate-700 font-semibold">
                     {topProducts.map((p, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/30 transition">
-                        <td className="py-3.5 px-4 font-semibold text-white">{p.product__name}</td>
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-200">{p.total_quantity_sold} pcs</td>
-                        <td className="py-3.5 px-4 text-right text-emerald-400 font-mono font-bold">
+                      <tr key={idx} className="hover:bg-slate-50 transition">
+                        <td className="py-3.5 px-4 font-extrabold text-blue-950">{p.product__name}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-600">{p.total_quantity_sold} pcs</td>
+                        <td className="py-3.5 px-4 text-right text-blue-950 font-mono font-black">
                           {Number(p.total_revenue || 0).toLocaleString()} TZS
                         </td>
                       </tr>

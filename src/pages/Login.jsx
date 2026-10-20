@@ -45,31 +45,33 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(34,197,94,0.15),rgba(255,255,255,0))] p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4 font-sans text-slate-800">
+      <div className="w-full max-w-md space-y-6">
         
-        {/* BRAND HEADER (Logo Imepunguzwa Ukubwa) */}
-        <div className="text-center mb-5 flex flex-col items-center">
-          <div className="w-36 sm:w-44 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300">
+        {/* BRAND HEADER */}
+        <div className="text-center flex flex-col items-center">
+          <div className="w-44 sm:w-52 h-auto flex items-center justify-center transition-transform hover:scale-105 duration-300 bg-white p-3 rounded-3xl border-2 border-emerald-500/30 shadow-md">
             <img 
-              src="/Selguudiadobe.png" 
+              src="/uzakisasa.png" 
               alt="Selguudi POS Logo" 
-              className="w-full h-full object-contain drop-shadow-xl"
+              className="w-full h-full object-contain drop-shadow-sm"
             />
           </div>
-          <p className="text-slate-400 text-xs font-medium mt-1.5">
+          <p className="text-slate-500 text-xs font-bold mt-3">
             Mfumo wa Kisasa wa Mauzo na Stoko
           </p>
         </div>
 
         {/* Card Form */}
-        <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+        <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-8 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-900 via-emerald-500 to-blue-900" />
+
+          <h2 className="text-xl font-black text-blue-950 mb-6 flex items-center gap-2">
             <span>Ingia Kwenye Duka Lako</span>
           </h2>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
+            <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-black">
               {error}
             </div>
           )}
@@ -77,10 +79,10 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Username Input */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">USERNAME YA DUKA</label>
+              <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-2">USERNAME YA DUKA</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <User className="w-5 h-5" />
+                  <User className="w-5 h-5 text-emerald-600" />
                 </div>
                 <input
                   type="text"
@@ -90,7 +92,7 @@ export default function Login() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck="false"
-                  className="w-full pl-11 pr-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition-all duration-200"
                   placeholder="Weka username ya duka"
                 />
               </div>
@@ -99,17 +101,17 @@ export default function Login() {
             {/* Password Input */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">NENOSIRI (PASSWORD)</label>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider">NENOSIRI (PASSWORD)</label>
                 <Link 
                   to="/forgot-password" 
-                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition hover:underline"
+                  className="text-xs font-extrabold text-emerald-700 hover:text-emerald-800 transition hover:underline"
                 >
                   Umesahau Password?
                 </Link>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="w-5 h-5" />
+                  <Lock className="w-5 h-5 text-emerald-600" />
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -119,13 +121,13 @@ export default function Login() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck="false"
-                  className="w-full pl-11 pr-12 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200"
+                  className="w-full pl-11 pr-12 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition-all duration-200"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -136,16 +138,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 py-3.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="w-full mt-2 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
               {isSubmitting ? 'Inahakiki...' : 'Login'}
               <ArrowRight className="w-5 h-5" />
             </button>
 
             {/* Register Link */}
-            <div className="mt-6 text-center text-sm text-slate-400">
+            <div className="mt-6 text-center text-sm font-semibold text-slate-600">
               Hujasajili Duka Bado?{' '}
-              <Link to="/register" className="text-emerald-400 hover:underline font-semibold">
+              <Link to="/register" className="text-emerald-700 hover:underline font-black">
                 Sajili Duka Lako Hapa
               </Link>
             </div>
@@ -154,8 +156,8 @@ export default function Login() {
         </div>
 
         {/* Security Badge */}
-        <div className="mt-8 text-center flex items-center justify-center gap-2 text-xs text-slate-500">
-          <ShieldCheck className="w-4 h-4 text-emerald-500" />
+        <div className="text-center flex items-center justify-center gap-2 text-xs font-bold text-slate-500">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
           <span>Protected by Enterprise End-to-End Encryption</span>
         </div>
       </div>
