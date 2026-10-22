@@ -47,7 +47,7 @@ export default function Debts() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [customerData, setCustomerData] = useState({ name: '', phone: '' });
-  const [debtData, setDebtData] = useState({ customer: '', total_amount: '', due_date: '' });
+  const [debtData, setDebtData] = useState({ customer: '', total_amount: '', due_date: '', items_summary: '' });
 
   // Floating Toast State
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -111,6 +111,7 @@ export default function Debts() {
         customer: debtData.customer,
         total_amount: amount,
         remaining_amount: amount,
+        items_summary: debtData.items_summary || 'Bidhaa mbalimbali'
       };
 
       if (debtData.due_date && debtData.due_date.trim() !== '') {
@@ -120,7 +121,7 @@ export default function Debts() {
       await apiClient.post('sales/debts/', payload);
       triggerToast("Deni jipya limesajiliwa vizuri! 📝", "success");
       setShowAddDebtModal(false);
-      setDebtData({ customer: '', total_amount: '', due_date: '' });
+      setDebtData({ customer: '', total_amount: '', due_date: '', items_summary: '' });
       fetchData();
     } catch (err) {
       console.error("Error creating debt:", err.response?.data);
@@ -399,7 +400,6 @@ export default function Debts() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredDebts.map((d) => {
-                    // Mchanganuo wa bidhaa alizokopa
                     const itemsList = d.items || d.sale_items || [];
 
                     return (
@@ -413,7 +413,6 @@ export default function Debts() {
                           )}
                         </td>
 
-                        {/* COLUMN MPYA: BIDHAA ALIZOKOPA */}
                         <td className="py-4 px-6 max-w-xs">
                           {itemsList.length > 0 ? (
                             <div className="space-y-1">
@@ -430,7 +429,9 @@ export default function Debts() {
                               📦 {d.items_summary}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">Bila Mchanganuo</span>
+                            <span className="text-xs font-slate-400 italic bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
+                              ⚠️ Deni la Jumla (Bila Mchanganuo)
+                            </span>
                           )}
                         </td>
 
@@ -620,7 +621,7 @@ export default function Debts() {
         </div>
       )}
 
-      {/* MODAL 3: RECORD DEBT */}
+      {/* MODAL 3: RECORD DEBT (YENYE SEHEMU YA KUWEKA AINA YA BIDHAA ZILIZOKOPWA) */}
       {showAddDebtModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
           <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl animate-fadeIn">
@@ -656,6 +657,18 @@ export default function Debts() {
                   value={debtData.total_amount}
                   onChange={(e) => setDebtData({ ...debtData, total_amount: e.target.value })}
                   className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-mono font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              {/* SEHEMU MPYA YA KUIWEKEA BIDHAA / MAELEZO YA VITY VILIVYOKOPWA */}
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Bidhaa Alizokopa (Maelezo)</label>
+                <input
+                  type="text"
+                  placeholder="Mfano: Sukari kilo 2, Mchele kilo 5"
+                  value={debtData.items_summary}
+                  onChange={(e) => setDebtData({ ...debtData, items_summary: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600 text-sm"
                 />
               </div>
 
