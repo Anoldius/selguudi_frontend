@@ -271,7 +271,7 @@ export default function POS() {
           }
         }
 
-        // TUMA MCHANGANUO WA BIDHAA ALIZOKOPA (ITEMS BREAKDOWN) KWENYE DENI
+        // TUMA MCHANGANUO WA BIDHAA ALIZOKOPA (ITEMS BREAKDOWN)
         if (customerId) {
           const debtPayload = {
             customer: customerId,
@@ -747,7 +747,7 @@ export default function POS() {
         </div>
       )}
 
-      {/* MODAL YA SAJILI DENI YENYE KUVUTA MTEJA ALIYESAJILIWA */}
+      {/* MODAL FORM YA SAJILI DENI YENYE CHAGUA MTEJA ALIYESAJILIWA */}
       {showDebtModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-2 border-amber-500/40 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-fadeIn">
@@ -763,7 +763,7 @@ export default function POS() {
 
             <form onSubmit={handleDebtSubmit} className="space-y-3">
               
-              {/* SELECTOR YA KUVUTA MTEJA ALIYESAJILIWA */}
+              {/* SELECTOR YA CHAGUA MTEJA ALIYESAJILIWA KABISA */}
               <div>
                 <label className="block text-xs font-black text-blue-950 uppercase mb-1">Chagua Mteja Aliyesajiliwa (Hiari)</label>
                 <select
@@ -771,7 +771,7 @@ export default function POS() {
                   onChange={(e) => handleSelectCustomer(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 >
-                  <option value="">-- Mteja Mpya / Andika Jina Chini --</option>
+                  <option value="">-- Mteja Mpya / Andika Chini --</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} {c.phone ? `(${c.phone})` : ''}
@@ -789,7 +789,7 @@ export default function POS() {
                   value={customerName}
                   onChange={(e) => {
                     setCustomerName(e.target.value);
-                    if (selectedCustomerId) setSelectedCustomerId('');
+                    if (selectedCustomerId) setSelectedCustomerId(''); // Weka mteja mpya kama anahariri jina
                   }}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
