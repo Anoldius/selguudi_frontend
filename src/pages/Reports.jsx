@@ -10,8 +10,7 @@ import {
   YAxis, 
   Tooltip, 
   ResponsiveContainer, 
-  CartesianGrid,
-  Legend
+  CartesianGrid
 } from 'recharts';
 import { 
   BarChart3, 
@@ -24,7 +23,9 @@ import {
   Filter,
   RefreshCw,
   ShieldAlert,
-  Download
+  Download,
+  Calendar,
+  Store
 } from 'lucide-react';
 
 export default function Reports() {
@@ -163,12 +164,10 @@ export default function Reports() {
     );
   }
 
-  // CHUJA MIAMALA: ONDOA REFUNDED NA UCHUJE KULINGANA NA TAREHE. 
-  // ONDOA PIA MALIPO YA "credit" (DENI) ILI KUPATA MAUZO HALISI.
+  // CHUJA MIAMALA: ONDOA REFUNDED NA UCHUJE MAUZO HALISI (BILA CREDIT/DENI)
   const filteredTransactions = allTransactions.filter(tx => {
     if (!tx.created_at || tx.status === 'REFUNDED' || tx.status === 'CANCELLED') return false;
     
-    // KAMA UNATAKA KUCHUJA MAUZO HALISI BILA KUJUMUISHA DENI (CREDIT), ONDOA PAYMENT METHOD YA CREDIT HAPA:
     const paymentMethod = tx.payment_method?.toLowerCase() || '';
     if (paymentMethod === 'credit' || paymentMethod === 'deni') return false;
 
@@ -180,12 +179,10 @@ export default function Reports() {
     return true;
   });
 
-  // 1. KOKOTOA JUMLA YA MAUZO HALISI YA KIPINDI HICHO
   const totalSalesAmount = filteredTransactions.reduce((sum, tx) => {
     return sum + Number(tx.total_amount ?? tx.amount_paid ?? 0);
   }, 0);
 
-  // 2. KOKOTOA FAIDA NA TOP SELLING PRODUCTS
   let calculatedProfit = 0;
   const productSalesMap = {};
   const dailyChartMap = {};
@@ -229,7 +226,6 @@ export default function Reports() {
   const topProducts = Object.values(productSalesMap).sort((a, b) => b.total_quantity_sold - a.total_quantity_sold);
   const chartData = Object.values(dailyChartMap);
 
-  // 3. LOW STOCK COUNT
   const lowStockCount = products.filter(p => {
     const stock = Number(p.quantity ?? p.stock_quantity ?? 0);
     const minAlert = Number(p.min_stock_alert || 5);
@@ -262,41 +258,46 @@ export default function Reports() {
     });
   };
 
-  // EXPORT PDF YENYE LOGO KWENYE KONTENA JEPESI (WHITE BOX)
+  // EXPORT PDF YENYE MUONEKANO WA KISHUA NA LOGO SAFI BILA KUKATIKA
   const exportPDF = async () => {
     const doc = new jsPDF();
-    const businessName = user?.business_name || 'Selguudi POS';
+    const shopName = user?.business_name || 'QUEEN SHOP';
 
+    // Header Background ya Kibabe (Bluu Nzito)
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 55, 'F');
-
-    let currentY = 12;
+    doc.rect(0, 0, 210, 45, 'F');
 
     try {
-      // Weka Logo ndani ya sanduku jeupe kwenye PDF kwanza (White background box simulation)
+      // Weka Logo Ndani ya Boksi Jeupec (White Container) Juu Kushoto
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(12, 5, 46, 22, 2, 2, 'F');
+      doc.roundedRect(14, 8, 32, 28, 2, 2, 'F');
 
-      const logoData = await getProportionalImage('/uzakisasa.png', 40);
-      doc.addImage(logoData.base64, 'PNG', 15, 7, logoData.width, logoData.height); 
-      currentY = 32;
+      const logoData = await getProportionalImage('/uzakisasa.png', 28);
+      doc.addImage(logoData.base64, 'PNG', 16, 10, logoData.width, logoData.height); 
     } catch (err) {
-      console.error("Logo haijapatikana:", err);
-      currentY = 16;
+      console.error("Logo haijapatikana kwenye PDF:", err);
     }
 
+    // Kichwa cha Ripoti Katikati / Kushoto Karibu na Logo
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(15);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(businessName.toUpperCase(), 14, currentY + 4);
+    doc.text("RIPOTI RASMI YA MAUZO HALISI (BILA DENI)", 52, 18);
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(52, 211, 153);
-    doc.text("RIPOTI RASMI YA MAUZO HALISI (BILA DENI)", 14, currentY + 10);
+    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 52, 25);
 
+    // Jina la Duka Upande wa Kulia kwenye PDF (Kama Dashibodi)
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(203, 213, 225);
-    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 16);
+    doc.text("BIASHARA / DUKA", 196, 15, { align: 'right' });
+
+    doc.setFontSize(13);
+    doc.setTextColor(52, 211, 153);
+    doc.text(shopName.toUpperCase(), 196, 23, { align: 'right' });
 
     const summaryDataPDF = [
       [
@@ -310,13 +311,13 @@ export default function Reports() {
     ];
 
     autoTable(doc, {
-      startY: Math.max(60, currentY + 22),
+      startY: 52,
       body: summaryDataPDF,
       theme: 'plain',
       styles: {
         fontSize: 10,
         fontStyle: 'bold',
-        cellPadding: 4,
+        cellPadding: 5,
         textColor: [15, 23, 42],
         fillColor: [241, 245, 249]
       }
@@ -340,8 +341,8 @@ export default function Reports() {
         fontStyle: 'bold'
       },
       styles: {
-        fontSize: 9,
-        cellPadding: 3
+        fontSize: 10,
+        cellPadding: 4
       }
     });
 
@@ -353,7 +354,7 @@ export default function Reports() {
       doc.text(`Imetolewa na Selguudi POS | Ukurasa ${i} wa ${pageCount}`, 14, 285);
     }
 
-    doc.save(`Ripoti_Halisi_${businessName}_${startDate}_hadi_${endDate}.pdf`);
+    doc.save(`Ripoti_Halisi_${shopName}_${startDate}_hadi_${endDate}.pdf`);
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -381,48 +382,63 @@ export default function Reports() {
   return (
     <div className="space-y-6 font-sans text-slate-800 pb-12">
       
-      {/* Top Header Banner na Logo Kwenye Kontena Jeupec (White Box) */}
+      {/* HEADER MPYA YA KIBABE INAYOFANANA NA DASHBOARD YAKO SANA */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 sm:p-8 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
+        {/* KUSHOTO: LOGO NDANI YA BOKSI JEPESI SAFI */}
         <div className="flex items-center gap-5 z-10">
-          {/* LOGO KILA KWENYE BOKSI JEPESI (CLEAN WHITE CONTAINER) */}
-          <div className="bg-white p-3 rounded-2xl border-2 border-emerald-500/40 shadow-lg flex items-center justify-center shrink-0">
+          <div className="bg-white p-3.5 rounded-2xl border-2 border-emerald-500/40 shadow-xl flex items-center justify-center shrink-0">
             <img 
               src="/uzakisasa.png" 
               alt="Logo" 
-              className="h-10 sm:h-12 w-auto max-w-[140px] object-contain"
+              className="h-11 sm:h-14 w-auto max-w-[150px] object-contain"
             />
           </div>
 
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-emerald-400" />
-              <span>Ripoti & Takwimu za Mauzo Halisi</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-black tracking-wider uppercase mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Ripoti Rasmi</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide">
+              MCHANGANUO WA MAUZO HALISI
             </h1>
-            <p className="text-blue-200 text-xs sm:text-sm mt-0.5">
-              Mchanganuo safi wa mauzo ya pesa taslimu/lipanamba bila kujumuisha madeni.
+            <p className="text-blue-200 text-xs sm:text-sm font-semibold mt-0.5">
+              Takwimu za mauzo safi ya pesa taslimu na lipanamba bila kujumuisha madeni.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 z-10">
-          <button
-            onClick={exportPDF}
-            disabled={loading || topProducts.length === 0}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Pakua PDF Rasmi</span>
-          </button>
+        {/* KULIA: JINA LA BIASHARA LILIVYO KAMA DASHBOARD NA VITENGO VYA DOWNLOAD */}
+        <div className="flex flex-col sm:flex-row lg:items-center gap-4 z-10">
+          
+          {/* JINA LA BIASHARA LINALOFANANA NA DASHBOARD */}
+          <div className="bg-white/10 border border-white/20 px-5 py-3 rounded-2xl backdrop-blur-md text-left sm:text-right shadow-md">
+            <p className="text-[10px] font-black uppercase text-blue-200 tracking-wider">Biashara / Duka</p>
+            <p className="text-base sm:text-lg font-black text-emerald-400 tracking-wider font-mono">
+              {user?.business_name || 'QUEEN SHOP'}
+            </p>
+          </div>
 
-          <button
-            onClick={fetchReportData}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-emerald-300 text-xs font-extrabold rounded-2xl border border-white/20 transition shadow-md"
-          >
-            <RefreshCw className="w-4 h-4 text-emerald-400" />
-            <span>Refresh</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportPDF}
+              disabled={loading || topProducts.length === 0}
+              className="px-5 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
+            >
+              <Download className="w-4 h-4" />
+              <span>Pakua PDF Rasmi</span>
+            </button>
+
+            <button
+              onClick={fetchReportData}
+              className="p-3.5 bg-white/10 hover:bg-white/20 text-emerald-300 rounded-2xl border border-white/20 transition shadow-md"
+              title="Refresh Data"
+            >
+              <RefreshCw className="w-4 h-4 text-emerald-400" />
+            </button>
+          </div>
         </div>
       </div>
 
