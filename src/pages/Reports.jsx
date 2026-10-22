@@ -47,7 +47,6 @@ export default function Reports() {
     return cached ? JSON.parse(cached) : { show_profit_to_cashier: false };
   });
 
-  // Kama tuna cache ya transactions, zima loading hapo hapo
   const [loading, setLoading] = useState(() => {
     const cachedTx = localStorage.getItem('selguudi_rep_transactions');
     return !cachedTx;
@@ -84,64 +83,28 @@ export default function Reports() {
       case 'today':
         start = new Date();
         break;
-
       case 'yesterday':
         start.setDate(today.getDate() - 1);
         end.setDate(today.getDate() - 1);
         break;
-
       case 'juzi':
         start.setDate(today.getDate() - 2);
         end.setDate(today.getDate() - 2);
         break;
-
       case 'month_1': // Mwezi Huu
         start = new Date(today.getFullYear(), today.getMonth(), 1);
         break;
-
       case 'month_2':
         start.setMonth(today.getMonth() - 1);
         break;
-
       case 'month_3':
         start.setMonth(today.getMonth() - 2);
         break;
-
-      case 'month_4':
-        start.setMonth(today.getMonth() - 3);
-        break;
-
-      case 'month_5':
-        start.setMonth(today.getMonth() - 4);
-        break;
-
-      case 'month_6':
-        start.setMonth(today.getMonth() - 5);
-        break;
-
       case 'year_1': // Mwaka Huu
         start = new Date(today.getFullYear(), 0, 1);
         break;
-
-      case 'year_2':
-        start.setFullYear(today.getFullYear() - 1);
-        break;
-
-      case 'year_3':
-        start.setFullYear(today.getFullYear() - 2);
-        break;
-
-      case 'year_4':
-        start.setFullYear(today.getFullYear() - 3);
-        break;
-
-      case 'year_5':
-        start.setFullYear(today.getFullYear() - 4);
-        break;
-
       case 'custom':
         return;
-
       default:
         start = new Date(today.getFullYear(), today.getMonth(), 1);
         break;
@@ -171,7 +134,6 @@ export default function Reports() {
       setProducts(pList);
       if (permRes?.data) setPermissions(permData);
 
-      // HIFADHI KWENYE CACHE FOR INSTANT LOADS SIKU ZOTE
       localStorage.setItem('selguudi_rep_transactions', JSON.stringify(txList));
       localStorage.setItem('selguudi_rep_products', JSON.stringify(pList));
       localStorage.setItem('selguudi_rep_permissions', JSON.stringify(permData));
@@ -201,10 +163,15 @@ export default function Reports() {
     );
   }
 
-  // CHUJA MIAMALA KULINGANA NA TAREHE ZILIZOCHAGULIWA
+  // CHUJA MIAMALA: ONDOA REFUNDED NA UCHUJE KULINGANA NA TAREHE. 
+  // ONDOA PIA MALIPO YA "credit" (DENI) ILI KUPATA MAUZO HALISI.
   const filteredTransactions = allTransactions.filter(tx => {
     if (!tx.created_at || tx.status === 'REFUNDED' || tx.status === 'CANCELLED') return false;
     
+    // KAMA UNATAKA KUCHUJA MAUZO HALISI BILA KUJUMUISHA DENI (CREDIT), ONDOA PAYMENT METHOD YA CREDIT HAPA:
+    const paymentMethod = tx.payment_method?.toLowerCase() || '';
+    if (paymentMethod === 'credit' || paymentMethod === 'deni') return false;
+
     const txDateStr = new Date(tx.created_at).toISOString().split('T')[0];
     
     if (startDate && endDate) {
@@ -213,7 +180,7 @@ export default function Reports() {
     return true;
   });
 
-  // 1. KOKOTOA JUMLA YA MAUZO YA KIPINDI HICHO
+  // 1. KOKOTOA JUMLA YA MAUZO HALISI YA KIPINDI HICHO
   const totalSalesAmount = filteredTransactions.reduce((sum, tx) => {
     return sum + Number(tx.total_amount ?? tx.amount_paid ?? 0);
   }, 0);
@@ -269,7 +236,6 @@ export default function Reports() {
     return stock <= minAlert;
   }).length;
 
-  // HELPER FUNCTION YA KUPATA BASE64 PAMOJA NA VIPIMO CHA ASILI CHA PICHA
   const getProportionalImage = (imageUrl, maxWidth) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -296,7 +262,7 @@ export default function Reports() {
     });
   };
 
-  // EXPORT PDF YENYE LOGO ISIYOFINYWA
+  // EXPORT PDF YENYE LOGO KWENYE KONTENA JEPESI (WHITE BOX)
   const exportPDF = async () => {
     const doc = new jsPDF();
     const businessName = user?.business_name || 'Selguudi POS';
@@ -307,9 +273,13 @@ export default function Reports() {
     let currentY = 12;
 
     try {
-      const logoData = await getProportionalImage('/uzakisasa.png', 42);
-      doc.addImage(logoData.base64, 'PNG', 14, 6, logoData.width, logoData.height); 
-      currentY = 6 + logoData.height + 6;
+      // Weka Logo ndani ya sanduku jeupe kwenye PDF kwanza (White background box simulation)
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(12, 5, 46, 22, 2, 2, 'F');
+
+      const logoData = await getProportionalImage('/uzakisasa.png', 40);
+      doc.addImage(logoData.base64, 'PNG', 15, 7, logoData.width, logoData.height); 
+      currentY = 32;
     } catch (err) {
       console.error("Logo haijapatikana:", err);
       currentY = 16;
@@ -318,19 +288,19 @@ export default function Reports() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
-    doc.text(businessName.toUpperCase(), 14, currentY);
+    doc.text(businessName.toUpperCase(), 14, currentY + 4);
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(52, 211, 153);
-    doc.text("RIPOTI RASMI YA MAUZO NA BIDHAA", 14, currentY + 6);
+    doc.text("RIPOTI RASMI YA MAUZO HALISI (BILA DENI)", 14, currentY + 10);
 
     doc.setTextColor(203, 213, 225);
-    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 12);
+    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 14, currentY + 16);
 
     const summaryDataPDF = [
       [
-        `Jumla ya Mauzo: ${Number(totalSalesAmount).toLocaleString()} TZS`,
+        `Jumla ya Mauzo Halisi: ${Number(totalSalesAmount).toLocaleString()} TZS`,
         `Kadirio la Faida: ${Number(calculatedProfit).toLocaleString()} TZS`
       ],
       [
@@ -340,7 +310,7 @@ export default function Reports() {
     ];
 
     autoTable(doc, {
-      startY: Math.max(58, currentY + 18),
+      startY: Math.max(60, currentY + 22),
       body: summaryDataPDF,
       theme: 'plain',
       styles: {
@@ -383,10 +353,9 @@ export default function Reports() {
       doc.text(`Imetolewa na Selguudi POS | Ukurasa ${i} wa ${pageCount}`, 14, 285);
     }
 
-    doc.save(`Ripoti_${businessName}_${startDate}_hadi_${endDate}.pdf`);
+    doc.save(`Ripoti_Halisi_${businessName}_${startDate}_hadi_${endDate}.pdf`);
   };
 
-  // Custom Recharts Tooltip for Modern Light Look
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -412,28 +381,39 @@ export default function Reports() {
   return (
     <div className="space-y-6 font-sans text-slate-800 pb-12">
       
-      {/* Top Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
+      {/* Top Header Banner na Logo Kwenye Kontena Jeupec (White Box) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 sm:p-8 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="z-10 relative">
-          <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <BarChart3 className="w-7 h-7 text-emerald-400" />
-            <span>Ripoti & Takwimu za Mauzo</span>
-          </h1>
-          <p className="text-blue-200 text-sm mt-1">
-            Kagua mchanganuo wa mauzo, faida, na bidhaa zinazotoka zaidi kulingana na kipindi ulichochagua.
-          </p>
+        <div className="flex items-center gap-5 z-10">
+          {/* LOGO KILA KWENYE BOKSI JEPESI (CLEAN WHITE CONTAINER) */}
+          <div className="bg-white p-3 rounded-2xl border-2 border-emerald-500/40 shadow-lg flex items-center justify-center shrink-0">
+            <img 
+              src="/uzakisasa.png" 
+              alt="Logo" 
+              className="h-10 sm:h-12 w-auto max-w-[140px] object-contain"
+            />
+          </div>
+
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-emerald-400" />
+              <span>Ripoti & Takwimu za Mauzo Halisi</span>
+            </h1>
+            <p className="text-blue-200 text-xs sm:text-sm mt-0.5">
+              Mchanganuo safi wa mauzo ya pesa taslimu/lipanamba bila kujumuisha madeni.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 z-10">
           <button
             onClick={exportPDF}
             disabled={loading || topProducts.length === 0}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition"
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
           >
             <Download className="w-4 h-4" />
-            <span>Pakua PDF</span>
+            <span>Pakua PDF Rasmi</span>
           </button>
 
           <button
@@ -467,14 +447,7 @@ export default function Reports() {
               <option value="month_1">Mwezi Huu</option>
               <option value="month_2">Miezi 2 Zilizopita</option>
               <option value="month_3">Miezi 3 Zilizopita</option>
-              <option value="month_4">Miezi 4 Zilizopita</option>
-              <option value="month_5">Miezi 5 Zilizopita</option>
-              <option value="month_6">Miezi 6 Zilizopita</option>
               <option value="year_1">Mwaka Huu</option>
-              <option value="year_2">Miaka 2 Zilizopita</option>
-              <option value="year_3">Miaka 3 Zilizopita</option>
-              <option value="year_4">Miaka 4 Zilizopita</option>
-              <option value="year_5">Miaka 5 Zilizopita</option>
               <option value="custom">Chagua Tarehe Maalum (Custom)</option>
             </select>
           </div>
@@ -513,10 +486,9 @@ export default function Reports() {
           {/* Summary Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             
-            {/* Mauzo Card */}
             <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Jumla ya Mauzo</span>
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Jumla ya Mauzo Halisi</span>
                 <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl">
                   <DollarSign className="w-6 h-6" />
                 </div>
@@ -526,10 +498,9 @@ export default function Reports() {
                   {Number(totalSalesAmount).toLocaleString()} <span className="text-xs font-bold text-slate-500">TZS</span>
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-500 font-semibold">Jumla ya fedha zilizoingia</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Bila kujumuisha madeni</p>
             </div>
 
-            {/* Estimated Profit Card */}
             <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Faida (Est.)</span>
@@ -542,10 +513,9 @@ export default function Reports() {
                   {Number(calculatedProfit).toLocaleString()} TZS
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-500 font-semibold">Mauzo minus Bei za kununulia</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Mauzo Halisi minus Bei za kununulia</p>
             </div>
 
-            {/* Total Receipts Card */}
             <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Miamala / Risiti</span>
@@ -558,10 +528,9 @@ export default function Reports() {
                   {filteredTransactions.length} <span className="text-xs font-bold text-slate-500">Risiti</span>
                 </h3>
               </div>
-              <p className="mt-2 text-xs text-slate-500 font-semibold">Idadi ya mauzo yaliyofanyika</p>
+              <p className="mt-2 text-xs text-slate-500 font-semibold">Idadi ya mauzo halisi</p>
             </div>
 
-            {/* Low Stock Items Count */}
             <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 relative overflow-hidden shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Alert ya Stoko</span>
@@ -579,15 +548,15 @@ export default function Reports() {
 
           </div>
 
-          {/* BAR CHART SECTION: GRAPH YA KISASA YA MWENENDO WA MAUZO NA FAIDA */}
+          {/* BAR CHART SECTION */}
           <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-lg font-black text-blue-950 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-emerald-600" />
-                  <span>Mwenendo wa Mauzo na Faida (Graph)</span>
+                  <span>Mwenendo wa Mauzo Halisi na Faida (Graph)</span>
                 </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Mchanganuo wa mauzo na faida kwa kila siku kulingana na tarehe zilizochaguliwa</p>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Mchanganuo wa mauzo na faida halisi kwa kila siku</p>
               </div>
 
               <div className="flex items-center gap-4 text-xs font-extrabold">
@@ -608,8 +577,6 @@ export default function Reports() {
               <div className="h-80 w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    
-                    {/* GRADIENT DEFINITIONS FOR VIBRANT MODERN BARS */}
                     <defs>
                       <linearGradient id="mauzoGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
