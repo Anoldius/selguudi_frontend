@@ -1,761 +1,456 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import apiClient from '../api/axios';
 import { 
-  Search, 
+  LayoutDashboard, 
   ShoppingCart, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  CreditCard, 
-  CheckCircle2, 
-  Loader2,
-  BookOpen,
-  UserCheck,
+  Package, 
+  CreditCard,
+  BarChart3, 
+  Wallet,
+  LogOut, 
+  User,
+  Heart,
+  Menu,
   X,
-  AlertCircle,
-  Filter,
-  AlertTriangle,
-  Package
+  Clock,
+  Lock,
+  Loader2,
+  ChevronLeft,
+  Settings as SettingsIcon,
+  Users as UsersIcon,
+  Smartphone,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 
-export default function POS() {
-  // 1. INSTANT CACHE LOAD: SOMA PRODUCTS NA CATEGORIES KUTOKA LOCALSTORAGE PAPO HAPO
-  const [products, setProducts] = useState(() => {
-    const cached = localStorage.getItem('selguudi_pos_products');
-    return cached ? JSON.parse(cached) : [];
-  });
+export default function Layout({ children }) {
+  const { user, logout } = useContext(AuthContext);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [categories, setCategories] = useState(() => {
-    const cached = localStorage.getItem('selguudi_pos_categories');
-    return cached ? JSON.parse(cached) : [];
-  });
+  // Mobile Menu State
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Kama bidhaa zipo kwenye cache, fungua ukurasa instantly bila kusubiri network
-  const [loading, setLoading] = useState(() => {
-    const cachedProducts = localStorage.getItem('selguudi_pos_products');
-    return !cachedProducts;
-  });
+  // Desktop Sidebar Collapse / Expand State
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [cart, setCart] = useState([]);
-  
-  // Tab State kwa ajili ya Simu Zote ('products' au 'cart')
-  const [activeMobileTab, setActiveMobileTab] = useState('products');
+  // States za Billing & Subscription Status
+  const [billingInfo, setBillingInfo] = useState(null);
+  const [loadingBilling, setLoadingBilling] = useState(true);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  // Choices: 'cash', 'mobile_money', 'bank_card', 'credit'
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [amountPaid, setAmountPaid] = useState('');
-  const [isCheckout, setIsCheckout] = useState(false);
+  // State ya Modal ya Malipo (Payment Modal)
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  // Modal State ya Confirmation ya Mauzo
-  const [showConfirmSaleModal, setShowConfirmSaleModal] = useState(false);
-
-  // State za Modal ya Kukopa
-  const [showDebtModal, setShowDebtModal] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [debtNotes, setDebtNotes] = useState('');
-
-  // Floating Toast Notification State
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-  const triggerToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 4000);
-  };
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
-    fetchData();
+    fetchBillingStatus();
   }, []);
 
-  // 2. BACKGROUND SYNC: LETA DATA MPYA KUTOKA SERVER BILA KUMCHELEWESHA CASHIER
-  const fetchData = async () => {
+  const fetchBillingStatus = async () => {
     try {
-      const [prodRes, catRes] = await Promise.all([
-        apiClient.get('inventory/products/'),
-        apiClient.get('inventory/categories/')
-      ]);
-
-      const fetchedProducts = prodRes.data.results || prodRes.data || [];
-      const fetchedCategories = catRes.data.results || catRes.data || [];
-
-      setProducts(fetchedProducts);
-      setCategories(fetchedCategories);
-
-      // HIFADHI KWENYE CACHE KWA AJILI YA LOAD YA HARAKA SIKU ZOTE
-      localStorage.setItem('selguudi_pos_products', JSON.stringify(fetchedProducts));
-      localStorage.setItem('selguudi_pos_categories', JSON.stringify(fetchedCategories));
+      const res = await apiClient.get('auth/billing/status/');
+      setBillingInfo(res.data);
     } catch (err) {
-      console.error("Error fetching POS background data:", err);
+      console.error("Billing status fetch error:", err);
     } finally {
-      setLoading(false);
+      setLoadingBilling(false);
     }
   };
 
-  // CHUJO LA BIDHAA KWA KUTUMIA SEARCH (JINA, BARCODE NA CATEGORY) & CATEGORY TAB
-  const filteredProducts = products.filter(p => {
-    const searchTerm = search.toLowerCase().trim();
-    const matchesSearch = 
-      p.name.toLowerCase().includes(searchTerm) ||
-      (p.barcode && p.barcode.toLowerCase().includes(searchTerm)) ||
-      (p.category_name && p.category_name.toLowerCase().includes(searchTerm));
-    
-    if (selectedCategory === 'ALL') return matchesSearch;
-    if (selectedCategory === 'UNCATEGORIZED') return matchesSearch && !p.category;
-    return matchesSearch && p.category === selectedCategory;
-  });
-
-  const addToCart = (product) => {
-    const stockAvailable = Number(product.quantity ?? product.stock_quantity ?? 0);
-
-    if (stockAvailable <= 0) {
-      triggerToast("Bidhaa hii imeisha stoko!", "error");
-      return;
-    }
-
-    const existing = cart.find(item => item.id === product.id);
-    if (existing) {
-      if (existing.quantity >= stockAvailable) {
-        triggerToast("Huwezi kuongeza zaidi ya stoko iliyopo!", "error");
-        return;
-      }
-      setCart(cart.map(item => 
-        item.id === product.id 
-          ? { ...item, quantity: item.quantity + 1 } 
-          : item
-      ));
-    } else {
-      setCart([...cart, { 
-        ...product, 
-        quantity: 1, 
-        availableStock: stockAvailable,
-        selling_price: product.selling_price
-      }]);
-    }
-
-    triggerToast(`"${product.name}" imeongezwa kwenye kikapu!`, 'success');
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
-  // BADILISHA BEI YA KUUZIA KWENYE KIKAPU TU
-  const updateCartPrice = (id, newPrice) => {
-    const priceVal = parseFloat(newPrice);
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        return { 
-          ...item, 
-          selling_price: newPrice === '' ? '' : (isNaN(priceVal) ? 0 : priceVal) 
-        };
-      }
-      return item;
-    }));
-  };
-
-  const updateQuantity = (id, delta) => {
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        const newQty = item.quantity + delta;
-        if (newQty <= 0) return null;
-        if (newQty > item.availableStock) {
-          triggerToast("Umezidi stoko iliyopo!", "error");
-          return item;
-        }
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }).filter(Boolean));
-  };
-
-  const removeFromCart = (id) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
-
-  const totalAmount = cart.reduce((sum, item) => sum + ((parseFloat(item.selling_price) || 0) * item.quantity), 0);
-  const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
-
-  const handleInitiateCheckout = () => {
-    if (cart.length === 0) return;
-
-    if (paymentMethod === 'credit') {
-      setShowDebtModal(true);
-    } else {
-      setShowConfirmSaleModal(true);
-    }
-  };
-
-  const handleConfirmSaleExecution = () => {
-    setShowConfirmSaleModal(false);
-    executeCheckout({});
-  };
-
-  const executeCheckout = async (debtDetails = {}) => {
-    setIsCheckout(true);
+  // Kagua Kama Malipo Yameshaingia
+  const handleVerifyPaymentStatus = async () => {
+    setIsVerifying(true);
     try {
-      if (paymentMethod === 'credit') {
-        let customerId = null;
-
-        try {
-          const custRes = await apiClient.get('sales/customers/');
-          const existingCustomers = custRes.data.results || custRes.data || [];
-          
-          const match = existingCustomers.find(c => 
-            c.name?.toLowerCase() === debtDetails.customer_name?.toLowerCase() ||
-            (debtDetails.customer_phone && c.phone === debtDetails.customer_phone)
-          );
-
-          if (match) {
-            customerId = match.id;
-          } else {
-            const newCustRes = await apiClient.post('sales/customers/', {
-              name: debtDetails.customer_name,
-              phone: debtDetails.customer_phone || ''
-            });
-            customerId = newCustRes.data.id;
-          }
-        } catch (cErr) {
-          console.error("Error creating/fetching customer:", cErr);
-        }
-
-        if (customerId) {
-          const debtPayload = {
-            customer: customerId,
-            total_amount: totalAmount,
-            remaining_amount: totalAmount,
-          };
-          if (debtDetails.due_date && debtDetails.due_date.trim() !== '') {
-            debtPayload.due_date = debtDetails.due_date;
-          }
-
-          await apiClient.post('sales/debts/', debtPayload);
-        }
-      }
-
-      const salePayload = {
-        payment_method: paymentMethod,
-        customer_name: debtDetails.customer_name || '',
-        customer_phone: debtDetails.customer_phone || '',
-        items: cart.map(item => ({
-          product_id: String(item.id),
-          quantity: Number(item.quantity),
-          unit_price: Number(item.selling_price)
-        }))
-      };
-
-      await apiClient.post('sales/transactions/', salePayload);
-      
-      triggerToast(
-        paymentMethod === 'credit' 
-          ? 'Deni Limesajiliwa Kwenye Daftari na Mauzo Yamekamilika! 📝' 
-          : 'Mauzo Yamekamilika Vizuri! 🎉', 
-        'success'
-      );
-      
-      // OPTIMISTIC LOCAL STOCK UPDATE: Punguza stoko ya bidhaa kwenye memory hapo hapo
-      const updatedProducts = products.map(prod => {
-        const cartItem = cart.find(c => c.id === prod.id);
-        if (cartItem) {
-          const currentQty = Number(prod.quantity ?? prod.stock_quantity ?? 0);
-          const newQty = Math.max(0, currentQty - cartItem.quantity);
-          return { ...prod, quantity: newQty, stock_quantity: newQty };
-        }
-        return prod;
-      });
-
-      setProducts(updatedProducts);
-      localStorage.setItem('selguudi_pos_products', JSON.stringify(updatedProducts));
-
-      setCart([]);
-      setAmountPaid('');
-      setShowDebtModal(false);
-      setCustomerName('');
-      setCustomerPhone('');
-      setDueDate('');
-      setDebtNotes('');
-      setActiveMobileTab('products');
-
-      // Refresh data kimya kimya kutoka server
-      fetchData();
-    } catch (err) {
-      console.error("Full Sale Error Response:", err.response);
-
-      if (err.response?.data) {
-        const errorData = err.response.data;
-        if (errorData.stock_error) {
-          triggerToast(errorData.stock_error, 'error');
-        } else {
-          triggerToast("Imeshindikana kukamilisha mauzo!", 'error');
-        }
+      await fetchBillingStatus();
+      const res = await apiClient.get('auth/billing/status/');
+      if (res.data && res.data.has_active_access) {
+        alert("🎉 Hongera! Duka lako limewashwa kikamilifu!");
+        setShowPaymentModal(false);
       } else {
-        triggerToast('Imeshindikana kuunganisha na server!', 'error');
+        alert("Malipo yako bado hayajasomwa na mfumo. Kama umeshatuma fedha, subiri sekunde chache kisha ubonyeze tena 'Hakiki Malipo'.");
       }
+    } catch (err) {
+      console.error(err);
+      alert("Imeshindikana kuhakiki taarifa za malipo kwa sasa.");
     } finally {
-      setIsCheckout(false);
+      setIsVerifying(false);
     }
   };
 
-  const handleDebtSubmit = (e) => {
-    e.preventDefault();
-    if (!customerName.trim()) {
-      triggerToast("Tafadhali weka Jina la Mteja!", "error");
-      return;
-    }
-    executeCheckout({
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      due_date: dueDate,
-      notes: debtNotes
-    });
-  };
+  // Orodha Kamili ya Menyu
+  const allNavItems = [
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: false },
+    { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
+    { name: 'Matumizi', path: '/expenses', icon: Wallet, ownerOnly: false },
+    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package, ownerOnly: false },
+    { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard, ownerOnly: false },
+    { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3, ownerOnly: true },
+    { name: 'Wafanyakazi', path: '/users', icon: UsersIcon, ownerOnly: true },
+    { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
+  ];
 
-  const getPaymentLabel = (method) => {
-    switch (method) {
-      case 'cash': return 'Pesa Taslimu (Cash)';
-      case 'mobile_money': return 'Lipa Namba (M-Pesa / Tigo / Airtel)';
-      case 'bank_card': return 'Kadi ya Benki (NMB / CRDB)';
-      case 'credit': return 'Deni (Kukopa)';
-      default: return method;
-    }
-  };
+  const isOwner = user?.role === 'owner';
+  const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
 
-  return (
-    <div className="h-full md:h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden font-sans text-slate-800">
-      
-      {/* FLOATING TOAST NOTIFICATION TOP RIGHT */}
-      {toast.show && (
-        <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
-          toast.type === 'success' 
-            ? 'bg-emerald-900 text-white border-emerald-700 shadow-emerald-900/20' 
-            : 'bg-red-900 text-white border-red-700 shadow-red-900/20'
-        }`}>
-          {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 text-emerald-300" /> : <AlertCircle className="w-5 h-5 text-red-300" />}
-          <span className="text-xs font-bold tracking-wide">{toast.message}</span>
+  // KUPATA SIKU ZILIZOBAKI (Default ni Siku 7)
+  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 7;
+  const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
+
+  // Namba iliyosajiliwa na Mteja
+  const registeredPhone = billingInfo?.phone || user?.phone || user?.phone_number || user?.business?.phone || user?.username || "07XXXXXXXX";
+
+  const showTrialPill = Number(daysLeft) > 0;
+
+  // COMPONENT YA MAELEKEZO YA MALIPO (Clean Light Style)
+  const PaymentInstructionsCard = () => (
+    <div className="space-y-4 text-left">
+      <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2 text-emerald-800 font-medium">
+          <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Namba yako ya usajili:</span>
         </div>
-      )}
-
-      {/* MOBILE SCREEN TOGGLE SWITCHER */}
-      <div className="flex md:hidden bg-white p-1.5 rounded-2xl border-2 border-emerald-500/40 gap-2 shrink-0 shadow-xs">
-        <button
-          onClick={() => setActiveMobileTab('products')}
-          className={`flex-1 py-3 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 ${
-            activeMobileTab === 'products'
-              ? 'bg-blue-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-blue-950 bg-slate-50'
-          }`}
-        >
-          <Package className="w-4 h-4 text-emerald-600" />
-          <span>Orodha ya Bidhaa ({products.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveMobileTab('cart')}
-          className={`flex-1 py-3 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 relative ${
-            activeMobileTab === 'cart'
-              ? 'bg-blue-900 text-white shadow-md'
-              : 'text-slate-600 hover:text-blue-950 bg-slate-50'
-          }`}
-        >
-          <ShoppingCart className="w-4 h-4 text-emerald-600" />
-          <span>Kikapu ({cart.reduce((a, b) => a + b.quantity, 0)})</span>
-          {cart.length > 0 && (
-            <span className="ml-1 px-2 py-0.5 bg-red-600 text-white rounded-full text-[10px] font-extrabold">
-              {cart.length}
-            </span>
-          )}
-        </button>
+        <span className="font-mono font-black text-blue-950 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-sm shadow-2xs">
+          {registeredPhone}
+        </span>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 min-w-0 overflow-hidden">
-        
-        {/* LEFT SIDE: Product Catalog & Search */}
-        <div className={`flex-1 flex-col min-h-0 min-w-0 space-y-4 overflow-hidden ${
-          activeMobileTab === 'products' ? 'flex' : 'hidden md:flex'
-        }`}>
-          
-          {/* CARD 1: SEARCH & CATEGORY FILTERS */}
-          <div className="bg-white border-2 border-emerald-500/40 p-4 rounded-3xl space-y-3 flex-shrink-0 shadow-xs">
-            <div className="relative">
-              <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Tafuta kwa jina la bidhaa, barcode, au kundi (category)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 transition text-sm font-semibold"
+      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+          <span className="text-xs font-bold text-slate-500">Kifurushi cha Mwezi:</span>
+          <span className="text-emerald-700 font-black font-mono text-base">20,000 TZS</span>
+        </div>
+
+        <div className="space-y-2 pt-1 text-xs">
+          <div className="flex justify-between text-slate-700">
+            <span className="font-semibold">AirtelMoney:</span>
+            <span className="font-mono font-extrabold text-blue-900">0686915966</span>
+          </div>
+          <div className="flex justify-between text-slate-700">
+            <span className="font-semibold">Halopesa:</span>
+            <span className="font-mono font-extrabold text-blue-900">0613012686</span>
+          </div>
+          <div className="flex justify-between text-slate-500 text-[11px] pt-1.5 border-t border-slate-200">
+            <span>Jina la Akaunti:</span>
+            <span className="font-bold text-slate-800">ANOLDIUS PAUL</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-amber-900 bg-amber-50 p-3 rounded-xl border border-amber-200 leading-relaxed font-medium">
+        📌 <strong className="text-amber-800">Angalizo:</strong> Hakikisha unatuma fedha kutoka kwenye namba yako ya usajili (<strong className="text-blue-950 underline">{registeredPhone}</strong>). Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara tu baada ya kutuma!
+      </p>
+
+      <button
+        onClick={handleVerifyPaymentStatus}
+        disabled={isVerifying}
+        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
+      >
+        {isVerifying ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Inahakiki Malipo...</span>
+          </>
+        ) : (
+          <>
+            <RefreshCw className="w-5 h-5" />
+            <span>Nishatuma / Hakiki Malipo</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+
+  // KAMA ACCESS IMEISHA KABISA
+  if (!loadingBilling && !hasActiveAccess) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
+        <div className="max-w-md w-full bg-white border-2 border-emerald-500/40 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
+
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shadow-sm">
+            <Lock className="w-10 h-10" />
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-black text-blue-950">Muda wa Trial Umeisha!</h2>
+            <p className="text-slate-500 text-sm mt-2 font-medium">
+              Kifurushi cha <span className="text-emerald-700 font-extrabold uppercase">{billingInfo?.business_name || user?.business_name}</span> kimeisha. Lipia ili mfumo uwake kiotomatiki.
+            </p>
+          </div>
+
+          <PaymentInstructionsCard />
+
+          <button
+            onClick={handleLogout}
+            className="text-xs font-bold text-slate-400 hover:text-red-600 transition"
+          >
+            Toka (Logout)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans">
+
+      {/* DESKTOP SIDEBAR WITH MODERN ANIMATED GLOW & NAV INDICATOR */}
+      <aside 
+        className={`bg-gradient-to-b from-blue-950 via-slate-900 to-blue-950 text-white border-r border-blue-900/60 hidden md:flex flex-col justify-between shrink-0 transition-all duration-300 shadow-2xl z-20 ${
+          isSidebarCollapsed ? 'w-20' : 'w-64'
+        }`}
+      > 
+        <div>
+          {/* BRAND HEADER WITH CLEAN WHITE LOGO CONTAINER */}
+          <div className={`p-4 border-b border-blue-900/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
+            
+            {/* CONTAINER NYEUPE SAFIFU INAYOFANANA NA DASHBOARD CARD */}
+            <div className={`bg-white p-2.5 rounded-2xl border-2 border-emerald-500/40 shadow-md transition-all duration-300 flex items-center justify-center overflow-hidden ${
+              isSidebarCollapsed ? 'w-12 h-12 p-1.5' : 'w-full'
+            }`}>
+              <img 
+                src="/uzakisasa.png" 
+                alt="Selguudi Logo" 
+                className={`object-contain transition-all duration-300 drop-shadow-xs ${
+                  isSidebarCollapsed 
+                    ? 'h-9 w-auto' 
+                    : 'h-10 sm:h-12 w-auto max-w-[190px]'
+                }`}
               />
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
-              <span className="text-[10px] text-blue-950 font-black uppercase tracking-wider flex items-center gap-1 pr-1 shrink-0">
-                <Filter className="w-3 h-3 text-emerald-600" /> KUNDI:
-              </span>
-
-              <button
-                onClick={() => setSelectedCategory('ALL')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 whitespace-nowrap ${
-                  selectedCategory === 'ALL'
-                    ? 'bg-blue-900 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:text-blue-950 border border-slate-200'
-                }`}
-              >
-                Bidhaa Zote ({products.length})
-              </button>
-
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 whitespace-nowrap ${
-                    selectedCategory === cat.id
-                      ? 'bg-blue-900 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:text-blue-950 border border-slate-200'
-                  }`}
-                >
-                  {cat.name} ({cat.products_count ?? 0})
-                </button>
-              ))}
-
-              <button
-                onClick={() => setSelectedCategory('UNCATEGORIZED')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 whitespace-nowrap ${
-                  selectedCategory === 'UNCATEGORIZED'
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'bg-slate-100 text-slate-600 hover:text-blue-950 border border-slate-200'
-                }`}
-              >
-                Bila Kundi
-              </button>
-            </div>
-          </div>
-
-          {/* CARD 2: PRODUCT CATALOG GRID */}
-          <div className="flex-1 bg-white border-2 border-emerald-500/40 rounded-3xl p-4 sm:p-5 overflow-y-auto shadow-xs">
-            {loading ? (
-              <div className="flex items-center justify-center h-full text-slate-500 gap-2 font-medium">
-                <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
-                <span>Inapakia bidhaa...</span>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-sm font-semibold">
-                Hakuna bidhaa iliyopatikana kwenye kundi hili au utafutaji wako.
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
-                {filteredProducts.map((product) => {
-                  const stock = Number(product.quantity ?? product.stock_quantity ?? 0);
-                  const minAlert = Number(product.min_stock_alert || 5);
-                  const isLow = stock <= minAlert;
-
-                  return (
-                    <button
-                      key={product.id}
-                      onClick={() => addToCart(product)}
-                      className="bg-slate-50 hover:bg-emerald-50/50 border-2 border-slate-200 hover:border-emerald-500 p-3.5 rounded-2xl text-left transition flex flex-col justify-between group active:scale-95 shadow-2xs"
-                    >
-                      <div>
-                        <h3 className="font-extrabold text-blue-950 group-hover:text-emerald-700 transition text-xs sm:text-sm line-clamp-2">{product.name}</h3>
-                        <p className="text-[10px] text-blue-800 font-bold mt-0.5 truncate uppercase">{product.category_name || 'Bila Kundi'}</p>
-                        <p className="text-xs text-slate-500 font-semibold mt-1">
-                          Stoko: <span className={isLow ? 'text-amber-600 font-black' : 'text-slate-700 font-bold'}>{stock} {product.unit || 'pcs'}</span>
-                        </p>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <span className="font-black text-blue-950 text-xs sm:text-sm font-mono">{Number(product.selling_price).toLocaleString()} TZS</span>
-                        <div className="p-1.5 rounded-xl bg-emerald-100 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition">
-                          <Plus className="w-4 h-4" />
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT SIDE: Cart Section */}
-        <div className={`w-full md:w-96 flex-shrink-0 bg-white border-2 border-emerald-500/40 rounded-3xl p-5 flex-col justify-between overflow-y-auto shadow-xs ${
-          activeMobileTab === 'cart' ? 'flex' : 'hidden md:flex'
-        }`}>
-          <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <h2 className="font-black text-lg text-blue-950 flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-emerald-600" />
-                <span>Kikapu cha Mauzo</span>
-              </h2>
-              <span className="text-xs px-3 py-1 rounded-xl bg-blue-50 text-blue-900 border border-blue-200 font-black">
-                {cart.reduce((a, b) => a + b.quantity, 0)} Items
-              </span>
-            </div>
-
-            <div className="mt-4 max-h-64 md:max-h-60 overflow-y-auto space-y-3 pr-1">
-              {cart.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-sm font-semibold">
-                  Kikapu kipo wazi. Bonyeza bidhaa kuongeza.
-                </div>
-              ) : (
-                cart.map((item) => {
-                  const isBelowCost = Number(item.selling_price) < Number(item.buying_price || 0);
-
-                  return (
-                    <div key={item.id} className="p-3.5 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-2 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-extrabold text-blue-950 truncate max-w-[180px]">{item.name}</h4>
-                        
-                        <button onClick={() => removeFromCart(item.id)} className="text-slate-400 hover:text-red-600 p-1 transition">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-200">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-black text-slate-500 uppercase">Bei:</span>
-                          <input
-                            type="number"
-                            value={item.selling_price}
-                            onChange={(e) => updateCartPrice(item.id, e.target.value)}
-                            className={`w-24 px-2.5 py-1 bg-white border-2 rounded-xl text-xs font-mono font-black focus:outline-none transition ${
-                              isBelowCost 
-                                ? 'border-red-500 text-red-600 bg-red-50' 
-                                : 'border-slate-300 text-blue-950 focus:border-emerald-600'
-                            }`}
-                          />
-                          <span className="text-[10px] text-slate-500 font-bold">TZS</span>
-                        </div>
-
-                        <div className="flex items-center bg-white border-2 border-slate-300 rounded-xl overflow-hidden shadow-2xs">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 text-slate-600 hover:bg-slate-100 transition">
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="px-2.5 text-xs font-black text-blue-950">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 text-slate-600 hover:bg-slate-100 transition">
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {isBelowCost && (
-                        <p className="text-[10px] text-red-600 font-extrabold flex items-center gap-1 pt-0.5">
-                          ⚠️ Chini ya gharama ({Number(item.buying_price).toLocaleString()} TZS)!
-                        </p>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Payment Options Summary */}
-          <div className="pt-4 border-t border-slate-200 space-y-3 mt-4">
-            <div>
-              <label className="block text-xs font-extrabold text-blue-950 uppercase tracking-wider mb-1.5">Njia ya Malipo</label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {[
-                  { id: 'cash', label: 'Cash' },
-                  { id: 'mobile_money', label: 'Lipa' },
-                  { id: 'bank_card', label: 'Card' },
-                  { id: 'credit', label: 'Kukopa' }
-                ].map((method) => (
-                  <button
-                    key={method.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(method.id)}
-                    className={`py-2.5 text-xs font-black rounded-xl border-2 capitalize transition shadow-2xs ${
-                      paymentMethod === method.id
-                        ? method.id === 'credit' 
-                          ? 'bg-amber-500 text-slate-950 border-amber-600' 
-                          : 'bg-blue-900 text-white border-blue-950 shadow-md'
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-blue-950 hover:border-slate-300'
-                    }`}
-                  >
-                    {method.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {paymentMethod !== 'credit' && (
-              <div>
-                <div className="flex justify-between text-xs text-slate-600 font-bold mb-1">
-                  <span>Fedha Iliyotolewa:</span>
-                  {change > 0 && <span className="text-emerald-700 font-black">Chenji: {change.toLocaleString()} TZS</span>}
-                </div>
-                <input
-                  type="number"
-                  placeholder="Weka kiasi kilicholipwa..."
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-emerald-600"
-                />
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs font-black text-blue-950 uppercase">Jumla Kuu:</span>
-              <span className="text-2xl font-black text-blue-950 font-mono">{totalAmount.toLocaleString()} TZS</span>
-            </div>
-
             <button
-              onClick={handleInitiateCheckout}
-              disabled={cart.length === 0 || isCheckout}
-              className={`w-full py-3.5 font-black rounded-2xl shadow-lg flex items-center justify-center gap-2 transition disabled:opacity-50 ${
-                paymentMethod === 'credit'
-                  ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-              }`}
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 rounded-xl bg-blue-900/50 hover:bg-emerald-500 hover:text-slate-950 text-blue-200 transition-all duration-200 shrink-0 hover:scale-105"
+              title={isSidebarCollapsed ? "Panua Sidebar" : "Kunja Sidebar"}
             >
-              {isCheckout ? <Loader2 className="w-5 h-5 animate-spin" /> : paymentMethod === 'credit' ? <BookOpen className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
-              <span>{paymentMethod === 'credit' ? 'Sajili Kama Deni' : 'Kamilisha Mauzo'}</span>
+              {isSidebarCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
             </button>
           </div>
+
+          {/* Navigation Menu with Modern Hover & Active Animations */}
+          <nav className="p-3 space-y-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  title={isSidebarCollapsed ? item.name : ''}
+                  className={`group relative flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all duration-300 transform active:scale-98 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-500/25 translate-x-1'
+                      : 'text-slate-300 hover:text-white hover:bg-white/10 hover:translate-x-1'
+                  } ${isSidebarCollapsed ? 'justify-center px-0 transform-none' : ''}`}
+                >
+                  {/* Glowing Indicator Line for Active Item */}
+                  {isActive && !isSidebarCollapsed && (
+                    <span className="absolute left-0 top-2 bottom-2 w-1.5 bg-white rounded-r-full shadow-md" />
+                  )}
+
+                  <Icon className={`w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                    isActive ? 'text-slate-950' : 'text-emerald-400 group-hover:text-emerald-300'
+                  }`} />
+
+                  {!isSidebarCollapsed && <span className="tracking-wide">{item.name}</span>}
+                </Link>
+              );
+            })}
+
+            {/* USER PROFILE & LOGOUT BADGE */}
+            <div className="pt-3 mt-3 border-t border-blue-900/60">
+              <div className={`flex items-center justify-between p-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md ${
+                isSidebarCollapsed ? 'justify-center' : ''
+              }`}>
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black shadow-md">
+                    <User className="w-4 h-4" />
+                  </div>
+                  {!isSidebarCollapsed && (
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-black text-white truncate">{user?.username}</p>
+                      <p className="text-[10px] text-emerald-300 font-extrabold uppercase truncate">{user?.role || 'Owner'}</p>
+                    </div>
+                  )}
+                </div>
+
+                {!isSidebarCollapsed && (
+                  <button
+                    onClick={handleLogout}
+                    className="p-1.5 rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
+                    title="Toka (Logout)"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </nav>
         </div>
+
+        {!isSidebarCollapsed && (
+          <div className="p-4 border-t border-blue-900/60 text-[11px] text-slate-400 font-bold">
+            &copy; {currentYear} Selguudi POS
+          </div>
+        )}
+      </aside>
+
+      {/* MOBILE SIDEBAR DRAWER */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm md:hidden flex">
+          <div className="w-72 bg-gradient-to-b from-blue-950 to-slate-900 text-white h-full border-r border-blue-900 p-5 flex flex-col justify-between shadow-2xl">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-blue-900">
+                <div className="bg-white p-2 rounded-2xl border-2 border-emerald-500/40 shadow-md">
+                  <img 
+                    src="/uzakisasa.png" 
+                    alt="Selguudi Logo" 
+                    className="h-10 w-auto max-w-[170px] object-contain"
+                  />
+                </div>
+                <button onClick={() => setMobileMenuOpen(false)} className="text-blue-200 hover:text-white p-1">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <nav className="mt-6 space-y-2">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-extrabold text-sm transition-all ${
+                        isActive
+                          ? 'bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20'
+                          : 'text-slate-300 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5 text-emerald-400" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+
+                <div className="pt-3 mt-3 border-t border-blue-900">
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 mb-3">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-9 h-9 shrink-0 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-black text-white truncate">{user?.username}</p>
+                        <p className="text-xs text-emerald-300 font-bold uppercase truncate">{user?.role || 'Owner'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500/20 font-extrabold text-sm transition"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Toka (Logout)</span>
+                  </button>
+                </div>
+              </nav>
+            </div>
+          </div>
+          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+        </div>
+      )}
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-slate-100">
+
+        {/* TOP HEADER BAR NA TOP-UP TRIAL NOTIFICATION PILL */}
+        <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-xs z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 text-slate-700 hover:text-blue-950 rounded-xl bg-slate-100"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="font-black text-blue-950 text-sm hidden sm:inline">SELGUUDI POS DASHBOARD</span>
+          </div>
+
+          {/* TRIAL / SUBSCRIPTION BADGE (TOP UP PILL - GREEN & BLUE GLOW) */}
+          {showTrialPill && (
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="group flex items-center gap-2.5 bg-gradient-to-r from-blue-950 to-blue-900 hover:from-emerald-600 hover:to-emerald-500 text-white px-4 py-2 rounded-full shadow-md border-2 border-emerald-400/60 transition-all duration-300 transform hover:scale-105 animate-pulse"
+              title="Bonyeza kulipia kifurushi chako"
+            >
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-inner">
+                <Clock className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left leading-tight">
+                <p className="text-[10px] text-emerald-300 font-extrabold uppercase tracking-wider">Trial ya Bure</p>
+                <p className="text-xs font-black text-white">{daysLeft} Siku Zimebaki</p>
+              </div>
+              <span className="bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full ml-1 shadow-sm group-hover:bg-white transition-colors">
+                Lipa 20k
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* DYNAMIC PAGE CONTENT */}
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+          {children || <Outlet />}
+        </main>
+
+        {/* MODAL YA MAELEKEZO YA MALIPO */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white border-2 border-emerald-500/40 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl relative animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 text-emerald-700 font-black text-base">
+                  <CreditCard className="w-5 h-5" />
+                  <span>Lipia Kifurushi cha Mwezi</span>
+                </div>
+                <button 
+                  onClick={() => setShowPaymentModal(false)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 bg-slate-100 rounded-xl"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <PaymentInstructionsCard />
+            </div>
+          </div>
+        )}
+
+        {/* FOOTER SECTION */}
+        <footer className="py-4 px-6 border-t border-slate-200 bg-white text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 mt-auto">
+          <div className="flex items-center gap-1 font-semibold">
+            <span>&copy; {currentYear}</span>
+            <span className="font-extrabold text-blue-950">Selguudi POS</span>. 
+            <span>Haki zote zimehifadhiwa.</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
+            <span>Engineered with</span>
+            <Heart className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600/30" />
+            <span>for Supermarkets & Retail Stores</span>
+          </div>
+        </footer>
 
       </div>
-
-      {/* CONFIRMATION ALERT MODAL KABLA YA KUKAMILISHA MAUZO */}
-      {showConfirmSaleModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-emerald-700 font-black text-base">
-                <AlertTriangle className="w-5 h-5 text-emerald-600" />
-                <span>Thibitisha Mauzo</span>
-              </div>
-              <button onClick={() => setShowConfirmSaleModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-xl bg-slate-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-sm text-slate-700 font-medium">
-              <p className="font-extrabold text-blue-950">Unataka kukamilisha mauzo haya sasa?</p>
-              
-              <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-bold">Idadi ya Bidhaa:</span>
-                  <span className="font-black text-blue-950">{cart.reduce((a, b) => a + b.quantity, 0)} Items</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-bold">Njia ya Malipo:</span>
-                  <span className="font-black text-emerald-700">{getPaymentLabel(paymentMethod)}</span>
-                </div>
-                <div className="flex justify-between pt-1.5 border-t border-slate-200 text-sm">
-                  <span className="text-blue-950 font-extrabold">Jumla ya Malipo:</span>
-                  <span className="font-black text-blue-950 font-mono">{totalAmount.toLocaleString()} TZS</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowConfirmSaleModal(false)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition text-sm"
-              >
-                Ghairi
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSaleExecution}
-                disabled={isCheckout}
-                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md shadow-emerald-600/20"
-              >
-                {isCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                <span>Thibitisha Kuuza</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL FORM YA SAJILI DENI */}
-      {showDebtModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-amber-500/40 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-amber-700 font-black text-base">
-                <BookOpen className="w-5 h-5 text-amber-600" />
-                <span>Taarifa za Mteja Anayekopa</span>
-              </div>
-              <button onClick={() => setShowDebtModal(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-xl bg-slate-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleDebtSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Jina la Mteja *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Mfano: John Doe"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
-                />
-              </div>
-a
-              <div>
-                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Namba ya Simu</label>
-                <input
-                  type="text"
-                  placeholder="Mfano: 0712345678"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Tarehe ya Ahadi ya Kulipa</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Maelezo Ziada (Notes)</label>
-                <textarea
-                  rows="2"
-                  placeholder="Maelezo mengine ya ziada..."
-                  value={debtNotes}
-                  onChange={(e) => setDebtNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-between border-t border-slate-200">
-                <span className="text-xs text-slate-600 font-extrabold uppercase">Jumla ya Deni:</span>
-                <span className="text-lg font-black text-amber-600 font-mono">{totalAmount.toLocaleString()} TZS</span>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDebtModal(false)}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition text-sm"
-                >
-                  Ghairi
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCheckout}
-                  className="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md shadow-amber-500/20"
-                >
-                  {isCheckout ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
-                  <span>Weka Deni</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
