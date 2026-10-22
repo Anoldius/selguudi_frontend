@@ -14,7 +14,10 @@ import {
   Check, 
   Phone,
   UserPlus,
-  Trash2
+  Trash2,
+  Calendar,
+  Filter,
+  ShoppingBag
 } from 'lucide-react';
 
 export default function Debts() {
@@ -23,6 +26,10 @@ export default function Debts() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('debts');
+
+  // Date Filtering States
+  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'juzi', 'custom'
+  const [customDate, setCustomDate] = useState('');
 
   // Modals States
   const [showPayModal, setShowPayModal] = useState(false);
@@ -148,7 +155,6 @@ export default function Debts() {
     }
   };
 
-  // LOGIC YA KUFUTA DENI
   const handleDeleteDebt = async () => {
     if (!debtToDelete) return;
 
@@ -173,10 +179,47 @@ export default function Debts() {
 
   const activeDebtorsCount = debts.filter(d => d.status !== 'PAID').length;
 
-  const filteredDebts = debts.filter(d => 
-    d.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    (d.customer_phone && d.customer_phone.includes(search))
-  );
+  // CHUJO LA TAREHE NA SEARCH
+  const filteredDebts = debts.filter(d => {
+    const matchesSearch = 
+      d.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      (d.customer_phone && d.customer_phone.includes(search)) ||
+      (d.items_summary && d.items_summary.toLowerCase().includes(search.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
+    if (dateFilter === 'all') return true;
+
+    if (!d.created_at) return false;
+    const debtDateStr = new Date(d.created_at).toISOString().split('T')[0];
+    
+    const today = new Date();
+    const formatDate = (dObj) => {
+      const year = dObj.getFullYear();
+      const month = String(dObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    if (dateFilter === 'today') {
+      return debtDateStr === formatDate(today);
+    }
+    if (dateFilter === 'yesterday') {
+      const yest = new Date();
+      yest.setDate(today.getDate() - 1);
+      return debtDateStr === formatDate(yest);
+    }
+    if (dateFilter === 'juzi') {
+      const juzi = new Date();
+      juzi.setDate(today.getDate() - 2);
+      return debtDateStr === formatDate(juzi);
+    }
+    if (dateFilter === 'custom' && customDate) {
+      return debtDateStr === customDate;
+    }
+
+    return true;
+  });
 
   return (
     <div className="w-full space-y-6 relative font-sans text-slate-800 pb-12">
@@ -202,7 +245,7 @@ export default function Debts() {
             <CreditCard className="w-7 h-7 text-emerald-400" />
             <span>Daftari la Madeni & Wateja</span>
           </h1>
-          <p className="text-blue-200 text-sm mt-1">Simamia madeni ya wateja, fanya ufuatiliaji, na rekodi au futa madeni.</p>
+          <p className="text-blue-200 text-sm mt-1">Simamia madeni ya wateja, kagua bidhaa walizokopa, na rekodi malipo.</p>
         </div>
 
         <div className="flex items-center gap-3 z-10">
@@ -262,22 +305,56 @@ export default function Debts() {
       </div>
 
       {/* SEARCH AND TABS */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-96">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="relative w-full md:w-80">
           <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Tafuta mteja au namba ya simu..."
+            placeholder="Tafuta mteja, simu, au bidhaa aliyokopa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-300 rounded-2xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-xs"
+            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-300 rounded-2xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-xs text-sm"
           />
         </div>
 
-        <div className="flex items-center gap-2 bg-white p-1.5 border-2 border-slate-200 rounded-2xl w-full sm:w-auto shadow-xs">
+        {/* DATE FILTERS */}
+        {activeTab === 'debts' && (
+          <div className="flex items-center gap-1.5 bg-white p-1.5 border-2 border-slate-200 rounded-2xl overflow-x-auto w-full md:w-auto shadow-xs">
+            <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
+              <Filter className="w-3 h-3 text-emerald-600" /> Kipindi:
+            </span>
+            {[
+              { id: 'all', label: 'Yote' },
+              { id: 'today', label: 'Leo' },
+              { id: 'yesterday', label: 'Jana' },
+              { id: 'juzi', label: 'Juzi' }
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => { setDateFilter(f.id); setCustomDate(''); }}
+                className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition ${
+                  dateFilter === f.id ? 'bg-blue-900 text-white shadow-md' : 'text-slate-600 hover:text-blue-950 bg-slate-50'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+
+            <div className="relative flex items-center">
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => { setCustomDate(e.target.value); setDateFilter('custom'); }}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-blue-950 text-xs font-bold font-mono focus:outline-none focus:border-emerald-600"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 bg-white p-1.5 border-2 border-slate-200 rounded-2xl w-full md:w-auto shadow-xs">
           <button
             onClick={() => setActiveTab('debts')}
-            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-black text-sm transition ${
+            className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-black text-sm transition ${
               activeTab === 'debts' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-600 hover:text-blue-950'
             }`}
           >
@@ -285,7 +362,7 @@ export default function Debts() {
           </button>
           <button
             onClick={() => setActiveTab('customers')}
-            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-black text-sm transition ${
+            className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-black text-sm transition ${
               activeTab === 'customers' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-600 hover:text-blue-950'
             }`}
           >
@@ -294,7 +371,7 @@ export default function Debts() {
         </div>
       </div>
 
-      {/* DEBTS TABLE */}
+      {/* DEBTS TABLE WITH ITEMS BORROWED */}
       {activeTab === 'debts' && (
         <div className="bg-white border-2 border-emerald-500/40 rounded-3xl overflow-hidden shadow-sm">
           {loading ? (
@@ -304,72 +381,109 @@ export default function Debts() {
             </div>
           ) : filteredDebts.length === 0 ? (
             <div className="text-center py-16 text-slate-400 font-extrabold">
-              Hakuna kumbukumbu za madeni zilizopatikana.
+              Hakuna kumbukumbu za madeni zilizopatikana kwa kipindi hiki.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-black">
-                    <th className="py-4 px-6">Mteja</th>
+                    <th className="py-4 px-6">Mteja & Simu</th>
+                    <th className="py-4 px-6">Bidhaa Alizokopa</th>
+                    <th className="py-4 px-6">Tarehe</th>
                     <th className="py-4 px-6">Deni Lote</th>
-                    <th className="py-4 px-6">Kilicholipwa</th>
                     <th className="py-4 px-6">Salio Linalobaki</th>
                     <th className="py-4 px-6">Hali (Status)</th>
                     <th className="py-4 px-6 text-right">Vitendo</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  {filteredDebts.map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50 transition">
-                      <td className="py-4 px-6 font-black text-blue-950">
-                        <div>{d.customer_name}</div>
-                        {d.customer_phone && (
-                          <div className="text-xs text-slate-500 font-bold flex items-center gap-1 mt-0.5">
-                            <Phone className="w-3 h-3 text-emerald-600" /> {d.customer_phone}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-4 px-6 text-slate-600 font-mono font-bold">{Number(d.total_amount).toLocaleString()} TZS</td>
-                      <td className="py-4 px-6 text-emerald-700 font-mono font-black">{Number(d.paid_amount || d.amount_paid || 0).toLocaleString()} TZS</td>
-                      <td className="py-4 px-6 text-amber-600 font-black font-mono">{Number(d.remaining_amount).toLocaleString()} TZS</td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black ${
-                          d.status === 'PAID' 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
-                            : d.status === 'PARTIAL'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-300'
-                            : 'bg-red-50 text-red-700 border border-red-300'
-                        }`}>
-                          {d.status === 'PAID' && <CheckCircle className="w-3.5 h-3.5" />}
-                          {d.status === 'PARTIAL' && <Clock className="w-3.5 h-3.5" />}
-                          {d.status === 'PENDING' && <AlertCircle className="w-3.5 h-3.5" />}
-                          {d.status === 'PAID' ? 'Imelipwa Yote' : d.status === 'PARTIAL' ? 'Imelipwa Nusu' : 'Haijalipwa'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {d.status !== 'PAID' && (
-                            <button
-                              onClick={() => { setSelectedDebt(d); setShowPayModal(true); }}
-                              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition shadow-2xs"
-                            >
-                              Sajili Malipo
-                            </button>
-                          )}
+                  {filteredDebts.map((d) => {
+                    // Mchanganuo wa bidhaa alizokopa
+                    const itemsList = d.items || d.sale_items || [];
 
-                          {/* KITUFE CHA KUFUTA DENI */}
-                          <button
-                            onClick={() => { setDebtToDelete(d); setShowDeleteModal(true); }}
-                            className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition"
-                            title="Futa Deni"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                    return (
+                      <tr key={d.id} className="hover:bg-slate-50 transition">
+                        <td className="py-4 px-6 font-black text-blue-950">
+                          <div>{d.customer_name}</div>
+                          {d.customer_phone && (
+                            <div className="text-xs text-slate-500 font-bold flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-emerald-600" /> {d.customer_phone}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* COLUMN MPYA: BIDHAA ALIZOKOPA */}
+                        <td className="py-4 px-6 max-w-xs">
+                          {itemsList.length > 0 ? (
+                            <div className="space-y-1">
+                              {itemsList.map((item, idx) => (
+                                <div key={idx} className="text-xs font-bold text-slate-700 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                                  <ShoppingBag className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span className="truncate">{item.product_name || item.name || 'Bidhaa'}:</span>
+                                  <span className="text-blue-950 font-black font-mono">{item.quantity} {item.unit || 'pcs'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : d.items_summary ? (
+                            <span className="text-xs font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 inline-block">
+                              📦 {d.items_summary}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Bila Mchanganuo</span>
+                          )}
+                        </td>
+
+                        <td className="py-4 px-6 text-slate-500 font-mono text-xs font-bold whitespace-nowrap">
+                          {d.created_at ? new Date(d.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+
+                        <td className="py-4 px-6 text-slate-600 font-mono font-bold whitespace-nowrap">
+                          {Number(d.total_amount).toLocaleString()} TZS
+                        </td>
+
+                        <td className="py-4 px-6 text-amber-600 font-black font-mono whitespace-nowrap">
+                          {Number(d.remaining_amount).toLocaleString()} TZS
+                        </td>
+
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black ${
+                            d.status === 'PAID' 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                              : d.status === 'PARTIAL'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-300'
+                              : 'bg-red-50 text-red-700 border border-red-300'
+                          }`}>
+                            {d.status === 'PAID' && <CheckCircle className="w-3.5 h-3.5" />}
+                            {d.status === 'PARTIAL' && <Clock className="w-3.5 h-3.5" />}
+                            {d.status === 'PENDING' && <AlertCircle className="w-3.5 h-3.5" />}
+                            {d.status === 'PAID' ? 'Imelipwa Yote' : d.status === 'PARTIAL' ? 'Imelipwa Nusu' : 'Haijalipwa'}
+                          </span>
+                        </td>
+
+                        <td className="py-4 px-6 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            {d.status !== 'PAID' && (
+                              <button
+                                onClick={() => { setSelectedDebt(d); setShowPayModal(true); }}
+                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition shadow-2xs"
+                              >
+                                Sajili Malipo
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => { setDebtToDelete(d); setShowDeleteModal(true); }}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition"
+                              title="Futa Deni"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

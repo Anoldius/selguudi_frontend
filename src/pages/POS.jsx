@@ -1,456 +1,727 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
 import apiClient from '../api/axios';
 import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  CreditCard,
-  BarChart3, 
-  Wallet,
-  LogOut, 
-  User,
-  Heart,
-  Menu,
-  X,
-  Clock,
-  Lock,
-  Loader2,
-  ChevronLeft,
-  Settings as SettingsIcon,
-  Users as UsersIcon,
-  Smartphone,
-  RefreshCw,
-  Sparkles
+  Users, 
+  CreditCard, 
+  DollarSign, 
+  Search, 
+  Plus, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle,
+  Loader2, 
+  X, 
+  Check, 
+  Phone,
+  UserPlus,
+  Trash2,
+  Calendar,
+  Filter,
+  ShoppingBag
 } from 'lucide-react';
 
-export default function Layout({ children }) {
-  const { user, logout } = useContext(AuthContext);
-  const location = useLocation();
-  const navigate = useNavigate();
+export default function Debts() {
+  const [debts, setDebts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('debts');
 
-  // Mobile Menu State
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Date Filtering States
+  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'juzi', 'custom'
+  const [customDate, setCustomDate] = useState('');
 
-  // Desktop Sidebar Collapse / Expand State
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Modals States
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [showAddDebtModal, setShowAddDebtModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // States za Billing & Subscription Status
-  const [billingInfo, setBillingInfo] = useState(null);
-  const [loadingBilling, setLoadingBilling] = useState(true);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [selectedDebt, setSelectedDebt] = useState(null);
+  const [debtToDelete, setDebtToDelete] = useState(null);
 
-  // State ya Modal ya Malipo (Payment Modal)
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  // Form States
+  const [payAmount, setPayAmount] = useState('');
+  const [payNotes, setPayNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const currentYear = new Date().getFullYear();
+  const [customerData, setCustomerData] = useState({ name: '', phone: '' });
+  const [debtData, setDebtData] = useState({ customer: '', total_amount: '', due_date: '' });
+
+  // Floating Toast State
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const triggerToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
 
   useEffect(() => {
-    fetchBillingStatus();
+    fetchData();
   }, []);
 
-  const fetchBillingStatus = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const res = await apiClient.get('auth/billing/status/');
-      setBillingInfo(res.data);
+      const [debtsRes, custRes] = await Promise.all([
+        apiClient.get('sales/debts/'),
+        apiClient.get('sales/customers/')
+      ]);
+      setDebts(debtsRes.data.results || debtsRes.data);
+      setCustomers(custRes.data.results || custRes.data);
     } catch (err) {
-      console.error("Billing status fetch error:", err);
+      console.error("Error fetching debt data:", err);
+      triggerToast("Imeshindikana kuvuta taarifa za madeni!", "error");
     } finally {
-      setLoadingBilling(false);
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleAddCustomer = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('sales/customers/', customerData);
+      triggerToast("Mteja amesajiliwa vizuri! 🎉", "success");
+      setShowAddCustomerModal(false);
+      setCustomerData({ name: '', phone: '' });
+      fetchData();
+    } catch (err) {
+      triggerToast(err.response?.data?.message || "Imeshindikana kusajili mteja!", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Kagua Kama Malipo Yameshaingia
-  const handleVerifyPaymentStatus = async () => {
-    setIsVerifying(true);
+  const handleAddDebt = async (e) => {
+    e.preventDefault();
+    if (!debtData.customer || !debtData.total_amount) {
+      triggerToast("Tafadhali chagua mteja na uweke kiasi cha deni!", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      await fetchBillingStatus();
-      const res = await apiClient.get('auth/billing/status/');
-      if (res.data && res.data.has_active_access) {
-        alert("🎉 Hongera! Duka lako limewashwa kikamilifu!");
-        setShowPaymentModal(false);
-      } else {
-        alert("Malipo yako bado hayajasomwa na mfumo. Kama umeshatuma fedha, subiri sekunde chache kisha ubonyeze tena 'Hakiki Malipo'.");
+      const amount = parseFloat(debtData.total_amount);
+
+      const payload = {
+        customer: debtData.customer,
+        total_amount: amount,
+        remaining_amount: amount,
+      };
+
+      if (debtData.due_date && debtData.due_date.trim() !== '') {
+        payload.due_date = debtData.due_date;
       }
+
+      await apiClient.post('sales/debts/', payload);
+      triggerToast("Deni jipya limesajiliwa vizuri! 📝", "success");
+      setShowAddDebtModal(false);
+      setDebtData({ customer: '', total_amount: '', due_date: '' });
+      fetchData();
     } catch (err) {
-      console.error(err);
-      alert("Imeshindikana kuhakiki taarifa za malipo kwa sasa.");
+      console.error("Error creating debt:", err.response?.data);
+      triggerToast(err.response?.data?.message || "Imeshindikana kurekodi deni!", "error");
     } finally {
-      setIsVerifying(false);
+      setIsSubmitting(false);
     }
   };
 
-  // Orodha Kamili ya Menyu
-  const allNavItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, ownerOnly: false },
-    { name: 'Mauzo (POS)', path: '/pos', icon: ShoppingCart, ownerOnly: false },
-    { name: 'Matumizi', path: '/expenses', icon: Wallet, ownerOnly: false },
-    { name: 'Stoko & Bidhaa', path: '/inventory', icon: Package, ownerOnly: false },
-    { name: 'Daftari la Madeni', path: '/debts', icon: CreditCard, ownerOnly: false },
-    { name: 'Ripoti & Takwimu', path: '/reports', icon: BarChart3, ownerOnly: true },
-    { name: 'Wafanyakazi', path: '/users', icon: UsersIcon, ownerOnly: true },
-    { name: 'Mipangilio', path: '/settings', icon: SettingsIcon, ownerOnly: true },
-  ];
+  const handlePayDebt = async (e) => {
+    e.preventDefault();
+    if (!payAmount || Number(payAmount) <= 0) {
+      triggerToast("Ingiza kiasi sahihi cha malipo!", "error");
+      return;
+    }
 
-  const isOwner = user?.role === 'owner';
-  const navItems = allNavItems.filter(item => !item.ownerOnly || isOwner);
+    setIsSubmitting(true);
+    try {
+      await apiClient.post(`sales/debts/${selectedDebt.id}/pay/`, {
+        amount_paid: parseFloat(payAmount),
+        notes: payNotes
+      });
+      triggerToast("Malipo yamesajiliwa vizuri! 🎉", "success");
+      setShowPayModal(false);
+      setPayAmount('');
+      setPayNotes('');
+      fetchData();
+    } catch (err) {
+      triggerToast(err.response?.data?.error || err.response?.data?.message || "Imeshindikana kurekodi malipo!", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // KUPATA SIKU ZILIZOBAKI (Default ni Siku 7)
-  const daysLeft = billingInfo?.days_left_in_trial ?? user?.days_left_in_trial ?? 7;
-  const hasActiveAccess = billingInfo?.has_active_access ?? user?.has_active_access ?? true;
+  const handleDeleteDebt = async () => {
+    if (!debtToDelete) return;
 
-  // Namba iliyosajiliwa na Mteja
-  const registeredPhone = billingInfo?.phone || user?.phone || user?.phone_number || user?.business?.phone || user?.username || "07XXXXXXXX";
+    setIsDeleting(true);
+    try {
+      await apiClient.delete(`sales/debts/${debtToDelete.id}/`);
+      triggerToast("Deni limefutwa kabisa kwenye mfumo! 🗑️", "success");
+      setShowDeleteModal(false);
+      setDebtToDelete(null);
+      fetchData();
+    } catch (err) {
+      console.error("Delete Debt Error:", err.response);
+      triggerToast(err.response?.data?.message || "Imeshindikana kufuta deni hili!", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
-  const showTrialPill = Number(daysLeft) > 0;
+  const totalDebtAmount = debts
+    .filter(d => d.status !== 'PAID')
+    .reduce((acc, curr) => acc + Number(curr.remaining_amount || 0), 0);
 
-  // COMPONENT YA MAELEKEZO YA MALIPO (Clean Light Style)
-  const PaymentInstructionsCard = () => (
-    <div className="space-y-4 text-left">
-      <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2 text-emerald-800 font-medium">
-          <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Namba yako ya usajili:</span>
-        </div>
-        <span className="font-mono font-black text-blue-950 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-sm shadow-2xs">
-          {registeredPhone}
-        </span>
-      </div>
+  const activeDebtorsCount = debts.filter(d => d.status !== 'PAID').length;
 
-      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
-        <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-          <span className="text-xs font-bold text-slate-500">Kifurushi cha Mwezi:</span>
-          <span className="text-emerald-700 font-black font-mono text-base">20,000 TZS</span>
-        </div>
+  // CHUJO LA TAREHE NA SEARCH
+  const filteredDebts = debts.filter(d => {
+    const matchesSearch = 
+      d.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+      (d.customer_phone && d.customer_phone.includes(search)) ||
+      (d.items_summary && d.items_summary.toLowerCase().includes(search.toLowerCase()));
 
-        <div className="space-y-2 pt-1 text-xs">
-          <div className="flex justify-between text-slate-700">
-            <span className="font-semibold">AirtelMoney:</span>
-            <span className="font-mono font-extrabold text-blue-900">0686915966</span>
-          </div>
-          <div className="flex justify-between text-slate-700">
-            <span className="font-semibold">Halopesa:</span>
-            <span className="font-mono font-extrabold text-blue-900">0613012686</span>
-          </div>
-          <div className="flex justify-between text-slate-500 text-[11px] pt-1.5 border-t border-slate-200">
-            <span>Jina la Akaunti:</span>
-            <span className="font-bold text-slate-800">ANOLDIUS PAUL</span>
-          </div>
-        </div>
-      </div>
+    if (!matchesSearch) return false;
 
-      <p className="text-[11px] text-amber-900 bg-amber-50 p-3 rounded-xl border border-amber-200 leading-relaxed font-medium">
-        📌 <strong className="text-amber-800">Angalizo:</strong> Hakikisha unatuma fedha kutoka kwenye namba yako ya usajili (<strong className="text-blue-950 underline">{registeredPhone}</strong>). Mfumo utasoma SMS na kuwasha duka lako <strong>kiotomatiki</strong> mara tu baada ya kutuma!
-      </p>
+    if (dateFilter === 'all') return true;
 
-      <button
-        onClick={handleVerifyPaymentStatus}
-        disabled={isVerifying}
-        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition duration-200 disabled:opacity-50"
-      >
-        {isVerifying ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span>Inahakiki Malipo...</span>
-          </>
-        ) : (
-          <>
-            <RefreshCw className="w-5 h-5" />
-            <span>Nishatuma / Hakiki Malipo</span>
-          </>
-        )}
-      </button>
-    </div>
-  );
+    if (!d.created_at) return false;
+    const debtDateStr = new Date(d.created_at).toISOString().split('T')[0];
+    
+    const today = new Date();
+    const formatDate = (dObj) => {
+      const year = dObj.getFullYear();
+      const month = String(dObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-  // KAMA ACCESS IMEISHA KABISA
-  if (!loadingBilling && !hasActiveAccess) {
-    return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
-        <div className="max-w-md w-full bg-white border-2 border-emerald-500/40 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-amber-500 to-emerald-500" />
+    if (dateFilter === 'today') {
+      return debtDateStr === formatDate(today);
+    }
+    if (dateFilter === 'yesterday') {
+      const yest = new Date();
+      yest.setDate(today.getDate() - 1);
+      return debtDateStr === formatDate(yest);
+    }
+    if (dateFilter === 'juzi') {
+      const juzi = new Date();
+      juzi.setDate(today.getDate() - 2);
+      return debtDateStr === formatDate(juzi);
+    }
+    if (dateFilter === 'custom' && customDate) {
+      return debtDateStr === customDate;
+    }
 
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shadow-sm">
-            <Lock className="w-10 h-10" />
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-black text-blue-950">Muda wa Trial Umeisha!</h2>
-            <p className="text-slate-500 text-sm mt-2 font-medium">
-              Kifurushi cha <span className="text-emerald-700 font-extrabold uppercase">{billingInfo?.business_name || user?.business_name}</span> kimeisha. Lipia ili mfumo uwake kiotomatiki.
-            </p>
-          </div>
-
-          <PaymentInstructionsCard />
-
-          <button
-            onClick={handleLogout}
-            className="text-xs font-bold text-slate-400 hover:text-red-600 transition"
-          >
-            Toka (Logout)
-          </button>
-        </div>
-      </div>
-    );
-  }
+    return true;
+  });
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans">
-
-      {/* DESKTOP SIDEBAR WITH MODERN ANIMATED GLOW & NAV INDICATOR */}
-      <aside 
-        className={`bg-gradient-to-b from-blue-950 via-slate-900 to-blue-950 text-white border-r border-blue-900/60 hidden md:flex flex-col justify-between shrink-0 transition-all duration-300 shadow-2xl z-20 ${
-          isSidebarCollapsed ? 'w-20' : 'w-64'
-        }`}
-      > 
-        <div>
-          {/* BRAND HEADER WITH CLEAN WHITE LOGO CONTAINER */}
-          <div className={`p-4 border-b border-blue-900/60 flex items-center justify-between gap-2 ${isSidebarCollapsed ? 'flex-col gap-3 py-4' : ''}`}>
-            
-            {/* CONTAINER NYEUPE SAFIFU INAYOFANANA NA DASHBOARD CARD */}
-            <div className={`bg-white p-2.5 rounded-2xl border-2 border-emerald-500/40 shadow-md transition-all duration-300 flex items-center justify-center overflow-hidden ${
-              isSidebarCollapsed ? 'w-12 h-12 p-1.5' : 'w-full'
-            }`}>
-              <img 
-                src="/uzakisasa.png" 
-                alt="Selguudi Logo" 
-                className={`object-contain transition-all duration-300 drop-shadow-xs ${
-                  isSidebarCollapsed 
-                    ? 'h-9 w-auto' 
-                    : 'h-10 sm:h-12 w-auto max-w-[190px]'
-                }`}
-              />
-            </div>
-
-            <button
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-2 rounded-xl bg-blue-900/50 hover:bg-emerald-500 hover:text-slate-950 text-blue-200 transition-all duration-200 shrink-0 hover:scale-105"
-              title={isSidebarCollapsed ? "Panua Sidebar" : "Kunja Sidebar"}
-            >
-              {isSidebarCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {/* Navigation Menu with Modern Hover & Active Animations */}
-          <nav className="p-3 space-y-1.5">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  title={isSidebarCollapsed ? item.name : ''}
-                  className={`group relative flex items-center gap-3.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all duration-300 transform active:scale-98 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-500/25 translate-x-1'
-                      : 'text-slate-300 hover:text-white hover:bg-white/10 hover:translate-x-1'
-                  } ${isSidebarCollapsed ? 'justify-center px-0 transform-none' : ''}`}
-                >
-                  {/* Glowing Indicator Line for Active Item */}
-                  {isActive && !isSidebarCollapsed && (
-                    <span className="absolute left-0 top-2 bottom-2 w-1.5 bg-white rounded-r-full shadow-md" />
-                  )}
-
-                  <Icon className={`w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
-                    isActive ? 'text-slate-950' : 'text-emerald-400 group-hover:text-emerald-300'
-                  }`} />
-
-                  {!isSidebarCollapsed && <span className="tracking-wide">{item.name}</span>}
-                </Link>
-              );
-            })}
-
-            {/* USER PROFILE & LOGOUT BADGE */}
-            <div className="pt-3 mt-3 border-t border-blue-900/60">
-              <div className={`flex items-center justify-between p-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md ${
-                isSidebarCollapsed ? 'justify-center' : ''
-              }`}>
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black shadow-md">
-                    <User className="w-4 h-4" />
-                  </div>
-                  {!isSidebarCollapsed && (
-                    <div className="overflow-hidden">
-                      <p className="text-xs font-black text-white truncate">{user?.username}</p>
-                      <p className="text-[10px] text-emerald-300 font-extrabold uppercase truncate">{user?.role || 'Owner'}</p>
-                    </div>
-                  )}
-                </div>
-
-                {!isSidebarCollapsed && (
-                  <button
-                    onClick={handleLogout}
-                    className="p-1.5 rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-500/20 transition-colors shrink-0"
-                    title="Toka (Logout)"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </nav>
-        </div>
-
-        {!isSidebarCollapsed && (
-          <div className="p-4 border-t border-blue-900/60 text-[11px] text-slate-400 font-bold">
-            &copy; {currentYear} Selguudi POS
-          </div>
-        )}
-      </aside>
-
-      {/* MOBILE SIDEBAR DRAWER */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm md:hidden flex">
-          <div className="w-72 bg-gradient-to-b from-blue-950 to-slate-900 text-white h-full border-r border-blue-900 p-5 flex flex-col justify-between shadow-2xl">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-blue-900">
-                <div className="bg-white p-2 rounded-2xl border-2 border-emerald-500/40 shadow-md">
-                  <img 
-                    src="/uzakisasa.png" 
-                    alt="Selguudi Logo" 
-                    className="h-10 w-auto max-w-[170px] object-contain"
-                  />
-                </div>
-                <button onClick={() => setMobileMenuOpen(false)} className="text-blue-200 hover:text-white p-1">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <nav className="mt-6 space-y-2">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-extrabold text-sm transition-all ${
-                        isActive
-                          ? 'bg-emerald-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20'
-                          : 'text-slate-300 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 text-emerald-400" />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
-
-                <div className="pt-3 mt-3 border-t border-blue-900">
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 mb-3">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-9 h-9 shrink-0 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-black text-white truncate">{user?.username}</p>
-                        <p className="text-xs text-emerald-300 font-bold uppercase truncate">{user?.role || 'Owner'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500/20 font-extrabold text-sm transition"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>Toka (Logout)</span>
-                  </button>
-                </div>
-              </nav>
-            </div>
-          </div>
-          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+    <div className="w-full space-y-6 relative font-sans text-slate-800 pb-12">
+      
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toast.show && (
+        <div className={`fixed top-6 right-6 z-[9999] px-5 py-4 rounded-2xl border shadow-2xl flex items-center gap-3 backdrop-blur-md transition-all animate-bounce ${
+          toast.type === 'success' 
+            ? 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-900/20' 
+            : 'bg-red-600 border-red-500 text-white shadow-red-900/20'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle className="w-5 h-5 text-white" /> : <AlertCircle className="w-5 h-5 text-white" />}
+          <span className="text-xs font-black tracking-wide">{toast.message}</span>
         </div>
       )}
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-slate-100">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* TOP HEADER BAR NA TOP-UP TRIAL NOTIFICATION PILL */}
-        <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-xs z-10">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 text-slate-700 hover:text-blue-950 rounded-xl bg-slate-100"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <span className="font-black text-blue-950 text-sm hidden sm:inline">SELGUUDI POS DASHBOARD</span>
-          </div>
-
-          {/* TRIAL / SUBSCRIPTION BADGE (TOP UP PILL - GREEN & BLUE GLOW) */}
-          {showTrialPill && (
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="group flex items-center gap-2.5 bg-gradient-to-r from-blue-950 to-blue-900 hover:from-emerald-600 hover:to-emerald-500 text-white px-4 py-2 rounded-full shadow-md border-2 border-emerald-400/60 transition-all duration-300 transform hover:scale-105 animate-pulse"
-              title="Bonyeza kulipia kifurushi chako"
-            >
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xs shadow-inner">
-                <Clock className="w-3.5 h-3.5" />
-              </div>
-              <div className="text-left leading-tight">
-                <p className="text-[10px] text-emerald-300 font-extrabold uppercase tracking-wider">Trial ya Bure</p>
-                <p className="text-xs font-black text-white">{daysLeft} Siku Zimebaki</p>
-              </div>
-              <span className="bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full ml-1 shadow-sm group-hover:bg-white transition-colors">
-                Lipa 20k
-              </span>
-            </button>
-          )}
+        <div className="z-10 relative">
+          <h1 className="text-2xl font-black text-white flex items-center gap-2">
+            <CreditCard className="w-7 h-7 text-emerald-400" />
+            <span>Daftari la Madeni & Wateja</span>
+          </h1>
+          <p className="text-blue-200 text-sm mt-1">Simamia madeni ya wateja, kagua bidhaa walizokopa, na rekodi malipo.</p>
         </div>
 
-        {/* DYNAMIC PAGE CONTENT */}
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {children || <Outlet />}
-        </main>
+        <div className="flex items-center gap-3 z-10">
+          <button
+            onClick={() => setShowAddCustomerModal(true)}
+            className="px-4 py-3 bg-white/10 hover:bg-white/20 text-emerald-300 font-extrabold rounded-2xl border border-white/20 flex items-center gap-2 transition shadow-md"
+          >
+            <UserPlus className="w-4 h-4 text-emerald-400" />
+            <span>Mteja Mpya</span>
+          </button>
 
-        {/* MODAL YA MAELEKEZO YA MALIPO */}
-        {showPaymentModal && (
-          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white border-2 border-emerald-500/40 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl relative animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2 text-emerald-700 font-black text-base">
-                  <CreditCard className="w-5 h-5" />
-                  <span>Lipia Kifurushi cha Mwezi</span>
-                </div>
-                <button 
-                  onClick={() => setShowPaymentModal(false)} 
-                  className="text-slate-400 hover:text-slate-600 p-1 bg-slate-100 rounded-xl"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+          <button
+            onClick={() => setShowAddDebtModal(true)}
+            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Sajili Deni Jipya</span>
+          </button>
+        </div>
+      </div>
 
-              <PaymentInstructionsCard />
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="bg-white border-2 border-emerald-500/40 p-6 rounded-3xl flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-slate-400 text-xs font-extrabold uppercase tracking-wider">Jumla ya Madeni Nje</p>
+            <p className="text-2xl font-black text-amber-600 font-mono mt-1">
+              {totalDebtAmount.toLocaleString()} <span className="text-xs text-slate-500 font-bold">TZS</span>
+            </p>
+          </div>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-600">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white border-2 border-emerald-500/40 p-6 rounded-3xl flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-slate-400 text-xs font-extrabold uppercase tracking-wider">Wateja Wanaodaiwa</p>
+            <p className="text-2xl font-black text-blue-950 font-mono mt-1">{activeDebtorsCount} <span className="text-xs text-slate-500 font-bold">Wateja</span></p>
+          </div>
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl text-blue-900">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white border-2 border-emerald-500/40 p-6 rounded-3xl flex items-center justify-between shadow-sm">
+          <div>
+            <p className="text-slate-400 text-xs font-extrabold uppercase tracking-wider">Madeni Yaliyokamilika</p>
+            <p className="text-2xl font-black text-emerald-700 font-mono mt-1">
+              {debts.filter(d => d.status === 'PAID').length} <span className="text-xs text-slate-500 font-bold">Yalolipwa</span>
+            </p>
+          </div>
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-700">
+            <CheckCircle className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* SEARCH AND TABS */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="relative w-full md:w-80">
+          <Search className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Tafuta mteja, simu, au bidhaa aliyokopa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-300 rounded-2xl text-blue-950 font-bold placeholder-slate-400 focus:outline-none focus:border-emerald-600 shadow-xs text-sm"
+          />
+        </div>
+
+        {/* DATE FILTERS */}
+        {activeTab === 'debts' && (
+          <div className="flex items-center gap-1.5 bg-white p-1.5 border-2 border-slate-200 rounded-2xl overflow-x-auto w-full md:w-auto shadow-xs">
+            <span className="text-[10px] font-black uppercase text-slate-400 px-2 flex items-center gap-1">
+              <Filter className="w-3 h-3 text-emerald-600" /> Kipindi:
+            </span>
+            {[
+              { id: 'all', label: 'Yote' },
+              { id: 'today', label: 'Leo' },
+              { id: 'yesterday', label: 'Jana' },
+              { id: 'juzi', label: 'Juzi' }
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => { setDateFilter(f.id); setCustomDate(''); }}
+                className={`px-3.5 py-1.5 rounded-xl font-black text-xs transition ${
+                  dateFilter === f.id ? 'bg-blue-900 text-white shadow-md' : 'text-slate-600 hover:text-blue-950 bg-slate-50'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+
+            <div className="relative flex items-center">
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => { setCustomDate(e.target.value); setDateFilter('custom'); }}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-blue-950 text-xs font-bold font-mono focus:outline-none focus:border-emerald-600"
+              />
             </div>
           </div>
         )}
 
-        {/* FOOTER SECTION */}
-        <footer className="py-4 px-6 border-t border-slate-200 bg-white text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 mt-auto">
-          <div className="flex items-center gap-1 font-semibold">
-            <span>&copy; {currentYear}</span>
-            <span className="font-extrabold text-blue-950">Selguudi POS</span>. 
-            <span>Haki zote zimehifadhiwa.</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-slate-500 font-semibold">
-            <span>Engineered with</span>
-            <Heart className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600/30" />
-            <span>for Supermarkets & Retail Stores</span>
-          </div>
-        </footer>
-
+        <div className="flex items-center gap-2 bg-white p-1.5 border-2 border-slate-200 rounded-2xl w-full md:w-auto shadow-xs">
+          <button
+            onClick={() => setActiveTab('debts')}
+            className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-black text-sm transition ${
+              activeTab === 'debts' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-600 hover:text-blue-950'
+            }`}
+          >
+            Orodha ya Madeni
+          </button>
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-black text-sm transition ${
+              activeTab === 'customers' ? 'bg-blue-900 text-white shadow-md' : 'text-slate-600 hover:text-blue-950'
+            }`}
+          >
+            Orodha ya Wateja
+          </button>
+        </div>
       </div>
+
+      {/* DEBTS TABLE WITH ITEMS BORROWED */}
+      {activeTab === 'debts' && (
+        <div className="bg-white border-2 border-emerald-500/40 rounded-3xl overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-slate-500 gap-2 font-medium">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+              <span>Inapakia madeni...</span>
+            </div>
+          ) : filteredDebts.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 font-extrabold">
+              Hakuna kumbukumbu za madeni zilizopatikana kwa kipindi hiki.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-black">
+                    <th className="py-4 px-6">Mteja & Simu</th>
+                    <th className="py-4 px-6">Bidhaa Alizokopa</th>
+                    <th className="py-4 px-6">Tarehe</th>
+                    <th className="py-4 px-6">Deni Lote</th>
+                    <th className="py-4 px-6">Salio Linalobaki</th>
+                    <th className="py-4 px-6">Hali (Status)</th>
+                    <th className="py-4 px-6 text-right">Vitendo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {filteredDebts.map((d) => {
+                    // Mchanganuo wa bidhaa alizokopa
+                    const itemsList = d.items || d.sale_items || [];
+
+                    return (
+                      <tr key={d.id} className="hover:bg-slate-50 transition">
+                        <td className="py-4 px-6 font-black text-blue-950">
+                          <div>{d.customer_name}</div>
+                          {d.customer_phone && (
+                            <div className="text-xs text-slate-500 font-bold flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-emerald-600" /> {d.customer_phone}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* COLUMN MPYA: BIDHAA ALIZOKOPA */}
+                        <td className="py-4 px-6 max-w-xs">
+                          {itemsList.length > 0 ? (
+                            <div className="space-y-1">
+                              {itemsList.map((item, idx) => (
+                                <div key={idx} className="text-xs font-bold text-slate-700 flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                                  <ShoppingBag className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span className="truncate">{item.product_name || item.name || 'Bidhaa'}:</span>
+                                  <span className="text-blue-950 font-black font-mono">{item.quantity} {item.unit || 'pcs'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : d.items_summary ? (
+                            <span className="text-xs font-bold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 inline-block">
+                              📦 {d.items_summary}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Bila Mchanganuo</span>
+                          )}
+                        </td>
+
+                        <td className="py-4 px-6 text-slate-500 font-mono text-xs font-bold whitespace-nowrap">
+                          {d.created_at ? new Date(d.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+
+                        <td className="py-4 px-6 text-slate-600 font-mono font-bold whitespace-nowrap">
+                          {Number(d.total_amount).toLocaleString()} TZS
+                        </td>
+
+                        <td className="py-4 px-6 text-amber-600 font-black font-mono whitespace-nowrap">
+                          {Number(d.remaining_amount).toLocaleString()} TZS
+                        </td>
+
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black ${
+                            d.status === 'PAID' 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                              : d.status === 'PARTIAL'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-300'
+                              : 'bg-red-50 text-red-700 border border-red-300'
+                          }`}>
+                            {d.status === 'PAID' && <CheckCircle className="w-3.5 h-3.5" />}
+                            {d.status === 'PARTIAL' && <Clock className="w-3.5 h-3.5" />}
+                            {d.status === 'PENDING' && <AlertCircle className="w-3.5 h-3.5" />}
+                            {d.status === 'PAID' ? 'Imelipwa Yote' : d.status === 'PARTIAL' ? 'Imelipwa Nusu' : 'Haijalipwa'}
+                          </span>
+                        </td>
+
+                        <td className="py-4 px-6 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2">
+                            {d.status !== 'PAID' && (
+                              <button
+                                onClick={() => { setSelectedDebt(d); setShowPayModal(true); }}
+                                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition shadow-2xs"
+                              >
+                                Sajili Malipo
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => { setDebtToDelete(d); setShowDeleteModal(true); }}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition"
+                              title="Futa Deni"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CUSTOMERS TABLE */}
+      {activeTab === 'customers' && (
+        <div className="bg-white border-2 border-emerald-500/40 rounded-3xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-black">
+                  <th className="py-4 px-6">Jina la Mteja</th>
+                  <th className="py-4 px-6">Namba ya Simu</th>
+                  <th className="py-4 px-6">Jumla Anayodaiwa</th>
+                  <th className="py-4 px-6">Tarehe ya Kusajiliwa</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {customers.map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50 transition">
+                    <td className="py-4 px-6 font-black text-blue-950">{c.name}</td>
+                    <td className="py-4 px-6 text-slate-500 font-mono font-semibold">{c.phone || 'N/A'}</td>
+                    <td className="py-4 px-6 text-amber-600 font-black font-mono">{Number(c.total_debt || 0).toLocaleString()} TZS</td>
+                    <td className="py-4 px-6 text-slate-500 font-bold text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: PAY DEBT MODAL */}
+      {showPayModal && selectedDebt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-black text-blue-950">Sajili Malipo ya Deni</h3>
+              <button onClick={() => setShowPayModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-slate-600 bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-2xl space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 font-bold">Mteja:</span>
+                <span className="text-blue-950 font-black">{selectedDebt.customer_name}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 font-bold">Salio Linalobaki:</span>
+                <span className="text-amber-600 font-black font-mono">{Number(selectedDebt.remaining_amount).toLocaleString()} TZS</span>
+              </div>
+            </div>
+            <form onSubmit={handlePayDebt} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Kiasi Anacholipa Sasa (TZS)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="10000"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-mono font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Maelezo</label>
+                <input
+                  type="text"
+                  placeholder="Mfano: Kalipa kwa M-Pesa"
+                  value={payNotes}
+                  onChange={(e) => setPayNotes(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
+              >
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                <span>Hifadhi Malipo</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ADD CUSTOMER */}
+      {showAddCustomerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-black text-blue-950">Sajili Mteja Mpya</h3>
+              <button onClick={() => setShowAddCustomerModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-slate-600 bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddCustomer} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Jina la Mteja</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Mama Maria"
+                  value={customerData.name}
+                  onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Namba ya Simu</label>
+                <input
+                  type="text"
+                  placeholder="0712345678"
+                  value={customerData.phone}
+                  onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
+              >
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                <span>Hifadhi Mteja</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: RECORD DEBT */}
+      {showAddDebtModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white border-2 border-emerald-500/40 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-black text-blue-950">Rekodi Deni Jipya</h3>
+              <button onClick={() => setShowAddDebtModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-slate-600 bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddDebt} className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Chagua Mteja</label>
+                <select
+                  required
+                  value={debtData.customer}
+                  onChange={(e) => setDebtData({ ...debtData, customer: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600"
+                >
+                  <option value="">-- Chagua Mteja --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.phone || 'Bila Simu'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Jumla ya Deni (TZS)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder="50000"
+                  value={debtData.total_amount}
+                  onChange={(e) => setDebtData({ ...debtData, total_amount: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-mono font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase tracking-wider mb-1.5">Tarehe ya Kurudisha (Hiari)</label>
+                <input
+                  type="date"
+                  value={debtData.due_date}
+                  onChange={(e) => setDebtData({ ...debtData, due_date: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold focus:outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
+              >
+                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                <span>Rekodi Deni</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: DELETE DEBT CONFIRMATION */}
+      {showDeleteModal && debtToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white border-2 border-red-500/40 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-red-600 font-black text-base">
+                <Trash2 className="w-5 h-5" />
+                <span>Thibitisha Kufuta Deni</span>
+              </div>
+              <button onClick={() => setShowDeleteModal(false)} className="p-1 rounded-xl text-slate-400 hover:text-slate-600 bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-slate-600 text-xs font-medium leading-relaxed">
+              Je, una uhakika unataka kufuta kabisa kumbukumbu ya deni la <strong className="text-blue-950 font-black">{debtToDelete.customer_name}</strong> lenye thamani ya <strong className="text-amber-600 font-black">{Number(debtToDelete.total_amount).toLocaleString()} TZS</strong>?
+            </p>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition text-xs"
+              >
+                Ghairi
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteDebt}
+                disabled={isDeleting}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl transition text-xs shadow-md shadow-red-600/20 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span>Ndio, Futa Deni</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
