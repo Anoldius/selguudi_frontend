@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Filter,
   AlertTriangle,
-  Package
+  Package,
+  UserPlus
 } from 'lucide-react';
 
 export default function POS() {
@@ -30,7 +31,6 @@ export default function POS() {
     return cached ? JSON.parse(cached) : [];
   });
 
-  // Kama bidhaa zipo kwenye cache, fungua ukurasa instantly bila kusubiri network
   const [loading, setLoading] = useState(() => {
     const cachedProducts = localStorage.getItem('selguudi_pos_products');
     return !cachedProducts;
@@ -51,8 +51,10 @@ export default function POS() {
   // Modal State ya Confirmation ya Mauzo
   const [showConfirmSaleModal, setShowConfirmSaleModal] = useState(false);
 
-  // State za Modal ya Kukopa
+  // State za Modal ya Kukopa & Orodha ya Wateja Waliosajiliwa
   const [showDebtModal, setShowDebtModal] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -70,9 +72,10 @@ export default function POS() {
 
   useEffect(() => {
     fetchData();
+    fetchCustomers();
   }, []);
 
-  // 2. BACKGROUND SYNC: LETA DATA MPYA KUTOKA SERVER BILA KUMCHELEWESHA CASHIER
+  // BACKGROUND SYNC: LETA DATA MPYA KUTOKA SERVER
   const fetchData = async () => {
     try {
       const [prodRes, catRes] = await Promise.all([
@@ -86,7 +89,6 @@ export default function POS() {
       setProducts(fetchedProducts);
       setCategories(fetchedCategories);
 
-      // HIFADHI KWENYE CACHE KWA AJILI YA LOAD YA HARAKA SIKU ZOTE
       localStorage.setItem('selguudi_pos_products', JSON.stringify(fetchedProducts));
       localStorage.setItem('selguudi_pos_categories', JSON.stringify(fetchedCategories));
     } catch (err) {
@@ -96,7 +98,17 @@ export default function POS() {
     }
   };
 
-  // CHUJO LA BIDHAA KWA KUTUMIA SEARCH (JINA, BARCODE NA CATEGORY) & CATEGORY TAB
+  // VUTA ORODHA YA WATEJA KUTOKA SERVER FOR DEBT SELECTOR
+  const fetchCustomers = async () => {
+    try {
+      const res = await apiClient.get('sales/customers/');
+      setCustomers(res.data.results || res.data || []);
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+    }
+  };
+
+  // CHUJO LA BIDHAA KWA KUTUMIA SEARCH & CATEGORY TAB
   const filteredProducts = products.filter(p => {
     const searchTerm = search.toLowerCase().trim();
     const matchesSearch = 
@@ -140,7 +152,6 @@ export default function POS() {
     triggerToast(`"${product.name}" imeongezwa kwenye kikapu!`, 'success');
   };
 
-  // BADILISHA BEI YA KUUZIA KWENYE KIKAPU TU
   const updateCartPrice = (id, newPrice) => {
     const priceVal = parseFloat(newPrice);
     setCart(cart.map(item => {
@@ -172,13 +183,12 @@ export default function POS() {
     }).filter(Boolean));
   };
 
-  // KUWEKA IDADI MOJA KWA MOJA KUTOKA INPUT YA DESIMALI
   const handleDirectQuantityChange = (id, val) => {
     const num = parseFloat(val);
     setCart(cart.map(item => {
       if (item.id === id) {
         if (isNaN(num) || num <= 0) {
-          return { ...item, quantity: val }; // Acha iwe empty au string kwa muda kama anafuta
+          return { ...item, quantity: val };
         }
         if (num > item.availableStock) {
           triggerToast("Umezidi stoko iliyopo!", "error");
@@ -197,10 +207,25 @@ export default function POS() {
   const totalAmount = cart.reduce((sum, item) => sum + ((parseFloat(item.selling_price) || 0) * (parseFloat(item.quantity) || 0)), 0);
   const change = amountPaid ? Math.max(0, parseFloat(amountPaid) - totalAmount) : 0;
 
+  // LOGIC YA CHAGUA MTEJA ALIYESAJILIWA
+  const handleSelectCustomer = (cId) => {
+    setSelectedCustomerId(cId);
+    if (!cId) {
+      setCustomerName('');
+      setCustomerPhone('');
+      return;
+    }
+
+    const foundCust = customers.find(c => String(c.id) === String(cId));
+    if (foundCust) {
+      setCustomerName(foundCust.name || '');
+      setCustomerPhone(foundCust.phone || '');
+    }
+  };
+
   const handleInitiateCheckout = () => {
     if (cart.length === 0) return;
 
-    // Hakikisha hakuna item yenye quantity batili au zero
     const invalidItem = cart.find(item => !item.quantity || parseFloat(item.quantity) <= 0);
     if (invalidItem) {
       triggerToast("Tafadhali hakikisha kiasi (quantity) cha kila bidhaa ni sahihi!", "error");
@@ -222,36 +247,42 @@ export default function POS() {
   const executeCheckout = async (debtDetails = {}) => {
     setIsCheckout(true);
     try {
+      let customerId = selectedCustomerId || null;
+
       if (paymentMethod === 'credit') {
-        let customerId = null;
+        if (!customerId) {
+          try {
+            const match = customers.find(c => 
+              c.name?.toLowerCase() === debtDetails.customer_name?.toLowerCase() ||
+              (debtDetails.customer_phone && c.phone === debtDetails.customer_phone)
+            );
 
-        try {
-          const custRes = await apiClient.get('sales/customers/');
-          const existingCustomers = custRes.data.results || custRes.data || [];
-          
-          const match = existingCustomers.find(c => 
-            c.name?.toLowerCase() === debtDetails.customer_name?.toLowerCase() ||
-            (debtDetails.customer_phone && c.phone === debtDetails.customer_phone)
-          );
-
-          if (match) {
-            customerId = match.id;
-          } else {
-            const newCustRes = await apiClient.post('sales/customers/', {
-              name: debtDetails.customer_name,
-              phone: debtDetails.customer_phone || ''
-            });
-            customerId = newCustRes.data.id;
+            if (match) {
+              customerId = match.id;
+            } else {
+              const newCustRes = await apiClient.post('sales/customers/', {
+                name: debtDetails.customer_name,
+                phone: debtDetails.customer_phone || ''
+              });
+              customerId = newCustRes.data.id;
+            }
+          } catch (cErr) {
+            console.error("Error creating/fetching customer:", cErr);
           }
-        } catch (cErr) {
-          console.error("Error creating/fetching customer:", cErr);
         }
 
+        // TUMA MCHANGANUO WA BIDHAA ALIZOKOPA (ITEMS BREAKDOWN) KWENYE DENI
         if (customerId) {
           const debtPayload = {
             customer: customerId,
             total_amount: totalAmount,
             remaining_amount: totalAmount,
+            items: cart.map(i => ({
+              product_id: i.id,
+              product_name: i.name,
+              quantity: i.quantity,
+              unit: i.unit || 'pcs'
+            }))
           };
           if (debtDetails.due_date && debtDetails.due_date.trim() !== '') {
             debtPayload.due_date = debtDetails.due_date;
@@ -281,7 +312,7 @@ export default function POS() {
         'success'
       );
       
-      // OPTIMISTIC LOCAL STOCK UPDATE: Punguza stoko kwa usahihi wa desimali (mfano 0.25)
+      // OPTIMISTIC LOCAL STOCK UPDATE FOR DECIMALS
       const updatedProducts = products.map(prod => {
         const cartItem = cart.find(c => c.id === prod.id);
         if (cartItem) {
@@ -299,14 +330,15 @@ export default function POS() {
       setCart([]);
       setAmountPaid('');
       setShowDebtModal(false);
+      setSelectedCustomerId('');
       setCustomerName('');
       setCustomerPhone('');
       setDueDate('');
       setDebtNotes('');
       setActiveMobileTab('products');
 
-      // Refresh data kimya kimya kutoka server
       fetchData();
+      fetchCustomers();
     } catch (err) {
       console.error("Full Sale Error Response:", err.response);
 
@@ -328,7 +360,7 @@ export default function POS() {
   const handleDebtSubmit = (e) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      triggerToast("Tafadhali weka Jina la Mteja!", "error");
+      triggerToast("Tafadhali weka au chagua Jina la Mteja!", "error");
       return;
     }
     executeCheckout({
@@ -555,7 +587,7 @@ export default function POS() {
                           <span className="text-[10px] text-slate-500 font-bold">TZS</span>
                         </div>
 
-                        {/* IDADI YENYE UWEZO WA KUUZA KWA ROBO/DESIMALI (0.25, 0.5, 0.75, 1.25...) */}
+                        {/* IDADI YENYE UWEZO WA KUUZA KWA ROBO/DESIMALI */}
                         <div className="flex items-center gap-1">
                           <button onClick={() => updateQuantity(item.id, -0.25)} className="p-1 text-slate-600 hover:bg-slate-200 bg-white border border-slate-300 rounded-lg transition" title="Punguza robo (-0.25)">
                             <Minus className="w-3 h-3" />
@@ -660,7 +692,7 @@ export default function POS() {
 
       </div>
 
-      {/* CONFIRMATION ALERT MODAL KABLA YA KUKAMILISHA MAUZO */}
+      {/* CONFIRMATION ALERT MODAL */}
       {showConfirmSaleModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-2 border-emerald-500/40 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-fadeIn">
@@ -715,7 +747,7 @@ export default function POS() {
         </div>
       )}
 
-      {/* MODAL FORM YA SAJILI DENI */}
+      {/* MODAL YA SAJILI DENI YENYE KUVUTA MTEJA ALIYESAJILIWA */}
       {showDebtModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border-2 border-amber-500/40 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-fadeIn">
@@ -730,6 +762,24 @@ export default function POS() {
             </div>
 
             <form onSubmit={handleDebtSubmit} className="space-y-3">
+              
+              {/* SELECTOR YA KUVUTA MTEJA ALIYESAJILIWA */}
+              <div>
+                <label className="block text-xs font-black text-blue-950 uppercase mb-1">Chagua Mteja Aliyesajiliwa (Hiari)</label>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => handleSelectCustomer(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
+                >
+                  <option value="">-- Mteja Mpya / Andika Jina Chini --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.phone ? `(${c.phone})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-black text-blue-950 uppercase mb-1">Jina la Mteja *</label>
                 <input
@@ -737,7 +787,10 @@ export default function POS() {
                   required
                   placeholder="Mfano: John Doe"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    if (selectedCustomerId) setSelectedCustomerId('');
+                  }}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-xl text-blue-950 font-bold text-sm focus:outline-none focus:border-amber-600"
                 />
               </div>
