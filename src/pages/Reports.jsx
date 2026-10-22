@@ -258,46 +258,59 @@ export default function Reports() {
     });
   };
 
-  // EXPORT PDF YENYE MUONEKANO WA KISHUA NA LOGO SAFI BILA KUKATIKA
+  // EXPORT PDF YENYE MUONEKANO SAFI AMBABAO UNAFANANA 100% NA DASHBOARD BANNER
   const exportPDF = async () => {
     const doc = new jsPDF();
     const shopName = user?.business_name || 'QUEEN SHOP';
 
-    // Header Background ya Kibabe (Bluu Nzito)
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 45, 'F');
+    // 1. Header Background ya Bluu Nzito (Dashboard Style)
+    doc.setFillColor(30, 58, 138); 
+    doc.roundedRect(10, 8, 190, 42, 4, 4, 'F');
 
     try {
-      // Weka Logo Ndani ya Boksi Jeupec (White Container) Juu Kushoto
+      // 2. Logo Container Nyeupe Juu Kushoto
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(14, 8, 32, 28, 2, 2, 'F');
+      doc.roundedRect(14, 12, 28, 34, 3, 3, 'F');
 
-      const logoData = await getProportionalImage('/uzakisasa.png', 28);
-      doc.addImage(logoData.base64, 'PNG', 16, 10, logoData.width, logoData.height); 
+      const logoData = await getProportionalImage('/uzakisasa.png', 24);
+      doc.addImage(logoData.base64, 'PNG', 16, 15, logoData.width, logoData.height); 
     } catch (err) {
-      console.error("Logo haijapatikana kwenye PDF:", err);
+      console.error("Logo Error kwenye PDF:", err);
     }
 
-    // Kichwa cha Ripoti Katikati / Kushoto Karibu na Logo
+    // 3. Badge ya UZA KISASA
+    doc.setFillColor(16, 185, 129, 0.3);
+    doc.roundedRect(46, 13, 26, 6, 2, 2, 'F');
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(52, 211, 153);
+    doc.text("• UZA KISASA", 48, 17);
+
+    // 4. Kichwa cha Habari Rasmi
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text("RIPOTI RASMI YA MAUZO HALISI (BILA DENI)", 52, 18);
+    doc.text("RIPOTI RASMI YA MAUZO", 46, 26);
 
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(52, 211, 153);
-    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 52, 25);
+    doc.setTextColor(191, 219, 254);
+    doc.text(`Kipindi: ${startDate} hadi ${endDate}`, 46, 33);
 
-    // Jina la Duka Upande wa Kulia kwenye PDF (Kama Dashibodi)
-    doc.setFontSize(11);
+    // 5. Kiboksi cha Kulia (BIASHARA / DUKA)
+    doc.setDrawColor(255, 255, 255, 0.3);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(138, 13, 58, 32, 3, 3, 'D');
+
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(203, 213, 225);
-    doc.text("BIASHARA / DUKA", 196, 15, { align: 'right' });
+    doc.setTextColor(191, 219, 254);
+    doc.text("BIASHARA / DUKA", 143, 20);
 
-    doc.setFontSize(13);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(52, 211, 153);
-    doc.text(shopName.toUpperCase(), 196, 23, { align: 'right' });
+    doc.text(shopName.toUpperCase(), 143, 30);
 
     const summaryDataPDF = [
       [
@@ -311,13 +324,13 @@ export default function Reports() {
     ];
 
     autoTable(doc, {
-      startY: 52,
+      startY: 55,
       body: summaryDataPDF,
       theme: 'plain',
       styles: {
-        fontSize: 10,
+        fontSize: 9,
         fontStyle: 'bold',
-        cellPadding: 5,
+        cellPadding: 4.5,
         textColor: [15, 23, 42],
         fillColor: [241, 245, 249]
       }
@@ -331,7 +344,7 @@ export default function Reports() {
     ]);
 
     autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: doc.lastAutoTable.finalY + 8,
       head: [['#', 'Jina la Bidhaa', 'Idadi Iliyouzwa', 'Jumla ya Mapato']],
       body: tableRows,
       theme: 'striped',
@@ -341,8 +354,8 @@ export default function Reports() {
         fontStyle: 'bold'
       },
       styles: {
-        fontSize: 10,
-        cellPadding: 4
+        fontSize: 9,
+        cellPadding: 3.5
       }
     });
 
@@ -382,41 +395,42 @@ export default function Reports() {
   return (
     <div className="space-y-6 font-sans text-slate-800 pb-12">
       
-      {/* HEADER MPYA YA KIBABE INAYOFANANA NA DASHBOARD YAKO SANA */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 p-6 sm:p-8 rounded-3xl text-white shadow-xl border-2 border-emerald-500/40 relative overflow-hidden">
+      {/* HEADER MPYA INAYOFANANA 100% NA DASHBOARD BANNER YAKO */}
+      <div className="bg-blue-900 border-2 border-emerald-500/40 rounded-3xl p-6 sm:p-7 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* KUSHOTO: LOGO NDANI YA BOKSI JEPESI SAFI */}
+        {/* KUSHOTO: LOGO & KICHWA CHA HABARI */}
         <div className="flex items-center gap-5 z-10">
-          <div className="bg-white p-3.5 rounded-2xl border-2 border-emerald-500/40 shadow-xl flex items-center justify-center shrink-0">
+          <div className="bg-white p-3.5 rounded-2xl border-2 border-emerald-500/30 shadow-md flex items-center justify-center shrink-0 w-20 h-20 sm:w-24 sm:h-24">
             <img 
               src="/uzakisasa.png" 
-              alt="Logo" 
-              className="h-11 sm:h-14 w-auto max-w-[150px] object-contain"
+              alt="Selguudi Logo" 
+              className="w-full h-full object-contain"
             />
           </div>
 
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-black tracking-wider uppercase mb-1">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black tracking-wider uppercase">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Ripoti Rasmi</span>
+              <span>UZA KISASA</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide">
-              MCHANGANUO WA MAUZO HALISI
+
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase">
+              RIPOTI RASMI YA MAUZO
             </h1>
-            <p className="text-blue-200 text-xs sm:text-sm font-semibold mt-0.5">
-              Takwimu za mauzo safi ya pesa taslimu na lipanamba bila kujumuisha madeni.
+
+            <p className="text-blue-200 text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Kipindi: <strong className="text-white font-mono">{startDate}</strong> hadi <strong className="text-white font-mono">{endDate}</strong></span>
             </p>
           </div>
         </div>
 
-        {/* KULIA: JINA LA BIASHARA LILIVYO KAMA DASHBOARD NA VITENGO VYA DOWNLOAD */}
-        <div className="flex flex-col sm:flex-row lg:items-center gap-4 z-10">
-          
-          {/* JINA LA BIASHARA LINALOFANANA NA DASHBOARD */}
-          <div className="bg-white/10 border border-white/20 px-5 py-3 rounded-2xl backdrop-blur-md text-left sm:text-right shadow-md">
-            <p className="text-[10px] font-black uppercase text-blue-200 tracking-wider">Biashara / Duka</p>
-            <p className="text-base sm:text-lg font-black text-emerald-400 tracking-wider font-mono">
+        {/* KULIA: KIBOKSI CHA BIASHARA / DUKA & BUTTONS */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto z-10">
+          <div className="bg-white/10 border border-white/20 px-6 py-3.5 rounded-2xl backdrop-blur-md min-w-[200px]">
+            <p className="text-[10px] font-black uppercase text-blue-200 tracking-widest">BIASHARA / DUKA</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-400 tracking-wider uppercase font-mono mt-0.5">
               {user?.business_name || 'QUEEN SHOP'}
             </p>
           </div>
@@ -428,7 +442,7 @@ export default function Reports() {
               className="px-5 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition"
             >
               <Download className="w-4 h-4" />
-              <span>Pakua PDF Rasmi</span>
+              <span>Pakua PDF</span>
             </button>
 
             <button
